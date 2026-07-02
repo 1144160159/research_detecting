@@ -1,0 +1,319 @@
+# python3.9
+# time:2025/11/8
+# data from：https://huggingface.co/datasets/EgilKarlsen/Thunderbird_BERT_Baseline/viewer/default/train?views%5B%5D=train
+
+from datasets import load_dataset
+import numpy as np
+import pandas as pd
+import torch
+from torch import nn
+import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
+import torch.utils.data as Data
+import matplotlib.pyplot as plt
+from torch.nn.utils import weight_norm
+from torch.autograd import Variable
+import math
+import time
+from torchsummary import summary
+from sklearn.metrics import precision_recall_curve, auc, average_precision_score
+
+
+# Login using e.g. `huggingface-cli login` to access this dataset
+# ds = load_dataset("logfit-project/Thunderbird")
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+epsilon = 1e-8
+length = 50
+x_dimens = 768
+df_train = pd.read_excel(r'Thunderbird_data\train.xlsx')
+df_test = pd.read_excel(r'Thunderbird_data\test.xlsx')
+train = df_train.values
+test = df_test.values
+# print(train.shape)  # (37500, 769)
+# print(test.shape)  # (12500, 769)
+
+# Construct the training set and the test set.
+x_train = train[:, :-1].astype(np.float64)
+x_test = test[:, :-1].astype(np.float64)
+y_train = train[:, -1].astype(np.int64)
+y_test = test[:, -1].astype(np.int64)
+
+x_train = torch.tensor(x_train).cuda()
+x_test = torch.tensor(x_test).cuda()
+y_train = torch.tensor(y_train).cuda()
+y_test = torch.tensor(y_test).cuda()
+
+batch_size = 500
+batchsize_test = 12500
+torch_train = Data.TensorDataset(x_train, y_train)
+torch_test = Data.TensorDataset(x_test, y_test)
+train_loader = Data.DataLoader(
+    dataset=torch_train,
+    batch_size=batch_size,
+    shuffle=True,
+    drop_last=True
+)
+test_loader = Data.DataLoader(
+    dataset=torch_test,
+    batch_size=batchsize_test,
+    shuffle=True,
+    drop_last=True
+)
+
+# Build model
+channel_size = 16
+h_gru = 16  # 8
+class NN(nn.Module):
+    def __init__(self):
+        super(NN, self).__init__()
+        # self.embed = nn.Embedding(30, 128, 0)
+        self.tostep = nn.Linear(1, length)
+        self.wordembed = nn.Linear(x_dimens, channel_size)
+        self.attention = nn.Linear(channel_size, channel_size)
+        self.conv1 = weight_norm(nn.Conv1d(channel_size, channel_size, 1, stride=1, padding=0))
+        self.conv2 = weight_norm(nn.Conv1d(channel_size, channel_size, 3, stride=1, padding=1))
+        self.conv3 = weight_norm(nn.Conv1d(channel_size, channel_size, 5, stride=1, padding=2))
+        self.fc1 = nn.Linear(3*channel_size, 2)
+        self.maxpool = nn.MaxPool1d(length, stride=1)
+
+        self.gru = nn.GRU(channel_size, h_gru, dropout=0, batch_first=True)
+        # self.gru = nn.LSTM(channel_size, h_gru, dropout=0, batch_first=True)
+        self.fc2 = nn.Linear(h_gru, 2)
+        self.fc3 = nn.Linear(3*channel_size + h_gru, 2)
+        self.w_omega = Variable(
+            torch.zeros(h_gru, h_gru))
+        self.u_omega = Variable(torch.zeros(h_gru))
+        self.w_omega1 = Variable(
+            torch.zeros(3*channel_size, 3*channel_size))
+        self.u_omega1 = Variable(torch.zeros(3*channel_size))
+        # self.dotline1 = nn.Linear(h_gru, h_gru)
+        self.dotline1 = nn.Linear(3*channel_size, 3*channel_size)
+
+    def forward(self, x, batchsize=batch_size):
+        # print(x.shape)  # torch.Size([100, 768])
+        x = self.tostep(x.reshape([batchsize, x_dimens, 1]).float())
+        x = self.wordembed(x.reshape([batchsize, length, x_dimens]))  # (batch_size,1,50,128)
+        # x = self.embed(x)  # (batch_size, 50, 128)
+        x = x.reshape([batchsize, channel_size, length])
+        # CNN
+        x1 = self.conv1(x)  # (batch_size,128,50)
+        x1 = F.leaky_relu(x1, negative_slope=0.1)
+        x2 = self.conv2(x)
+        x2 = F.leaky_relu(x2, negative_slope=0.1)
+        x3 = self.conv3(x)
+        x3 = F.leaky_relu(x3, negative_slope=0.1)
+        x_cat = torch.cat([x1, x2, x3], dim=1)  # (batch_size,384,50)
+        # gru
+        x4, _ = self.gru(x.reshape([batchsize, length, channel_size]))  # (batch_size, length, h_gru)
+        # x4 = self.dotproduct1(x4, h_gru, batchsize)  # torch.Size([500, 16, 50])
+        # x_gru = self.attention1(x4, length)  # (batch_size, h_gru)
+        # print(x4.shape, "111")
+        x_gru = torch.sum(x4, dim=1)  # 不加注意力是1，加了是2 torch.Size([500, 16])
+        # x_gru = x4
+        # x_cat = torch.cat([x1, x2, x3, x4.reshape([batchsize, h_gru, length])], dim=1)  # (batch_size,384,50)
+
+        # Construct the attention weights.
+        # for i in range(x.shape[2]):
+        #     if i == 0:
+        #         attn = F.tanh(self.attention(x[:, :, i].reshape([x.shape[0], 1, channel_size])))
+        #     else:
+        #         attn = torch.cat([attn, F.tanh(self.attention(x[:, :, i].reshape([x.shape[0], 1, channel_size])))], dim=1)  # (batch_size, 50, 128)
+        # attn1 = torch.cat([attn, attn, attn], dim=2).reshape([batchsize, 3*channel_size, length])
+        # x_cnn = torch.sum(x_cat * attn1, dim=2)  # (batch_size, 3*channel_size)
+
+        # print(x_cat.shape)  # torch.Size([500, 48, 50])
+        # x_cnn = self.attention2(x_cat.reshape([batchsize, length, 3*channel_size]), length)  # (batch_size, h_gru)
+        # x_cnn = self.dotproduct1(x_cat.reshape([batchsize, length, 3*channel_size]), 3*channel_size, batchsize)  # (batch_size, h_gru)
+        # x_cnn = x_cat
+        # print(x_cnn.shape, "111")  # torch.Size([100, 48])
+        x_cnn = torch.sum(x_cat, dim=2)
+
+
+        # print(x_cnn.shape, "111", x_gru.shape)  # torch.Size([100, 48]) 111 torch.Size([100, 16])
+        x = torch.cat([x_cnn, x_gru], dim=1)
+
+        x = F.dropout(x, 0.5)
+        x = x.reshape(batchsize, 3*channel_size+h_gru)
+        # x = x.reshape(batchsize, 3*channel_size)
+        x = self.fc3(x)
+        # x = F.softmax(x, dim=1)
+        return x
+
+    def attention1(self, gru_output, seq_len):
+        output_reshape = torch.Tensor.reshape(gru_output,
+                                              [-1, h_gru])
+
+        attn_tanh = torch.tanh(torch.mm(output_reshape, self.w_omega.to(device)))
+        attn_hidden_layer = torch.mm(
+            attn_tanh, torch.Tensor.reshape(self.u_omega.to(device), [-1, 1]))
+        exps = torch.Tensor.reshape(torch.exp(attn_hidden_layer),
+                                    [-1, seq_len])
+        alphas = exps / torch.Tensor.reshape(torch.sum(exps, 1), [-1, 1])
+        alphas_reshape = torch.Tensor.reshape(alphas,
+                                              [-1, seq_len, 1])
+        state = gru_output
+        attn_output = torch.sum(state * alphas_reshape, 1)
+        return attn_output
+
+    def attention2(self, gru_output, seq_len):
+        output_reshape = torch.Tensor.reshape(gru_output,
+                                              [-1, 3*channel_size])
+
+        attn_tanh = torch.tanh(torch.mm(output_reshape, self.w_omega1.to(device)))
+        attn_hidden_layer = torch.mm(
+            attn_tanh, torch.Tensor.reshape(self.u_omega1.to(device), [-1, 1]))
+        exps = torch.Tensor.reshape(torch.exp(attn_hidden_layer),
+                                    [-1, seq_len])
+        alphas = exps / torch.Tensor.reshape(torch.sum(exps, 1), [-1, 1])
+        alphas_reshape = torch.Tensor.reshape(alphas,
+                                              [-1, seq_len, 1])
+        state = gru_output
+        # print(state.shape)
+        # print(alphas_reshape.shape)
+        attn_output = torch.sum(state * alphas_reshape, 1)
+        return attn_output
+
+    def dotproduct1(self, x, h, batch):
+        # 1 cosdotproduct
+        y = torch.matmul(  # (batch_size, length, h_gru)
+            F.softmax(torch.matmul(x, x.reshape([batch, h, length])) / h, dim=1),
+            x.reshape([batch, length, h]))
+        # 2 Vaswani
+        # x = x.reshape([batch, length, h])
+        # y = torch.matmul(
+        #     F.softmax(torch.matmul(self.dotline1(x), self.dotline1(x).reshape([batch, h, length])) / math.sqrt(h), dim=1),
+        #     self.dotline1(x))
+        # 3
+        # attn = F.softmax(torch.matmul(x, x.reshape([batch, h, length])) / h, dim=2)
+        # x = x.reshape([batch, length, h])
+        # for i in range(length):
+        #     # print(attn[:, :, i].shape,"xaxs",x.shape)
+        #     if i == 0:
+        #         y = torch.sum(attn[:, :, i].reshape([batch, length, 1]) * x, dim=1)
+        #     else:
+        #         y = torch.cat([y, torch.sum(attn[:, :, i].reshape([batch, length, 1]) * x, dim=1)], dim=1)
+
+
+        y = y.reshape([batch, h, length])
+        # y = self.maxpool(y).reshape([batch, h])
+        return y
+
+
+# Build neural network
+network = NN()
+network = network.cuda()
+# summary(network, input_size=(50, length, x_dimens))
+
+# Loss function
+loss_fn = nn.CrossEntropyLoss()
+loss_fn = loss_fn.cuda()
+
+# optimizer
+learning_rate = 0.0005
+optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
+
+# Parameters
+# train step
+total_train_step = 0
+# test step
+total_test_step = 0
+# epoch
+epoch = 300
+# indicators
+accuracy_graph = torch.zeros((1, epoch))
+P_graph = torch.zeros((1, epoch))
+recall_graph = torch.zeros((1, epoch))
+F1_graph = torch.zeros((1, epoch))
+start = time.time()
+for i in range(epoch):
+    print("------The {} epoch train start------".format(i))
+
+    for data in train_loader:
+        x, y = data
+        # print(x.shape)
+        outputs = network(x)
+        loss = loss_fn(outputs, y)
+        outputs = outputs.argmax(1)
+        # print(y.shape)
+        # y = y.argmax(1)
+        # print(outputs.argmax(1).shape)
+        # print(y.shape)
+        accuracy_train = (outputs == y).sum() / y.shape[0]
+        TP = (outputs * y).sum()
+        FP = (outputs * (1-y)).sum()
+        FN = ((1 - outputs) * y).sum()
+        P = (TP / (TP + FP)).item()
+        recall = (TP / (TP + FN)).item()
+
+        F1 = (2*P*recall / (P + recall + epsilon))
+        # F1 = 0
+
+        # optimizer
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        total_train_step += 1
+        if total_train_step % 50 == 0:
+            print("train step: {}".format(total_train_step))
+            print("TP:{}, FP:{}, FN:{}".format(TP.item(), FP.item(), FN.item()))
+            print("TrainLoss: {}, Accuracy: {}, P: {}, Recall: {} F1: {}".format(loss.item(), accuracy_train, P, recall, F1))
+
+    # Test
+    total_test_loss = 0
+    total_test_step = 0
+    total_accuracy_test = 0
+    total_P = 0
+    total_recall = 0
+    total_F1 = 0
+    with torch.no_grad():
+        for data in test_loader:
+            x, y = data
+            outputs = network(x, batchsize_test)
+            y_score = F.softmax(outputs, dim=1)[:, 1]
+            loss = loss_fn(outputs, y)
+            outputs = outputs.argmax(1)
+            # y = y.argmax(1)
+
+            #PR-AUC
+            # precision, recall, thresholds = precision_recall_curve(y.cpu().numpy(), y_score.cpu().numpy())
+            # pr_auc = auc(recall, precision)
+            pr_auc = average_precision_score(y.cpu().numpy(), y_score.cpu().numpy())
+            print("PR-AUC =", pr_auc)
+
+            total_test_loss = total_test_loss + loss
+            total_test_step += 1
+            # print(total_test_step)
+            accuracy_test = (outputs == y).sum() / y.shape[0]
+            TP = (outputs * y).sum()
+            FP = (outputs * (1 - y)).sum()
+            FN = ((1 - outputs) * y).sum()
+            P = (TP / (TP + FP)).item()
+            recall = (TP / (TP + FN)).item()
+            F1 = (2 * P * recall / (P + recall + epsilon))
+            # F1 = 0
+            total_accuracy_test = total_accuracy_test + accuracy_test
+            total_P = total_P + P
+            total_recall = total_recall + recall
+            total_F1 = total_F1 + F1
+            accuracy_graph[0, i] = (total_accuracy_test / total_test_step)
+            P_graph[0, i] = (total_P/total_test_step)
+            recall_graph[0, i] = (total_recall/total_test_step)
+            F1_graph[0, i] = (total_F1/total_test_step)
+        # if i % 100 == 0:
+    print("TestLoss: {}, Accuracy: {}, P: {}, Recall: {} F1: {}".format(total_test_loss.item()/total_test_step, total_accuracy_test/total_test_step, total_P/total_test_step, total_recall/total_test_step, total_F1/total_test_step))
+end = time.time()
+print("Running Time：{}min".format((end-start)/60))
+# print(torch.squeeze(accuracy_graph))
+plt.plot(range(epoch), torch.squeeze(accuracy_graph), label="Accuracy")
+plt.plot(range(epoch), torch.squeeze(P_graph), label="P")
+plt.plot(range(epoch), torch.squeeze(recall_graph), label="recall")
+plt.plot(range(epoch), torch.squeeze(F1_graph), label="F1")
+plt.ylim((0.8, 1))
+plt.legend()
+plt.show()
+
+# df = pd.DataFrame(F1_graph.reshape([-1,1]))
+# df.to_excel(r'BGLcnncosdotproduct1.xlsx')
+# torch.save(network.state_dict(), "without20_idf_b100.pth")
