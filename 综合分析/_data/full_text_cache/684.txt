@@ -1,0 +1,776 @@
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 1
+
+ FedSecureFormer: A Fast, Federated and Secure
+ Transformer Framework for Lightweight Intrusion
+ Detection in Connected and Autonomous Vehicles
+Devika Sathyan, Vishnu Hari, Pratik Narang, Senior Member, IEEE, and Tejasvi Alladi, Senior Member, IEEE,
+ F. Richard Yu, Fellow, IEEE
+
+ Abstract—The era of Connected and Autonomous Vehicles to the US Department of Transportation, CVs utilize Vehicle-
+(CAVs) reflects a significant milestone in transportation, improv- to-Everything (V2X) [1] communication to improve road
+ing safety, efficiency, and intelligent navigation. However, the safety, enable real-time data exchange, and ensure seamless
+growing reliance on real-time communication, constant connectivity, and autonomous decision-making raises serious cybersecurity interaction within highly dynamic vehicular networks by facilconcerns, particularly in environments with limited resources. itating the exchange of critical information between vehicles,
+This highlights the need for security solutions that are efficient, infrastructure, and networks [2]. Additionally, NACo defines
+lightweight, and suitable for deployment in real-world vehicular Automated Vehicles (AV) (also known as driverless cars) as
+environments. In this work, we introduce FedSecureFormer, a “Vehicles equipped with technology that enables them to operlightweight transformer-based model with 1.7 million parameters, significantly smaller than most encoder-only transformer ate with little to no human assistance.” AVs rely on integrated
+architectures. The model is designed for efficient and accurate systems such as LiDAR, radar, cameras, and GPS [3] for safe
+cyber attack detection, achieving 93.69% classification accuracy navigation. The integration of Connected and Autonomous
+across 19 attack types and improving performance on 10 attack Vehicles (CAVs) [4] represents a significant advancement
+classes, outperforming several state-of-the-art (SOTA) methods. in transportation, with early milestones including Google’s
+To assess its practical viability, we implemented the model within
+a Federated Learning (FL) setup using the FedAvg aggregation self-driving car project, now known as Waymo. Intelligent
+strategy. We also incorporated differential privacy to enhance Transportation Systems (ITS) further enhance traffic safety
+data protection. For testing its generalization to unseen attacks, and efficiency through technologies like Artificial Intelligence,
+we used a histogram-guided GAN with LSTM and attention mod- sensor networks, and V2X, particularly using IEEE 802.11p
+ules to generate unseen data, achieving 88% detection accuracy. [4] for vehicular communication.
+Notably, the model achieved an inference time of 3.7775 milliseconds per vehicle on the Jetson Nano, approximately 100× faster Despite their advantages, CAVs are vulnerable to a wide
+than SOTA models. These results position FedSecureFormer as a range of cybersecurity threats due to their reliance on infast, scalable, and privacy-preserving solution for securing future terconnected systems, real-time data exchange, and wireless
+intelligent transport systems. communication technologies [1]. These include Denial-of-
+ Index Terms—Transformer, Attention, Federated Learning Service (DoS) attacks, Sybil attacks, spoofing, and other
+(FL), Differential Privacy (DP), Connected and Autonomous similar attacks. Vulnerabilities often stem from communication
+Vehicles (CAVs), Convolutional Neural Network (CNN), Long- protocols, such as Vehicle-to-Everything (V2X) and Controller
+Short-Term Memory (LSTM), Intrusion Detection System (IDS), Area Network (CAN) [5], as well as onboard components
+Cybersecurity
+ like LiDAR and GPS, due to the absence of encryption and
+ authentication mechanisms.
+ Ensuring robust security measures has become essential
+ I. I NTRODUCTION
+ as cyber threats in CAVs grow increasingly complex. This
+ The National Association of Counties (NACo) stated that has led to the development of Intrusion Detection Systems
+Connected Vehicles (CV) are “Vehicles that can communicate (IDS) [2]. IDS solutions employ techniques such as machine
+with other vehicles, infrastructure, and devices through wire- learning [6], deep learning [4], and generative AI [2] to
+less network technology such as Wi-Fi and radio”. According detect potential attacks in real time. As cyberattacks become
+ more sophisticated, the role of IDS in reinforcing vehicular
+ Copyright (c) 20xx IEEE. Personal use of this material is permitted. cybersecurity is increasingly critical. However, these models
+However, permission to use this material for any other purposes must be face severe drawbacks due to data imbalance problems, longobtained from the IEEE by sending a request to pubs-permissions@ieee.org.
+The work was supported by the Anusandhan National Research Foundation range dependencies in network traffic, and data poisoning.
+(ANRF), India under Grant ANRF/ARG/2025/008114/ENS. Unlike traditional models, transformers utilize self-attention
+ Devika Sathyan, Vishnu Hari, Pratik Narang and Tejasvi Alladi are mechanisms to capture complex dependencies and patterns
+with the Department of Computer Science and Information Systems,
+BITS Pilani, Pilani Campus, 333031, India. (e-mail: p20210024@pilani.bits- within sequential data from network traffic.
+pilani.ac.in; f20220094@pilani.bits-pilani.ac.in; pratik.narang@pilani.bits- Another key challenge is that existing IDS research for
+pilani.ac.in; tejasvi.alladi@pilani.bits-pilani.ac.in). CAVs often prioritizes detection accuracy, with less emphasis
+ F. Richard Yu is with the Department of Systems and Computer Engineering, Carleton University, Ottawa, ON K1S 5B6, Canada. (e-mail: on real-time response [5]. However, in dynamic environments,
+richard.yu@carleton.ca). the ability to detect and respond to threats promptly is just as
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 2
+
+critical as ensuring vehicle safety. Centralized models often ing previously unseen attacks, and conclude with a review of
+struggle with non-IID (non-Independent and Identically Dis- FL frameworks applied to IDS in CAV scenarios.
+tributed) data and are prone to single points of failure, making Intrusion detection within CAV environments involves identhem vulnerable to attacks. This limitation has led to the tifying and categorizing misbehavior exhibited by participant
+adoption of Federated Learning (FL) in the CAV domain [7], vehicles. Sharma et al. [8] calculated plausibility scores rewhich enhances robustness by enabling distributed learning lated to the location and movement of vehicles, employing
+across multiple clients while improving adaptability to non- a confidence interval-based technique to identify physically
+IID data through a client-server architecture. improbable behaviors within the VeReMi dataset [9]. Whereas
+ To address the limitations identified in the existing literature, Sedar et al. [10] treated the intrusion detection task as a reinwe developed a fast, lightweight transformer-based model forcement learning problem, implementing an LSTM-based Qspecifically designed for intrusion detection in CAV environ- network for classification. Moreover, Alladi et al. [1] deployed
+ments. This direction has received limited attention so far. hybrid CNN-LSTM models on edge devices to facilitate rapid,
+Although integrating FL with privacy-preserving mechanisms effective intrusion detection.
+such as Differential Privacy (DP) or Homomorphic Encryption Recent advancements have highlighted the effectiveness
+offers enhanced security, this approach remains underexplored of transformer-based architectures in IDS for CAVs. Wang
+in CAV-focused IDS research. In addition, most existing stud- et al. [11] demonstrated strong detection performance using
+ies have overlooked the inference time in resource-constrained hierarchical vector transformers, which employed distinct selfenvironments, even though a fast response is crucial for timely attention mechanisms to capture inter-vehicular interactions
+threat detection and decision-making. and temporal dependencies separately. Similarly, Guan et al.
+ The main contributions of this work are as follows: [12] improved detection accuracy by integrating Principal
+ i Lightweight Transformer Architecture: We propose Component Analysis (PCA) with multi-head self-attention,
+ FedSecureFormer, a compact transformer model with only illustrating the value of hybrid transformer-based approaches.
+ 1.7 million parameters, tailored for intrusion detection in Additionally, Mundra et al. [13] proposed a lightweight trans-
+ Connected and Autonomous Vehicles (CAVs), achieving former architecture in a decentralized framework by distributimproved performance across ten out of 19 cyberattack ing the processing tasks and feature selection across multiple
+ classes. vehicles.
+ ii Detection of Unseen Attacks: To evaluate the model’s Computational latency and response time are critical congeneralization capability, we tested the model in a central- siderations in CAV scenarios, where real-time feedback is
+ ized setting using unseen adversarial sequences generated essential to ensure safety and operational efficiency. Kumar et
+ via a histogram-based GAN with LSTM and attention al. [5] reported promising results on the CarChallenge dataset
+ layers. FedSecureFormer achieved an 88% detection rate, [14] using a Raspberry Pi, achieving inference time below
+ demonstrating robust adaptability. 50 microseconds. In contrast, Alladi et al. [1] documented
+ iii Federated and Privacy Preserving Deployment: In con- a significantly higher average inference time across multiple
+ trast to the centralized evaluation, we deployed the model models, at 234.505 milliseconds per vehicle, on a similar
+ in a Federated Learning setup with FedAvg, showing less hardware setup, highlighting the wide variation in performance
+ than 1.03% performance drop. With differential privacy, it across different IDS implementations. Meanwhile, Mundra
+ achieved a 4.04% reduction in accuracy across 20 clients. et al. [13] reported an average detection time of 22 to 25
+ iv Real-Time Inference Capability: FedSecureFormer milliseconds, further emphasizing the need for optimized, lowachieved an inference time of 3.7775 milliseconds per latency solutions in resource-constrained environments.
+ vehicle on Jetson Nano, making it nearly 100× faster The effectiveness of an IDS is significantly strengthened
+ than existing models and well-suited for deployment in by its ability to detect unseen attacks. Althunayyan et al.
+ resource-constrained Intelligent Transport Systems. [3] proposed a two-stage architecture comprising an Artificial
+ Neural Network (ANN) for detecting and classifying known
+ The remainder of the paper is organized as follows. Section
+ attacks, and an LSTM autoencoder for identifying previously
+II reviews related work, while Section III outlines the backunseen attacks. Lin et al. [15] addressed visual spoofing
+ground, including the CAV framework, and a taxonomy of
+ attacks using a multimodal sensor fusion approach, introducing
+vehicular misbehavior. Section IV details the proposed Feda multi-head self-attention-based fusion module to enhance
+SecureFormer architecture in both centralized and federated
+ robustness. Similarly, Fan et al. [16] developed a two-layer
+settings. Section V describes the experimental setup, followed
+ filtering mechanism that employed a One-Class SVM to detect
+by results and analysis in Section VI. Finally, Section VII
+ unknown attacks and dynamically update the attack recognizer,
+concludes the study.
+ which consists of a 1-D CNN augmented with a self-attention
+ mechanism.
+ II. L ITERATURE S URVEY Liu et al. [17] proposed a decentralized FL framework
+ Our literature review is structured as follows: We begin by that integrates a trust-based consensus mechanism using
+delving into the IDS framework in the context of CAVs, then blockchain, where model updates are aggregated across mulexplore transformer-based approaches for intrusion detection. tiple Roadside Units (RSUs), and evaluated using the KDD99
+Next, we examine real-time response capabilities in resource- dataset. Bhavsar et al. [18] demonstrated a practical FL setup
+constrained environments, followed by techniques for detect- using Raspberry Pi clients and a Jetson Xavier server, evalu-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 3
+
+ identified, the RSU generates a MisBehavior Report (MBR)
+ and forwards it to the CA. The CA then evaluates the report
+ and decides on appropriate actions, such as issuing alerts to
+ other vehicles or revoking the offending vehicle’s certificate.
+ 2) Dataset: In this paper, we use the VeReMi Extension dataset [20], an enhancement of the original VeReMi
+ dataset [9], which is a synthetically generated dataset incorporating a realistic sensor error model to reflect real-world
+ scenarios better. The attack taxonomy is detailed in [2]. We
+ have used nine features from the dataset: the timestamp (the
+ time at which the message was sent) and the vehicle’s motion
+ Fig. 1: Connected and Autonomous Vehicles Scenario coordinates (x and y), including position, speed, acceleration,
+ and heading. The attack classes are as follows: A(0) - Normal,
+ A(1) Constant position, A(2) - Constant position offset, A(3)
+ating NSL-KDD and Car-Hacking datasets, with FedAvg and - Random position, A(4) - Random position offset, A(5) -
+FedYogi aggregation strategies. Additionally, Al-Hawawreh Constant speed, A(6) – Constant speed offset, A(7) – Random
+et al. [19] introduced a distributed FL approach based on speed, A(8) – Random speed offset, A(9) – Eventual Stop,
+Augmented Lagrangian optimization, enabling each client A(10) - Disruptive, A(11) - Data replay, A(12) - Delayed
+to aggregate updates from its neighbouring clients, thereby messages, A(13) - DoS, A(14) - DoS random, A(15) - DoS
+enhancing collaboration in decentralized settings. Disruptive, A(16) - Data replay sybil, A(17) - Traffic con-
+ While prior studies such as [1], [8], [15], [16], [17], [18], gestion sybil, A(18) - DoS random sybil and A(19) - DoS
+and [19] have demonstrated strong detection performance, they disruptive sybil.
+fall short in addressing several essential aspects for a practical 3) Transformers: The Transformers, first introduced in
+inter-vehicular IDS. Specifically, [1] has limited its evaluation [21], are deep neural networks that process sequential data
+to a subset of attack classes, leaving a significant portion unex- effectively. Transformers replace conventional sequential modamined, whereas [8] has used an older version of the VeReMi els, such as RNNs and LSTMs, by parallelizing the process-
+Extension dataset [9], which has comparatively fewer attack ing of data sequences. Parallel processing in transformers
+types. Although [16] addresses the detection of previously is facilitated by a self-attention mechanism, which enables
+unseen attacks, it is based on an update mechanism that is the capture of long-range dependencies in data sequences
+prone to misclassifying known attack types, as acknowledged by learning the relationships between different data elements
+by the authors. Similarly, [15] introduced artificial modalities, within the sequence. While initially introduced for Natural
+but the work focused only on phantom spoofing attacks. Language Processing (NLP) tasks, transformers have shown
+In contrast, [17], [18], and [19] utilized FL; however, [17] promising results in a wide range of domains, including
+used the obsolete KDD99 dataset, [18] restricted scalability temporal sequence modeling tasks [11, 12].
+to only four clients, and [19] relied on a centralized model 4) Federated Learning: Federated Learning (FL) [22] is
+with no consideration for deployment in resource-constrained a machine learning framework that can collaboratively train a
+environments. shared model without exchanging data across different devices.
+ Addressing these limitations collectively, we propose a Each round of FL involves training the model locally on clients
+lightweight IDS architecture optimized for deployment in (can be edge devices) and then sharing the model updates
+resource-constrained environments. Despite the proven effec- with the server. The final recombination of model updates
+tiveness of transformers across various security applications, is carried out using strategies such as the Federated Average
+their use in the vehicular domain, particularly in a protected FL Strategy (FedAvg) [22], a weight averaging technique, or the
+setup, remains limited. This gap in current research motivates Federated Proximal Strategy (FedProx) [23], an iteration on
+the development of a robust, scalable, and privacy-aware IDS FedAvg designed to improve its performance in heterogeneous
+tailored to the unique challenges of the CAV IDS. environments. In this work, we have utilized FedAvg and
+ FedProx strategies because, as stated in the existing literature
+ III. P RELIMINARY BACKGROUND [24, 25], both strategies exhibit similar complexities and
+ convergence behavior in homogeneous environments. More
+ 1) CAV Scenario: A typical CAV scenario, as illustrated recent studies [3, 7] demonstrate that FL can effectively enable
+in Fig. 1, features Vehicle-to-Everything (V2X) communica- a decentralized approach while also preserving privacy.
+tion, where a vehicle interacts with other vehicles and fixed
+infrastructure, such as traffic signals and road signage. Each
+vehicle has an Onboard Unit (OBU) that processes and fuses IV. P ROPOSED I NTRUSION D ETECTION F RAMEWORK
+data from GPS and other onboard sensors. This information
+is transmitted to nearby RSUs, which are managed by the The proposed FedSecureFormer architecture is illustrated
+region’s Control Authority (CA). RSUs are equipped with in Fig. 2. FedSecureFormer is a transformer architecture
+built-in mechanisms for detecting and classifying misbehavior specifically designed for IDS in the CAV scenario. The model
+with the installed IDS systems. When anomalous activity is was implemented in both centralized and distributed settings.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 4
+
+Fig. 2: FedSecureFormer architecture based on a 6-layer encoder-only transformer model, designed for efficient intrusion
+detection in CAVs, illustrated within a Federated Learning setup involving n clients.
+
+A. Proposed FedSecureFormer Transformer
+ qj = uj wjq , k = Z ′ wK , v = Z ′ wV (6)
+ As shown in Fig. 2, the transformer architecture used in
+ qj k ⊤
+  
+our work employs an encoder-only design with six stacked
+encoder layers. The input is first projected into an embedding contextj = softmax √ v (7)
+ dk
+space using a linear layer, followed by the addition of learnable
+absolute positional encodings to incorporate temporal context. pooled = Wpool · Concat(context1 , . . . , contextHpool ) (8)
+Each encoder layer contains multi-head self-attention with y = Wcls · pooled + bcls (9)
+two attention heads, each having its own Query, Key, and
+Value projections. This is followed by layer normalization p̂ = softmax(y), ĉ = arg max(p̂) (10)
+and a two-layer Feed Forward Network (FFNN) with ReLU
+activation. Residual connections are applied after the attention (
+and FFNN blocks to improve gradient flow and model stability. 1 2
+ LSmoothL1 (p̂, y) = 2 (p̂k − yk ) , if |p̂k − yk | < 1
+ (11)
+Post encoding, the output is passed through a multi-head |p̂k − yk | − 12 , otherwise
+attention pooling layer with four heads. This layer uses a
+multi-query strategy to share Keys and Values across heads. In Here, the input feature vector xt at timestep t is projected
+contrast, each head maintains a unique learned Query vector, to ddim using the weight matrix Wproj , bias bproj , and added to
+resulting in concatenated context vectors to form a pooled a learnable positional encoding pt to produce the embedded
+representation. Finally, this is passed through a fully connected vector zt . The complete input sequence is represented as
+linear layer and softmax to generate the final probability Z. In the self-attention mechanism, Qi , Ki , and Vi are the
+distribution over the target classes. The mathematical formulas Query, Key, and Value matrices for attention head i, each of
+used are as follows: dimension dk . The dk is calculated by dividing ddim by the
+ number of attention heads H. The outputs from all heads are
+ combined via an output projection WO . Next, the output is fed
+Z = Stack(z1 , . . . , zt ), where zt = Wproj · xt + bproj + pt
+ to an FFN, followed by a layer normalization layer, resulting
+ (1)
+ in Z ′ . Each head j uses a learned query vector qj (utilizing
+ a learnable vector uj ) in the multi-head pooling stage, while
+ Qi = ZWiQ , Ki = ZWiK , Vi = ZWiV (2)
+ key k and value v from encoder outputs are shared across
+ Qi Ki⊤
+  
+ heads. The contextj learn qj , k, v, and are concatenated and
+ headi = softmax √ Vi (3) projected using Wpool to yield the final pooled vector, utilizing
+ dk
+ the pooling heads Hpool . For classification, the pooled vector is
+ MHSA(Z) = Concat(head1 , . . . , headH ) · WO (4) passed through a fully connected layer with weights Wcls and a
+ bias vector bcls to produce logits y. The predicted probabilities
+ Z ′ = LayerNorm (Z + FFN(Z)) p̂ are obtained via softmax, and the final predicted class ĉ
+ (5) corresponds to the class with the highest probability. Finally,
+ where FFN(Z) = ReLU(ZW1 + b1 )W2 + b2
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 5
+
+ which are compared to measure the difference between the
+ real and generated sequences. The λhist is a weighting factor
+ for histogram loss. To maintain equal weightage for both
+ adversarial loss and histogram loss, λhist was assigned a value
+ of 1. LD (discriminator loss) is the sum of Wasserstein’s loss
+ and gradient penalty (GP ). GP is calculated using the L2
+ norm of the discriminator gradient, along with a penalty for
+ deviation from the unit norm case. λgp is the Gradient penalty
+ coefficient set to 10.
+
+ C. Federated Learning Framework with Differential Privacy
+ Our FL implementation aligns closely with the vanilla FL
+Fig. 3: His-AttnGAN architecture utilized for generating un- algorithm [7]. To deal with the class imbalance issue while
+seen data. splitting the data between multiple clients, we have computed
+ the class weights (Wc ) and used them as a parameter for
+ the weighted cross-entropy loss (LWCE ). The aggregation
+the loss is computed via smooth L1 loss using the predicted of model parameters across clients is performed using the
+p̂k and actual probabilities yk . FedAvg and FedProx strategies, with FedAvg yielding the best
+ results.
+B. Histogram-aware Attention GAN (Hist-AttnGAN) C
+ X
+ To detect unseen attacks, we generated realistic samples LWCE = − wi · yi · log(ŷi ) (15)
+ i=1
+using a histogram-guided GAN as depicted in Fig. 3. The generator component of this GAN comprises a two-layer LSTM K
+ 1 X
+architecture enhanced with multi-head self-attention utilizing wglobal = ni · w i (16)
+ N i=1
+four attention heads. Each timestep’s output is subsequently
+passed through nine parallel feature projection heads—one K
+ X
+for each feature—each composed of a small Multi-Layer N= ni (17)
+Perceptron (MLP) consisting of combinations of Dense and i=1
+LeakyReLU layers to independently generate feature values. K
+ 1 X
+The discriminator is constructed using a single-layer LSTM. Mglobal = ni · metrici (18)
+During training, the generator receives input noise shaped N i=1
+[Batch size, N oise Dimension] and produces outputs of µ
+shape [Batch size′ , T imesteps′ , F eatures′ ]. Both the gen- LWCE (θ) = L(θ) +∥θ − θ(t) ∥2 (19)
+ 2
+erated data and the original training data, formatted identically
+ Here C, yi , ŷi , and wi represent the number of attack
+as [Batch size, T imesteps, F eatures], are provided as inclasses, true class label, predicted class probability, and class
+puts to the discriminator. The model training is guided by two
+ weight for each class i, respectively. Whereas in the equation
+primary objective functions: a discriminator loss, calculated
+ used to compute aggregation strategy, we have the following
+using the Wasserstein distance coupled with a gradient penalty,
+ terms K, ni , wi , N , which represent the total number of
+and a generator loss that incorporates both adversarial loss and
+ clients, the number of training samples for each client, the
+a histogram-based distribution loss.
+ local model parameter for each client c, and the total number
+ of training samples across all clients. As shown in eq. 18, we
+ F
+ X (i) (i) calculated the average of all performance measures across all
+ LG = −Ex̃∼Pfake [D(x̃)] + λhist · CDFreal − CDFfake clients. In eq. 19, we calculated the aggregation using FedProx
+ 1
+ i=1
+ (12) strategy, utilizing the weighted cross-entropy loss function
+ (LWCE (θ)), current local model parameters ( θ), global model
+ parameters received from the server before local training (θ(t) ),
+ LD = −Ex∼Preal [D(x)] + Ex̃∼Pfake [D(x̃)] + GP (13) and the FedProx constant (proximal term weight, µ).
+ To ensure privacy-preserving training in the federated envih i
+ GP = λgp · Ex̂∼Px̂ (∥∇x̂ D(x̂)∥2 − 1)
+ 2
+ (14) ronment, gradient updates are adjusted by applying gradient
+ clipping and adding noise, as described below:
+ The generator loss LG is calculated as the adversarial loss g
+added with histogram loss, which is the Cumulative Distribu- g̃i =  i  (20)
+tion Functions’ (CDF) L1 loss of the ith real and fake features, max 1, ∥g i ∥2
+ Cclip
+respectively. The histograms are first constructed for each ith B
+ !
+real and fake feature and then normalized into probability 1 X
+ 2 2
+ ĝ = g̃i + N (0, σ Cclip I) (21)
+distributions. These distributions are then converted into CDFs, B i=1
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 6
+
+In the above equations, gi denotes the original gradient of the Algorithm 1 FedSecureFormer Algorithm
+i-th model parameter, while g̃i represents the clipped gradient. 1: Input: X ∈ RT ×F (input sequence), model weights Θ =
+The clipping threshold Cclip restricts individual gradients to a {Wproj , bproj , pt , WiQ , WiK , WiV , WO , Wpool , Wcls , bcls , qi },
+specified maximum ℓ2 norm. After gradient clipping, Gaussian shared keys K, values V
+ 2
+noise N (0, σ 2 Cclip I) is introduced to the averaged gradient 2: Output: Predicted class ĉ, probability vector p̂
+(per batch B), with σ acting as the noise multiplier that 3: Hyperparameters: T = 20 (time steps), F = 9 (feacontrols the magnitude of the privacy-preserving noise. The tures), H = 2 (attention heads), Hpool = 4 (pooling
+resultant noisy gradient ĝi guarantees DP by ensuring that heads), dk = 32 (attention head dimension), ddim = 64
+gradient updates remain statistically indistinguishable, even (projection dimension), C = 20 (number of classes),
+when a single training sample is altered or removed. The 4: dk = H
+ ddim
+privacy guarantee is formally denoted by two privacy budget 5: for t = 1 to T do
+parameters (ϵ, δ), where ϵ refers to the maximum allowable 6: zt = Wproj · xt + bproj + pt
+privacy loss and δ refers to the probability of privacy failure 7: end for
+with respect to ϵ, without compromising the model’s utility 8: Z = Stack(z1 , . . . , zT )
+(performance) [26]. 9: for i = 1 to H do
+ The DP accountant utilized in our work is Rényi DP 10: Qi = ZWiQ
+(RDP) [27, 28], and the privacy budget parameters (ϵ, δ) are 11: Ki = ZWiK
+calculated using the mechanism as described in [28, 29]. 12: Vi = ZWiV
+ Q K⊤
+  
+ 2
+ αCclip 13: headi = softmax √i d i Vi
+ k
+ ε(α) = (22) 14: end for
+ 2σ 2
+ 15: MHSA(Z) = Concat(head1 , . . . , headH ) · WO
+ 16: FFN(Z) = ReLU(ZW1 + b1 )W2 + b2
+ 1
+ ε′ (α) = log Ek∼B(α,γ) [exp ((α − 1) · εk )] (23) 17: Z ′ = LayerNorm (Z + FFN(Z))
+ α−1
+ 18: for j = 1 to Hpool do
+ 19: qj = uj wjQ
+ εT (α) = T · ε′ (α) (24)
+ 20: k = Z ′ wK
+   21: v = Z ′ wV  ⊤
+ log(1/δ) 22: contextj = softmax √j d
+ q k
+ ·v
+ ε(δ) = min εT (α) + (25)
+ α>1 α−1 23: end for
+ k
+
+ Here, ε(α) is the RDP parameter with sensitivity Cclip . 24: pooled = Wpool · Concat(context1 , . . . , contextHpool )
+α corresponds to the order of Rényi divergence, a tunable 25: y = Wcls · pooled + bcls
+parameter with a value greater than 1, and we have used values 26: p̂ = softmax(y)
+typically ranging from 1.01 to 64. ε′ (α) provides the RDP after 27: ĉ = arg max(p̂) (
+subsampling, where γ corresponds to the sampling probability, 1 2
+ 28: LSmoothL1 (p̂k , yk ) = 2 (p̂k − yk ) , if |p̂k − yk | < 1
+B(α, γ) is the binomial distribution used in subsampling RDP |p̂k − yk | − 12 , otherwise
+analysis, and εk corresponds to the RDP parameter for the
+k-fold group. εT (α) corresponds to the composition rule for
+T local rounds. The final eq. 25 shows the conversion from
+RDP to (ϵ, δ)-DP guarantee. The algorithm for the proposed B. Dataset Specification
+FedSecureFormer is outlined as follows in Algorithms 1 and The dataset used in this study is the VeReMi Extension
+2. dataset [20]. Prior studies [4, 30] have inspired us to use
+ the sliding window mechanism with a window size of 20,
+ V. E XPERIMENTAL S ETUP
+ where each sample captures 20 consecutive timesteps with
+ This section provides details of the system specification, nine features per timestep, resulting in an input shape of [20,9]
+dataset specification, and model hyperparameters used in this for each sample. A slide length of 10 was used, resulting
+study. in lower repetition and a higher number of sequences. Any
+ sequence shorter than 20 was discarded. Each sequence is
+A. System Specification associated with one of 20 distinct classes (A(0) to A(19)),
+ All experiments were conducted on an NVIDIA RTX representing various types of attack categories. The dataset was
+A6000 GPU within a software environment consisting of labeled and sequentially generated, producing the following
+Python 3.10.12, PyTorch 2.6.0, CUDA 11.8, and the Visual sequence distribution per class: A(0) - 165373, A(1) - 3804,
+Studio Code (VSCode) IDE. FL experiments were imple- A(2) - 3793, A(3) - 3821, A(4) - 3701, A(5) - 3623, A(6) -
+mented using the Flower framework (version 1.14.0). The 3886, A(7) - 3662, A(8) - 3705, A(9) - 3727, A(10) - 3776,
+proposed FedSecureFormer model was also deployed on a A(11) - 3870, A(12) - 3745, A(13) - 12564, A(14) - 12103,
+Jetson Nano running JetPack 4.6.6 to demonstrate real-time A(15) - 12370, A(16) - 16981, A(17) - 3876, A(18) - 8122,
+inference and evaluate performance in resource-constrained and A(19) - 7654. The dataset was split into a 70:15:15 ratio
+environments. for training, validation, and testing, respectively, ensuring that
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 7
+
+Algorithm 2 FedSecureFormer in FL-DP Algorithm TABLE I: Comparison of Model Architectures – Hybrid CNN-
+ SN LSTM and Temporal Convolutional Network against various
+ 1: Input: D = i=1 Di (federated dataset including X and y
+ Performance Measures
+ features across N clients), R = 100 (total rounds), E = 1
+ (epoch per round), B (batch size), η (learning rate), σ Model Acc Pre Recall F1-Score
+ (noise multiplier), Cclip (clipping norm), Θ0 (initial global 1cnn1lstm 0.8780 0.7875 0.7801 0.7817
+ weights), T = 20 (time steps), F = 9 (features) 2cnn1lstm 0.8788 0.7942 0.7881 0.7821
+ 2: Output: Final global model ΘR 2cnn2lstm 0.8777 0.7817 0.7771 0.7772
+ 3cnn1lstm 0.8784 0.7890 0.7836 0.7840
+ 3: Initialize FedSecureFormer weights Θ0 on the server 2cnn1Bilstm 0.8781 0.7855 0.7807 0.7805
+ 4: for r = 1 to R do TCN 0.8918 0.8237 0.8180 0.8179
+ 5: Broadcast global weights Θr−1 to all clients i = 1 to
+ N
+ 6: for all client i = 1 to N in parallel do pooling, and attention heads. We also validated the FL with
+ 7: Receive Θr−1 , set Θi ← Θr−1 DP using 20 clients and demonstrated real-time inference on a
+ 8: for all batch (X, y) ∈ Di do Jetson Nano, confirming the model’s suitability for resource-
+ 9: ŷ ← FedSecureFormer(X; Θi ) constrained environments.
+ PC
+10: LWCE = − c=1 wc · yc · log(ŷc )
+11: Compute gradients: ∇θi ← ∇LWCE A. Models Implemented to Perform IDS
+ ∥∇ |
+12: Clip gradients: ∇θj ← ∇θi / max(1, Cθclipi 2 ) We experimented with multiple models for attack detection:
+13: Add noiseand average:
+ PB  • Hybrid CNN-LSTM: Models trained with varying num-
+ ∇θj ← B1 2 2
+ i=1 θj + N (0, σ Cclip I) bers of CNN, LSTM, and BiLSTM layers with different
+14: Update model: Θi ← Θi − η · ∇θj loss functions.
+15: end for • TCN: A basic Temporal Convolutional Network (TCN)
+16: Return Θi and metrics (Accuracy, F1, etc.) model updated using cross-entropy loss.
+17: end for • Transformers: Multiple transformer architectures ex-
+ Aggregate: Θr ← P1ni
+ P
+18: ni · Θ i plored by varying the number of layers, multi-head self-
+19: end for attention heads, and employing different loss functions.
+20: return final model ΘR
+
+ B. Evaluation and Analysis of Results Obtained by Different
+ Hybrid CNN-LSTM and TCN Models
+the original class imbalance was preserved.
+ Table I presents the performance metrics of the hybrid
+ CNN-LSTM and TCN models. To ensure fairness, all the
+C. Model Hyperparameters compared models discussed were evaluated under identical
+ The model took approximately 6937.16 seconds to train for experimental settings. Among the hybrid configurations tested,
+100 epochs using the Adam optimizer (learning rate = 0.0003). the 2CNN-1LSTM (2cnn1lstm) architecture—comprising two
+A gradient penalty of 10 and a latent space dimension of 100 convolutional layers followed by one LSTM layer achieved the
+were used. The hyperparameter choices for our transformer best results when optimized using label smoothing loss. While
+architecture were selected through an extensive ablation study other loss functions, such as focal and cross-entropy, were
+(Section VI), resulting in six encoder layers, each equipped explored, label smoothing provided superior performance.
+with two attention heads, and a multi-head attention pooling Increasing the number of CNN or LSTM layers did not
+layer with four heads. In a centralized training setting, we set yield noticeable improvements in accuracy, but it significantly
+the projection dimension to 64, the batch size to 128, and increased training time. The TCN model, however, delivered
+used the smooth L1 loss. For the FL setup, we used a batch better overall performance due to its strength in modeling
+size of 64 and weighted cross-entropy loss to address class temporal dependencies. For clarity, only 2cnn1lstm and TCN
+imbalance introduced by data splitting across multiple clients. models are compared in Table II. The TCN achieved an overall
+The FL experiments used 20 clients across 100 rounds and recall of 81.79%, outperforming 2cnn1lstm, which achieved a
+1 local epoch, with a clip norm of 5 and a noise multiplier recall of 78.81%.
+of 0.001. For the His-AttnGAN, we considered using a batch
+size of 64 and a noise dimension of 128. C. Evaluation and Analysis of Results obtained by Varying
+ Transformer Architectures
+ VI. P ERFORMANCE E VALUATION AND A NALYSIS OF As shown in Table III, the six-layer transformer encoder
+ R ESULTS with two attention heads and multi-head attention pooling
+ This section presents the numerical and graphical results yielded the best results. Multi-head pooling outperformed
+of the proposed FedSecureFormer architecture. It includes an mean pooling and single-head pooling in handling time-series
+evaluation of attack-detection performance, comparisons with data. As illustrated in Fig. 4, six layers offered the best trade-
+Transformer, TCN, and hybrid CNN-LSTM models, and an off between accuracy and complexity, while deeper models
+analysis of design choices such as encoder layers, attention led to overfitting. Although four attention heads performed
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 8
+
+TABLE II: Recall Comparison Between Hybrid CNN-LSTM
+and TCN Across Attack Type
+ Attack Class Hybrid CNN-LSTM TCN
+ A(0) 0.5099 0.5935
+ A(1) 0.8250 0.8697
+ A(2) 0.7300 0.7647
+ A(3) 0.9983 0.9967
+ A(4) 0.5917 0.9468
+ A(5) 0.9717 0.9559
+ A(6) 0.9617 0.9633
+ A(7) 0.9983 0.9942
+ A(8) 0.9983 0.9942 Fig. 4: FedSecureFormer achieves optimal performance across
+ A(9) 0.8583 0.8529 Accuracy, Precision, Recall, and F1-score plotted against the
+ A(10) 0.7917 0.8304 number of encoder layers. Red labels indicate the best values
+ A(11) 0.4667 0.4128 at six encoder layers.
+ A(12) 0.6333 0.7052
+ A(13) 0.9617 0.9739
+ A(14) 0.7400 0.7871
+ A(15) 0.5517 0.6623
+ A(16) 0.9733 0.9799
+ A(17) 0.4083 0.5186
+ A(18) 0.9183 0.8076
+ A(19) 0.8650 0.7498
+ Overall 0.7881 0.8179
+
+TABLE III: Transformer Architecture Evaluation Across Pooling, Encoder and Attention Variants
+ Model Pooling used No of Enc/attn Acc Pre Recall F1-Score Fig. 5: FedSecureFormer achieves similar accuracy with both
+ Mean Average 6 layer, 2 attn 0.9306 0.8786 0.8190 0.8392 2 and 4 attention heads, though 4 heads significantly increase
+ Single-head attn 6 layer, 2 attn 0.9304 0.8756 0.8180 0.8382 training time.
+ 4 layer, 2 attn 0.9245 0.8671 0.8035 0.8273
+ 4 layer, 1 attn 0.9238 0.8626 0.8039 0.8260
+ Transformer
+ Multi-head attn 4 layer, 2 attn 0.9245 0.867 0.8035 0.827
+ 6 layer, 1 attn 0.9306 0.8761 0.8187 0.8380
+ 6 layer, 2 attn 0.9369 0.8798 0.8205 0.8404 on A(3), A(7), A(11), and A(12), it lacks consistency across
+ other classes. Our model achieves 99.89% on A(1), 92.38% on
+ A(2), 97.25% on A(5), and 99.94% on A(19), outperforming
+slightly better, as illustrated in Fig. 5, we used two attention all baselines.
+heads to reduce cost and retained four in the pooling layer
+ TABLE IV: Evaluation Metrics per Attack Type Utilizing Our
+for optimal performance. As reported in Table IV, the model
+ Proposed Transformer
+achieved an accuracy of 93.69%, precision of 87.98%, recall
+of 82.05%, and F1 score of 84.04%. It performed exception- Attack Class Accuracy Precision Recall F1 Score
+ally well across 10 attack types, with many achieving recall A(0) 0.9691 0.9694 0.9997 0.9843
+above 0.95 and perfect scores in 8 attack classes. We used a A(1) 0.8295 0.9122 0.9514 0.9068
+projection dimension of 64, which reduced model complexity A(2) 0.9581 0.9038 0.6192 0.7349
+ A(3) 0.9935 0.9935 1.0000 0.9967
+and training time while resulting in only a 0.305% drop
+ A(4) 0.8798 0.9765 0.8988 0.9361
+in performance compared to the larger variant with a 128- A(5) 0.9715 0.9835 0.9876 0.9855
+dimensional projection. A(6) 0.9656 0.9896 0.9896 0.9825
+ A(7) 0.9973 0.9973 1.0000 0.9986
+ A(8) 0.9960 0.9960 1.0000 0.9980
+D. Comparison of Performance with SOTA A(9) 0.9509 0.9534 0.9214 0.6742
+ A(10) 0.9742 0.9048 0.8042 0.8515
+ The recall comparison across attack classes shown in Table A(11) 0.9318 0.4432 0.5297 0.4826
+V indicates that our proposed model consistently outperforms A(12) 0.9588 0.9977 0.5888 0.7406
+ A(13) 0.9385 0.9427 0.9952 0.9683
+traditional baselines and recent SOTA methods in terms of
+ A(14) 0.9737 0.9837 0.7464 0.8488
+detection capability and reliability. It achieves the highest A(15) 0.6348 0.8173 0.7397 0.7766
+recall in 10 out of 19 attack classes, including perfect recall A(16) 0.9719 0.9943 0.9773 0.9857
+(100%) for critical classes such as A(3), A(7), A(8), and A(18). A(17) 0.9218 0.4029 0.3209 0.3572
+ A(18) 0.9717 0.7238 1.0000 0.8352
+In contrast, models like Hybrid CNN-LSTM and prior works
+ A(19) 0.9514 0.6477 0.7133 0.6789
+[2], [4], [6] exhibit lower and inconsistent performance. For
+ Overall 0.9369 0.8798 0.8205 0.8404
+example, [4] records only 5.5, 8, and 9% recall for classes
+A(2), A(4), and A(9), respectively. While [6] performs well
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 9
+
+TABLE V: Comparison of Recall Rates for Various Attack
+Types with SOTA
+ Attack Class Our Model Hybrid CNN-LSTM [2] [4] [6]
+ A(1) 0.9514 0.8250 0.9100 0.4250 0.8234
+ A(2) 0.6192 0.7300 0.4200 0.0550 0.7467
+ A(3) 1.0000 0.9983 0.7500 1.0000 0.9930
+ A(4) 0.8988 0.5917 0.4200 0.0800 0.9936
+ A(5) 0.9876 0.9717 0.9425 0.9450 0.8181
+ A(6) 0.9896 0.9617 0.9860 0.4200 0.0381
+ A(7) 1.0000 0.9983 0.9000 1.0000 0.9948
+ A(8) 1.0000 0.9983 0.9135 1.0000 0.9855
+ A(9) 0.9214 0.8583 0.9000 0.0900 0.0653
+ A(10) 0.8042 0.7917 1.0000 0.9850 0.0681
+ A(11) 0.5297 0.4667 1.0000 0.9850 0.9992 Fig. 6: Performance of FedSecureFormer in a federated setup,
+ A(12) 0.5888 0.6333 0.6000 0.0850 0.9990 showcasing the ideal number of clients as 20.
+ A(13) 0.9952 0.9617 1.0000 0.9800 0.7825
+ A(14) 0.7464 0.7400 1.0000 1.0000 0.7888
+ A(15) 0.7397 0.5517 0.4800 0.9950 0.6004 TABLE VIII: Evaluation of Federated Learning under Various
+ A(16) 0.9773 0.9733 0.8850 0.9850 0.0278 Differential Privacy Settings
+ A(17) 0.3209 0.4083 1.0000 0.9750 0.5326
+ A(18) 1.0000 0.9183 0.9333 1.0000 0.7958
+ A(19) 0.7133 0.8650 0.7635 0.9900 0.7693
+ Strategy Noise Clip Acc Pre Recall F1
+ Multiplier Norm
+
+TABLE VI: Comparison of FedAvg Strategy in Different 0.1 1 0.441 0.791 0.441 0.501
+ 0.05 1 0.478 0.804 0.478 0.543
+Settings 0.5 1 0.278 0.635 0.278 0.320
+ FL with DP 0.01 3 0.565 0.870 0.565 0.644
+ Strategy # Clients Epochs Rounds Acc Pre Recall F1-score
+ 0.001 1 0.731 0.907 0.731 0.789
+ Centralized – – 100 0.9369 0.8798 0.8205 0.8404 0.001 3 0.679 0.907 0.679 0.749
+ 1 100 0.8301 0.9094 0.8457 0.8561 0.001 5 0.827 0.898 0.749 0.797
+ FedAvg 20 2 50 0.8202 0.8960 0.8202 0.8439
+ 4 25 0.7551 0.8829 0.7551 0.7998
+
+ inferior performance. As shown in Table VII, lower values of
+ the proximal term µ yielded better performance. Additionally,
+ Even for challenging classes like A(11) and A(12), it mainresults for 5 and 7 clients were evaluated using 10 local
+tains a competitive recall of 52.97%, and 58.88%, respectively,
+ epochs and 50 communication rounds. Among these, the best
+surpassing most benchmarks. Additionally, we also encounperformance was obtained with 5 clients, when using a µ value
+tered the study [31], which utilizes the Mistral-7B model
+ of 0.01. We have shown results only for 5 and 7 clients, which
+for attack detection in CAVs, employing 8 out of 19 attack
+ performed best among a subset of configurations selected from
+classes from the VeReMi Extension dataset. However, the paa range of 3 to 10.
+per reported only class-averaged metrics, whereas ours shows
+an average improvement of approximately 0.0058 across all
+ F. Federated Learning Executed under Differential Privacy
+performance measures. Since the paper failed to report perclass metrics, a further detailed assessment is not possible. Table VIII compares the performance of FL models with DP
+ under different noise and clipping multipliers, using a batch
+ size of 64. Performance dropped significantly when the noise
+E. Evaluation of Federated Learning Results multiplier exceeded 0.5, indicating sensitivity to noise. How-
+ In the FL setup using FedSecureFormer, the best perfor- ever, careful tuning enabled a balance between privacy and
+mance was observed with 20 clients as illustrated in Fig. accuracy. The optimal DP-FL setting (noise = 0.001, clipping
+6. Each client received approximately 11350 training and = 5) achieved an accuracy of 0.827, precision of 0.898, recall
+2830 test samples, with slight variations to simulate real-world of 0.749, and an F1 score of 0.797, closely matching the nontraffic scenarios. Clients participated in a first-come, first- private FL results with only a 4.04% performance loss. The
+served manner. We used equivalent communication rounds privacy budget parameters (ϵ, δ) achieved with our model is
+(100) and local epochs (1) to align with centralized train- (6.329, 1.00e-05). This shows that well-tuned DP-FL models
+ing. The FedAvg strategy yielded strong results with only a can preserve privacy with minimal accuracy trade-off.
+1.03% performance drop compared to centralized training, as
+illustrated in Table VI. We also tested FedProx but observed G. Detection of Unseen Attacks Using Hist-AttnGAN
+ The real and generated sequences are presented in Fig.
+TABLE VII: FedProx Strategy Performance with Varying 7, where the x-axis corresponds to the feature values across
+Clients and Proximal Parameters eight dynamic vehicle features and the y-axis represents the
+Strategy # Clients Epochs Rounds Acc Pre Recall F1 µ
+ frequency of observations of each feature. The generated
+ sequence exhibits narrow distributions, as our goal was not
+ 0.7841 0.6761 0.6761 0.7499 0.01
+ 5 to introduce diversity but to create a new class of previously
+ 0.6652 0.3798 0.3798 0.4150 0.1
+FedProx 10 50
+ 7
+ 0.7541 0.4027 0.4027 0.4348 0.01 unseen data. The generated sequences were fed to the FedSe-
+ 0.6589 0.3201 0.3201 0.3086 0.1
+ cureFormer Transformer. We evaluated similarity thresholds
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 10
+
+Fig. 7: Comparison of real and generated sequences plotted using histograms. Each subplot corresponds to one feature, with
+the x-axis representing feature values and the y-axis showing frequency counts.
+
+ranging from 0.3 to 0.9 based on model confidence. We
+observed underfitting at thresholds below 0.5 and overfitting
+at thresholds above 0.5, making 0.5 the optimal similarity
+threshold. Using this optimal threshold of 0.5, we achieved
+a detection accuracy of 88%.
+
+H. Comparison of Model Parameters with Encoder-Only
+Transformers
+ As illustrated in Fig. 8, the proposed FedSecureFormer
+has 1.70 million parameters, significantly fewer than those
+of all other compared encoder-only transformer models. The Fig. 8: Comparison of FedSecureFormer model parameters
+minimal architecture of our model features six encoder layers, with other Encoder-only Transformers.
+two attention heads per encoder, multi-query multi-head attention pooling with four attention heads, a projection layer of
+64 dimensions, trained on short sequences and dedicated for TABLE IX: Inference Time Comparison on Jetson Nano with
+time series classification tasks, making it compact with fewer SOTA
+parameters.
+ Reference Environment Data Setup Prediction Inference Time (ms)
+ [4] 0.07 511.82 511.89
+I. Comparison of Inference Time with SOTA [30] Jetson Nano 0.33 287.74 288.07
+ Table IX illustrates the deployment of FedSecureFormer [30] 0.32 251.24 251.56
+ Ours 0.0075 3.77 3.7775
+on a Jetson Nano for inference to demonstrate real-time
+applicability. The model achieved an average inference time of
+3.7775 milliseconds per vehicle, highlighting its suitability for
+resource-constrained edge environments. Notably, our model
+outperforms existing SOTA approaches in terms of inference of 135.53× compared to [4] and 66× compared to [30] when
+speedup. Specifically, FedSecureFormer achieves a speedup evaluated on the Jetson Nano hardware platform.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 11
+
+ VII. C ONCLUSION [10] R. Sedar, C. Kalalas, F. Vázquez-Gallego, and J. Alonso-Zarate, “Reinforcement learning based misbehavior detection in vehicular networks,”
+ In this work, we propose FedSecureFormer, a novel in Proc. IEEE ICC, 2022, pp. 3550–3555.
+lightweight transformer model for cyberattack detection in [11] H. Wang, J. Wang, Y. Jiao, S. Wang, and J. Guo, “Hierarchical vector
+Connected and Autonomous Vehicles (CAVs). The model transformer-based cyberattack detection for connected and autonomous
+ vehicles via cloud platform,” in Proc. 2024 8th CAA International
+features a six-layer encoder-only architecture with two at- Conference on Vehicular Control and Intelligence (CVCI), 2024, pp.
+tention heads, multi-query multi-head attention pooling, and 1–6.
+a 64-dimensional projection. Comparable performance was [12] Q. Guan, T. Zhang, Y. Qin, Y. Zhou, Y. Zhu, Y. Zhong, X. Huang,
+ Z. Duan, Z. Li, C. Liu, and X. Wu, “Transformer model with multi-type
+observed between 64 and 128 dimensions, with the 64- classification decisions for intrusion attack detection of track traffic and
+dimensional version reducing the model size to 1.7 million vehicle,” in Proc. ICASSP 2024 - 2024 IEEE International Conference
+parameters (approximately 1.9M fewer than the larger variant). on Acoustics, Speech and Signal Processing (ICASSP), 2024, pp. 4510–
+ 4514.
+Despite its compact design, the model achieved a classification [13] A. Mundra, P. Vyas, and V. K. Verma, “Decentralized and lightweight
+accuracy of 93.69% across 19 attack categories. FedSecure- transformer-based framework for cybersecurity in vehicular networks,”
+Former demonstrated strong resilience in real-world scenarios, Engineered Science, 2025.
+ [14] H. Kang, B. I. Kwak, Y. H. Lee, H. Lee, H. Lee, and H. K. Kim,
+with only a 1.03% drop in accuracy in the federated learning “Car hacking and defense competition on in-vehicle network,” in Proc.
+setup and a 4.04% performance loss under differential privacy. Workshop on Automotive and Autonomous Vehicle Security (AutoSec),
+It also generalized well to unseen adversarial attacks generated vol. 2021. NDSS San Diego, CA, 2021, p. 25.
+ [15] F. Lin, H. Yan, J. Li, Z. Liu, L. Lu, Z. Ba, and K. Ren, “Phade:
+using a histogram-based LSTM attention GAN, achieving 88% Practical phantom spoofing attack detection for autonomous vehicles,”
+detection accuracy. Most importantly, it delivered real-time IEEE Transactions on Information Forensics and Security, vol. 19, pp.
+inference with an average of 3.7775 milliseconds per vehicle 4199–4214, 2024.
+ [16] C. Fan, J. Cui, H. Jin, H. Zhong, I. Bolodurina, and D. He, “Autoon a Jetson Nano, making it nearly 100× faster than state- updating intrusion detection system for vehicular network: A deep
+of-the-art models and ideal for latency-sensitive Intelligent learning approach based on cloud-edge-vehicle collaboration,” IEEE
+Transport Systems. We aim to explore the use of pre-trained Transactions on Vehicular Technology, vol. 73, no. 10, pp. 15 372–
+ 15 384, 2024.
+transformer models to benchmark performance against our [17] H. Liu, S. Zhang, P. Zhang, X. Zhou, X. Shao, G. Pu, and Y. Zhang,
+custom architecture. We also plan to investigate more efficient “Blockchain and federated learning for collaborative intrusion detection
+federated learning strategies that are mindful of bandwidth in vehicular edge computing,” IEEE Transactions on Vehicular Technology, vol. 70, no. 6, pp. 6073–6084, 2021.
+limitations, account for heterogeneous data distributions, mini- [18] M. Bhavsar, Y. Bekele, K. Roy, J. Kelly, and D. Limbrick, “Fl-ids:
+mize the performance gap between centralized and FL settings, Federated learning-based intrusion detection system using edge devices
+and are better suited for deployment on edge devices. for transportation iot,” IEEE Access, 2024.
+ [19] M. Al-Hawawreh and M. S. Hossain, “Federated learning-assisted distributed intrusion detection using mesh satellite nets for autonomous ve-
+ R EFERENCES hicle protection,” IEEE Transactions on Consumer Electronics, vol. 70,
+ [1] T. Alladi, V. Kohli, V. Chamola, F. R. Yu, and M. Guizani, “Artificial no. 1, pp. 854–862, 2023.
+ intelligence (ai)-empowered intrusion detection architecture for the in- [20] J. Kamel, M. Wolf, R. W. van der Hei, A. Kaiser, P. Urien, and F. Kargl,
+ ternet of vehicles,” IEEE Wireless Communications, vol. 28, no. 3, pp. “Veremi extension: A dataset for comparable evaluation of misbehavior
+ 144–149, 2021. detection in vanets,” in Proc. IEEE ICC, 2020, pp. 1–6.
+ [2] D. S, R. R. Shrivastava, P. Narang, T. Alladi, and F. R. Yu, “Vadgan: [21] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N.
+ An unsupervised gan framework for enhanced anomaly detection in Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” 2023.
+ connected and autonomous vehicles,” IEEE Transactions on Vehicular [Online]. Available: https://arxiv.org/abs/1706.03762
+ Technology, vol. 73, no. 9, pp. 12 458–12 467, 2024. [22] H. B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y Arcas,
+ [3] M. Althunayyan, A. Javed, and O. Rana, “A robust multi-stage “Communication-efficient learning of deep networks from decentralized
+ intrusion detection system for in-vehicle network security using data,” 2023. [Online]. Available: https://arxiv.org/abs/1602.05629
+ hierarchical federated learning,” Vehicular Communications, vol. 49, [23] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar, and V. Smith,
+ p. 100837, 2024. [Online]. Available: https://www.sciencedirect.com/ “Federated optimization in heterogeneous networks,” 2020. [Online].
+ science/article/pii/S2214209624001128 Available: https://arxiv.org/abs/1812.06127
+ [4] A. Chougule, V. Kohli, V. Chamola, and F. R. Yu, “Multibranch [24] S. W. Herlambang, F. Dewanta, and Y. Purwanto, “Federated learning
+ reconstruction error (mbre) intrusion detection architecture for intelligent approaches for iot intrusion detection based on fedavg and fedprox on
+ edge-based policing in vehicular ad-hoc networks,” IEEE Transactions iid and non-iid data,” in 2025 International Conference on Information
+ on Intelligent Transportation Systems, vol. 24, no. 11, pp. 13 068–13 077, and Communication Technology (ICoICT). IEEE, 2025, pp. 1–6.
+ 2022. [25] S. P. Karimireddy, S. Kale, M. Mohri, S. Reddi, S. Stich, and A. T.
+ [5] A. Kumar and T. K. Das, “Cavids: Real time intrusion detection Suresh, “Scaffold: Stochastic controlled averaging for federated learnsystem for connected autonomous vehicles using logical analysis of ing,” in International conference on machine learning. PMLR, 2020,
+ data,” Veh. Commun., vol. 43, no. C, Oct. 2023. [Online]. Available: pp. 5132–5143.
+ https://doi.org/10.1016/j.vehcom.2023.100652 [26] S. De, L. Berrada, J. Hayes, S. L. Smith, and B. Balle, “Unlocking
+ [6] O. Slama, B. Alaya, S. Zidi, and M. Tarhouni, “Comparative study of high-accuracy differentially private image classification through scale,”
+ misbehavior detection system for classifying misbehaviors on vanet,” in arXiv preprint arXiv:2204.13650, 2022.
+ Proc. 8th International Conference on Control, Decision and Informa- [27] I. Mironov, “Rényi differential privacy,” in 2017 IEEE 30th computer
+ tion Technologies (CoDIT), vol. 1. IEEE, 2022, pp. 243–248. security foundations symposium (CSF). IEEE, 2017, pp. 263–275.
+ [7] M. Z. Hossain, A. Imteaj, S. Zaman, A. R. Shahid, S. Talukder, [28] Y.-X. Wang, B. Balle, and S. P. Kasiviswanathan, “Subsampled rényi
+ and M. H. Amini, “Flid: Intrusion attack and defense mechanism for differential privacy and analytical moments accountant,” in The 22nd
+ federated learning empowered connected autonomous vehicles (cavs) international conference on artificial intelligence and statistics. PMLR,
+ application,” in Proc. 2023 IEEE Conference on Dependable and Secure 2019, pp. 1226–1235.
+ Computing (DSC), 2023, pp. 1–8. [29] I. Mironov, K. Talwar, and L. Zhang, “R\’enyi differential privacy of the
+ [8] P. Sharma and H. Liu, “A machine-learning-based data-centric misbe- sampled gaussian mechanism,” arXiv preprint arXiv:1908.10530, 2019.
+ havior detection model for internet of vehicles,” IEEE Internet of Things [30] T. Alladi, V. Kohli, V. Chamola, and F. R. Yu, “A deep learning based
+ Journal, vol. 8, no. 6, pp. 4991–4999, 2021. misbehavior classification scheme for intrusion detection in cooperative
+ [9] R. W. van der Heijden, T. Lukaseder, and F. Kargl, “Veremi: A dataset intelligent transportation systems,” Digital Communications and Netfor comparable evaluation of misbehavior detection in vanets,” 2018. works, vol. 9, no. 5, pp. 1113–1122, 2023.
+ [Online]. Available: https://arxiv.org/abs/1804.06701 [31] W. Hamhoum and S. Cherkaoui, “Mistralbsm: Leveraging mistral-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3681531
+
+ 12
+
+7b for vehicular networks misbehavior detection,” arXiv preprint
+arXiv:2407.18462, 2024.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

@@ -1,0 +1,1000 @@
+6362 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ Evaluation to Integration: Hybrid Feature Selection
+ Framework With Ensemble Machine Learning
+ for Intrusion Detection
+ Awais Bilal , Kashif Sharif , Senior Member, IEEE, Liehuang Zhu , Senior Member, IEEE,
+ Fan Li , Member, IEEE, Chang Xu , and Md Monjurul Karim , Member, IEEE
+
+ Abstract—We study feature selection (FS) for flow-based intru- complex, sectors ranging from corporate environments to home
+sion detection and propose a deterministic hybrid-FS that fuses IoT networks require strong security measures to safeguard
+Mutual Information, Random-Forest, and XGBoost importances sensitive information, maintain financial stability, and ensure
+under a simplex search with a single threshold. Using CIC-IDS-
+2017, CSE-CIC-IDS2018, and NF-UNSW-NB15, we evaluate ten
+ privacy [2]. The dynamic nature of cyber threats, including
+FS techniques paired with six ensembles under a leakage-safe sophisticated malware and social engineering tactics, demands
+protocol. The hybrid-FS consistently matches or exceeds the best security strategies that are both versatile and adaptive, leveragsingle selectors while reducing feature count (e.g., 78 → 31) and ing advanced technologies like machine learning and artificial
+improving runtime. Throughput rises by ∼9–10% and per-flow intelligence to stay ahead of attackers [3].
+latency drops from 0.44 → 0.40 ms (p50) and 1.40 → 1.20 ms Intrusion Detection Systems (IDS) are crucial for network
+(p99), with mean ± 95% CIs and paired tests. False-positive rate security, yet they face challenges that can compromise their ef-
+(FPR) decreases by 15–19% (≈22 fewer false alarms per hour at
+100k flows/h). Against representative PSO/GA hybrids, our fusion
+ fectiveness. High false positive rates often lead to ‘alert fatigue’,
+attains small but consistent macro-F1 gains and 15–25% FPR while traditional IDS struggle to adapt to the rapidly evolving
+reductions at comparable latency. We clarify adversarial robust- cyber threat landscape due to their reliance on predefined signaness with an explicit FGSM feature-space threat model and Deep- tures [4], [5]. Addressing these issues necessitates integrating
+PackGen configuration, and we diagnose cross-dataset shift with advanced, adaptable methods such as machine learning and
+lightweight mitigations. A 24-hour SOC replay links FPR to analyst behavioral analysis. These techniques enhance IDS by enabling
+time savings (2.5–3.7 hours/day) without sacrificing macro-F1 or them to dynamically learn from network activity and histori-
+AUROC. The results position deterministic, compact FS as a practical choice for inline IDS where tail latency and alert volume matter. cal data, thereby improving detection capabilities and overall
+ security [6]. Furthermore, integrating privacy-preserving mech-
+ Index Terms—Intrusion detection systems (IDS), ensemble anisms, such as those employed in blockchain-based framemachine learning models, feature selection (FS) techniques, works for e-healthcare systems, can further strengthen resilience
+hyperparameter tuning.
+ against evolving threats [7].
+ ML for Intrusion Detection: Machine learning significantly
+ I. INTRODUCTION enhances intrusion detection systems by enabling them to dy-
+ N TODAY’S interconnected world, robust network security namically learn from extensive datasets, effectively reducing
+I is essential to protect the vast digital infrastructure critical to
+various sectors [1]. As the digital landscape grows increasingly
+ false positives and adapting to emerging threats. This capability
+ shifts IDS from reactive to proactive security measures. A key
+ aspect of this enhancement is optimized feature selection (FS),
+ which improves diagnostic precision and scalability as network
+ Received 29 August 2025; revised 30 January 2026; accepted 7 February 2026.
+Date of publication 12 February 2026; date of current version 12 May 2026. The demands increase, reduces computational load, and minimizes
+work was supported in part by the National Natural Science Foundation of China the risk of overfitting due to irrelevant features. For instance,
+under Grant 62232002. (Corresponding author: Kashif Sharif.) Halim et al. and Amiri et al. demonstrated that optimized
+ Awais Bilal, Kashif Sharif, and Fan Li are with the School of Computer feature selection could elevate IDS accuracy to 99.80% [8],
+Science and Technology, Beijing Institute of Technology, Beijing 100081, China
+(e-mail: awaisbilal@bit.edu.cn; kashif@bit.edu.cn; fli@bit.edu.cn). [9]. Similarly, Hamed et al. showed that employing Recursive
+ Liehuang Zhu is with the School of Cyberspace Science and Technology, Feature Addition (RFA) and bigram techniques can increase IDS
+Beijing Institute of Technology, Beijing 100081, China, and also with the accuracy from 67% to 77.6% with smaller datasets and from 82%
+Shandong Key Laboratory of Energy Industry Internet Big Data Technology,
+Jinan 250003, China (e-mail: liehuangz@bit.edu.cn).
+ to 92.9% with larger datasets, while also reducing the false alarm
+ Chang Xu is with the School of Cyberspace Science and Technology, Beijing rate to 1.1% [10]. Conversely, Khammassi et al. highlighted
+Institute of Technology, Beijing 100081, China (e-mail: xuchang@bit.edu.cn). how the absence of feature selection could lead to increased
+ Md Monjurul Karim is with the Shenzhen Institute of Advanced Tech- computational demands and decreased system efficiency [11].
+nology, Chinese Academy of Sciences, Shenzhen 518005, China (e-mail:
+karim@siat.ac.cn). These studies underscore the pivotal role of feature selection in
+ This article has supplementary downloadable material available at https://doi. enhancing IDS capabilities, managing complex data effectively,
+org/10.1109/TDSC.2026.3664110, provided by the authors. and maintaining operational efficiency in real-time scenarios.
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TDSC.2026.3664110, provided by the authors.
+ Fig. 1 illustrates the integration of advanced machine learning
+ Digital Object Identifier 10.1109/TDSC.2026.3664110 techniques within IDS across different network architectures,
+ 1545-5971 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6363
+
+ Central to our investigation is developing a novel deterministic Hybrid Feature Selection (Hybrid-FS) technique that
+ synergistically combines the strengths of multiple methods to
+ refine model performance. These exploratory findings motivate
+ the design of our hybrid selector, which is then formally defined and evaluated extensively across multiple datasets, threat
+ models, and deployment scenarios. This approach is designed
+ to increase detection accuracy, improve operational efficiency,
+ and minimize false positives, thereby setting new standards for
+ the adaptability and effectiveness of intrusion detection systems.
+ Our goal is to enhance the operational and predictive capabilities
+ of ensemble machine learning-based IDS, enabling them to
+ effectively defend against a broad spectrum of cyber threats and
+ thereby strengthen overall network security. This study sets the
+ following specific objectives:
+ r Assess and compare a wide range of feature selection
+Fig. 1. Interaction map between network(s) & IDS, with machine learning
+integration and deployment of feature selection techniques. methods to determine their effectiveness in optimizing
+ IDS performance by balancing data reduction, accuracy,
+ computational efficiency, and system responsiveness.
+providing a visual map that details data flows, machine learning r Investigate the integration of feature selection with enintervention points, feature optimization, and their collective
+ semble learning models, analyzing synergistic effects and
+impact on security measures.
+ proposing best practices that improve detection accuracy
+ Problem Domain: The inclusion of irrelevant or redundant
+ and reduce false positives.
+features in machine learning models not only complicates their r Develop and rigorously evaluate a novel hybrid feature
+structure and increases processing burdens but also exacerselection technique, incorporating a principled simplexbates the overfitting problem, complicating decision-making
+ constrained joint search that optimizes macro-F1 and inprocesses and the interpretation of outcomes by security anaference time under stratified cross-validation, with datasetlysts [3], [12]. Targeted feature selection is crucial for reducspecific disclosed weights.
+ing these complexities, enhancing model generalizability, and r Perform a comprehensive comparative study to establish
+improving the interpretability of system decisions, which, in
+ benchmarks for IDS performance, including cross-dataset
+turn, aids analysts in responding more effectively to security
+ generalization (e.g., CIC-IDS-2017 → NF-UNSW-NB15)
+alerts [13]. By isolating only the most relevant features, feature
+ and robustness against adversarial perturbations (FGSM,
+selection not only simplifies the model and reduces the risk
+ DeepPackGen) within a defined threat model.
+of overfitting but also enhances accuracy and interpretability, r Highlight tangible improvements in IDS capabilities, such
+thereby supporting the operational efficiency of IDS [14].
+ as reduced response times, enhanced detection accuracy,
+ Additionally, employing ensemble methods like AdaBoost,
+ and resource-aware design for inline IDS deployment, sup-
+Random Forest, and XGBoost leverages the strengths of mulported by latency/throughput measurements and error-rate
+tiple learning algorithms to improve predictive accuracy and
+ reductions.
+robustness, essential for real-time threat detection [15]. These r Provide actionable insights for future IDS design and remethods, when combined with feature selection, enhance the
+ search, extending the findings to guide the refinement of
+adaptability and effectiveness of IDS against new and evolvadvanced security models.
+ing cyber threats [16]. Similar strategies are also utilized in
+ Structure of Paper: This paper is structured as follows.
+privacy-preserving data sharing within blockchain-based IoT
+ Section II reviews related work and technical background. Secnetworks, striking a balance between security and operational
+ tion III describes the experimental setup. Section IV reports
+efficiency [17], [18].
+ initial ensemble results with and without feature selection.
+ Objectives & Contributions: In the rapidly evolving field
+ Section V presents the proposed deterministic hybrid technique.
+of network security, the effectiveness of ensemble machine
+ Section VI evaluates its performance, and Section VII examines
+learning models heavily depends on feature selection to enhance
+ scalability across datasets. Section VIII discusses findings and
+accuracy, reduce complexity, and prevent overfitting [19], [20].
+ limitations, and Section IX concludes the study.
+Addressing this critical dependency, our study explores the
+research question: How can various feature selection methods
+optimize the performance of ensemble models to better detect
+and mitigate cyber threats? We investigate a range of estab- II. RELATED WORK AND TECHNICAL BACKGROUND
+lished techniques, including ANOVA, Boruta, Chi-Squared, L1-
+based Feature Selection, Mutual Information, PCA, Random- A. IDS and Feature Selection for Flow-Based IDS
+Forest Importance, RFE, RFECV, and XGBoost Importance, Traditional signature-based IDS struggle with novel attack
+in conjunction with ensemble methods like AdaBoost, Random vectors and evolving traffic, while ML-based IDS can suf-
+Forest, LightGBM, ExtraTrees, Bagging, and XGBoost. We first fer high false positives and overfitting to historical patterns,
+conduct an exploratory empirical evaluation of these ensemble limiting generalization to new threats [21], [22], [23], [24],
+models with and without existing feature selection methods to [25]. These realities motivate compact, informative feature sets
+quantify their impact on IDS performance and resource usage. and evaluation protocols that emphasize robustness, not only
+6364 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+aggregate accuracy but also macro-F1, rare-class behavior, and
+cross-dataset stability.
+ Recent representation-learning approaches, spanning transformers and attention-based deep models, learn packet/flow
+embeddings and increasingly tackle recognition of previously
+unseen attacks (open set) [26], [27], [28], [29], [30]. While effective, many such systems either rely on packet payloads or employ
+heavyweight architectures that can be impractical in security
+operations center (SOC) pipelines due to privacy/compliance
+constraints and runtime budgets [31]. Our scope is deliberately
+complementary, we target tabular, flow-level telemetry already
+available in operational networks and pair it with ensembles and
+compact feature sets, emphasizing feature economy, throughput/latency, and robustness under dataset shift and constrained
+adversaries [32].
+ Feature selection improves IDS by reducing dimensionality,
+mitigating noise, and controlling inference cost [9], [33]. Filter
+methods (e.g., mutual information) score features independently Fig. 2. Methodological Overview of Feature Selection for Ensemble Machine
+of a classifier and capture non-linear dependencies useful for Learning Models: From Evaluation to Integration.
+complex attacks [9]. Embedded methods expose model-driven
+importance (e.g., Random Forest and XGBoost gain/split met- model choices are typically judged not only by their detection
+rics) and are widely used in IDS pipelines to highlight salient capability but also by their ability to satisfy these runtime and
+flow attributes [34], [35], [36]. Wrapper methods (e.g., RFE) resource budgets.
+iteratively search subsets using a validation objective, often
+yielding strong accuracy at higher computational cost [37], [38]. D. Gaps That Motivate Our Empirical Study
+In practice, operational flow-based IDS favor FS schemes that (i)
+are reproducible, (ii) yield stable selections across folds/datasets,
+ r Reproducible, time-bounded fusion: Prior hybrids freand (iii) lower latency without degrading macro-F1. quently rely on stochastic, population-based search with
+ variable compute budgets [39], deterministic fusion with
+ explicit time bounds remains underexplored.
+B. Hybrid Feature Selection in the Literature r Robustness beyond a single dataset: Many studies optimize
+ Hybrid feature selection combines complementary signals within-dataset accuracy but do not assess cross-dataset
+(filter + embedded + wrapper) to stabilize rankings and cope generalization or out-of-box behavior [38], [42].
+with high-dimensional traffic features [33], [37]. Representative r Operational metrics: Tail latency (p99), false-positive rate,
+designs include Particle Swarm Optimisation (PSO) and Genetic and rare-class F1, key for analyst workload and inline
+Algorithms (GA) wrappers that search over subsets or fusion SLAs, are often secondary to aggregate accuracy [40], [41].
+weights [39], rank-fusion schemes that aggregate multiple scor- r Adversarial considerations: FS-centric work rarely articers, and CFS-DE variants integrated with stacking classifiers ulates explicit threat models or systematically evaluates
+reporting high accuracy on benchmark datasets [37]. However, performance under constrained feature- or packet-level
+population-based wrappers (PSO/GA) can introduce substantial perturbations [43].
+and variable runtime on 70–80 feature spaces, complicating Positioning of our approach: Against this backdrop, the redeterministic, time-bounded deployment. Existing hybrid ap- mainder of this work empirically studies ensembles with and
+proaches typically emphasize single-dataset accuracy and offer without a range of existing FS methods under the above metlimited analysis of cross-dataset generalization, adversarial ro- rics and constraints. Building on these observations, we later
+bustness, or tail-latency behavior, considerations that are crucial introduce a deterministic hybrid selector that fuses MI, RF, and
+for inline IDS deployments. XGBoost importances through a constrained weighting scheme
+ tuned to macro-F1 and latency, and evaluate it in terms of
+C. Evaluation Metrics and Operational Constraints in-dataset performance, cross-dataset generalization, adversarial robustness, and p50/p99 latency and FP-rate (Sections VI
+ Evaluation of IDS and associated FS pipelines must jointly and VII).
+consider classification quality and operational constraints. Standard metrics such as accuracy and area under the ROC curve
+ III. EXPERIMENTAL SETUP FOR BASELINE AND FS STUDIES
+(AUC) summarize overall discrimination ability, while macroaveraged F1 emphasizes performance on minority attack classes This section describes the experimental setup used to evaluate
+and mitigates dominance of majority benign traffic. In op- baseline ensemble models and their variants equipped with
+erational settings, false-positive rate directly affects analyst individual feature-selection methods. The overall methodology,
+workload and ‘alert fatigue’, and thus is often as important from evaluation to integration, is illustrated in Fig. 2. The objecas aggregate accuracy [40], [41]. Latency metrics, including tive is to establish a leakage-safe, reproducible framework that
+median and tail inference time (e.g., p50/p99), constrain feasible enables fair comparison across datasets, preprocessing choices,
+model complexity under service-level agreements, especially for imbalance handling procedures, ensemble learners, existing feainline or near-real-time IDS deployments. Consequently, FS and ture selection algorithms, and evaluation metrics.
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6365
+
+ TABLE I
+ DATASET SCHEMA, CLASS DISTRIBUTION, AND SPLITS BEFORE/AFTER SMOTEENN. MINOR CLASSES (< 0.1%) GROUPED AS OTHER
+
+A. Datasets and Class Imbalance this section, ensuring that performance differences arise primar-
+ Our study relies on three widely used flow- and packet- ily from the feature subsets rather than model retuning. Detailed
+level intrusion detection benchmarks, CIC-IDS-2017, CSE- configurations are listed in Table II.
+CIC-IDS2018, and NF-UNSW-NB15. These datasets differ substantially in traffic composition, attack diversity, and underlying D. Existing Feature Selection Algorithms
+feature schemas, providing a broad testbed for assessing the To evaluate how existing feature selection methods interact
+stability of feature selectors and ensemble models. For each with ensemble learners, we consider ten algorithms representing
+benchmark, we distinguish between the raw dataset, consisting the main methodological families. Filter-based selectors, such as
+of the unmodified feature space and original class distributions, ANOVA, Chi-Squared, and Mutual Information, score features
+and the post-processed variant obtained after the preprocessing independently of the classifier and provide rapid assessments
+steps described below. All three datasets exhibit pronounced of relevance. Embedded methods, including L1 regularization,
+class imbalance, with several minority attack categories occur- Random Forest importance, and XGBoost importance, expose
+ring at ratios exceeding 103 :1, a property that strongly influences model-driven saliency signals tied to their internal decision
+how feature selection and model learning behave. mechanisms. Wrapper approaches, such as RFE, RFECV, and
+ the Boruta algorithm, iteratively explore feature subsets and
+B. Preprocessing and Imbalance Handling often achieve high accuracy at the cost of increased computation. PCA is included as a dimensionality-reduction baseline
+ Preprocessing begins with standard cleaning operations, in- that retains variance-driven structure rather than explicit feature
+cluding the normalization of column names, enforcement of nu- relevance. All selectors are trained strictly within the training
+meric datatypes for flow-level attributes, and consistent handling folds, the resulting feature subsets are applied unchanged to the
+of non-ASCII entries. Missing numeric values are replaced with validation and test data to avoid leakage.
+column means, while categorical gaps are imputed using modal
+categories. Attack-type strings are encoded into integer labels,
+after which each dataset is partitioned into stratified training, E. Evaluation Metrics and Protocol
+validation, and test splits, preserving class priors as defined in Evaluation focuses on several complementary metrics. Ac-
+Table I. curacy and AUC provide broad measures of discrimination,
+ To mitigate extreme class imbalance, we apply SMOTEENN while macro-F1 captures performance across classes of uneven
+with k = 5 exclusively within the training folds. This combined prevalence and is therefore more reflective of behavior on rare
+oversampling and cleaning procedure helps stabilize minority- attack types. False-positive rate is reported due to its operational
+class learning and improves minority-class F1 without incurring importance in security operations centers, where excessive alerts
+the heavier computational overhead of pure oversampling strate- can quickly overwhelm analysts. Latency is measured in terms
+gies such as SMOTE. Crucially, neither the validation nor the of per-flow inference time, including both median and p99
+test splits are resampled, they remain in their raw form to ensure statistics, to capture the responsiveness requirements of inline
+that generalization is measured on realistic, imbalanced distri- IDS deployments. All models are trained and validated on stratbutions. Standardization is then performed by fitting a Stan- ified splits to preserve class proportions, and all preprocessing,
+dardScaler on the training fold and applying it unchanged feature selection, and resampling steps are encapsulated within
+to the validation and test sets, thereby preventing information the training fold to prevent any form of information leakage.
+leakage. A small set of redundant, timestamp-derived columns Experiments are conducted on an Intel Xeon Silver 4210R
+exhibiting extremely high correlation is removed to streamline CPU with 32 GB of RAM, paired with an Nvidia RTX3080
+subsequent feature-selection computations. GPU (12 GB VRAM) running CUDA 11.2 and cuDNN 8.1.
+ The software stack uses Python 3.8.10 and scikit-learn 1.4.2.
+C. Ensemble Models and Hyperparameters This environment provides consistent measurement of latency,
+ throughput, and other runtime metrics across all baseline and
+ To provide strong and diverse baselines, we employ six single-feature-selection experiments.
+ensemble models, Random Forest, ExtraTrees, Bagging, AdaBoost, XGBoost, and LightGBM. These ensembles collec-
+ IV. EXPLORATORY RESULTS: ENSEMBLES WITH AND
+tively span variance-reduction strategies and gradient-boosting
+mechanisms commonly used in IDS research and offer different WITHOUT EXISTING FEATURE SELECTION
+trade-offs between stability, expressiveness, and inference cost. This section presents exploratory, motivation-oriented find-
+Their hyperparameters follow established configurations suit- ings from our evaluation of ensemble models on the CIC-IDSable for tabular data and remain fixed across all experiments in 2017 dataset, both with and without established feature selection
+6366 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE II
+ ENSEMBLE METHODS AND FEATURE SELECTION TECHNIQUES: CONFIGURATION OVERVIEW
+
+ TABLE III
+ BASELINE PERFORMANCE METRICS AND RATIONALE FOR FEATURE SELECTION TECHNIQUES ON ENSEMBLE MODELS
+
+Fig. 3. Comparative overview of performance metrics for ensemble models.
+ Fig. 4. Comparative ROC curves of ensemble models.
+
+techniques. These experiments are not meant to provide a final attaining accuracies of 99.88% and 99.79%, respectively, along
+or optimized configuration, rather, they reveal the characteristic with consistently high precision and recall. ExtraTrees also
+strengths, weaknesses, and latency, performance trade-offs that performed competitively, reaching 99.79% accuracy and strong
+guide the design requirements for a more principled hybrid F1 scores, making it a reliable high-capacity model. In contrast,
+selector introduced later in Section V. AdaBoost and LightGBM exceeded 90% accuracy but exhibited
+ lower F1 scores due to imbalanced precision and recall.
+A. Baseline Ensemble Performance (No Feature Selection) ROC curves in Fig. 4 further reflected these differences.
+ ExtraTrees reached the highest AUC (0.92), while AdaBoost,
+ We begin by establishing reference performance for each
+ RandomForest, and XGBoost clustered around 0.87, and Lightensemble using the full, preprocessed feature set, as summarised
+ GBM lagged at 0.84. Operational efficiency is crucial for inline
+in Table III. This baseline provides a neutral point against which
+ IDS deployment, and the models exhibited clearly different
+the impact of individual feature selectors can be assessed.
+ latency characteristics, as shown in Fig. 5. XGBoost delivered
+ As illustrated in Fig. 3, performance varied considerably
+ the fastest prediction time,1 processing a batch of 1,000 flows in
+across the six ensemble methods, AdaBoost, RandomForest,
+ 4.65 seconds. LightGBM and RandomForest also demonstrated
+LightGBM, ExtraTrees, Bagging, and XGBoost, in terms of
+accuracy, discriminative power, and latency. Among them, XG-
+Boost and RandomForest delivered the strongest overall results, 1 Measured as wall-clock time throughout this work.
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6367
+
+ TABLE IV
+ IMPACT OF REPRESENTATIVE FEATURE SELECTORS ON ENSEMBLE
+ PERFORMANCE
+
+Fig. 5. Prediction time for 1,000 flows on RTX 3080 (CIC-IDS-2017 test set).
+
+acceptable latency for time-sensitive applications, whereas AdaBoost and Bagging required 43.55 seconds and 54.03 seconds,
+respectively, making them less suitable for real-time scenarios
+in their baseline form.
+ Beyond aggregate ROC and latency trends, we observed that
+LightGBM showed less stable class-wise behavior than the other
+ensembles, with higher FP/FN dispersion across multiple attack
+categories under the same feature-selection settings. Detailed
+confusion-matrix results are presented in Appendix A (Fig. A.1),
+available online. Learning-curve results further support these
+observations, AdaBoost shows a persistent generalization gap
+as sample size increases (suggesting overfitting), whereas XG-
+Boost improves steadily with a tighter train-validation gap.
+RandomForest and ExtraTrees remain stable across data scales,
+while LightGBM retains the largest train–validation gap. The
+learning-curves of all six ensembles is provided in Appendix A
+(Fig. A.2), available online.
+ Collectively, the baseline evaluations highlight three patterns, (i) high-capacity ensembles such as RandomForest and
+ExtraTrees risk overfitting when trained on wide feature sets,
+(ii) AdaBoost and LightGBM require more informative feature subsets to stabilize precision–recall behavior, and (iii)
+latency differences across models imply the need for feature
+sets that reduce inference cost without degrading predictive
+performance.
+
+B. Effect of Existing Feature Selection Methods
+ To understand how established feature selectors modify
+ensemble performance, we evaluated ten methods, ANOVA,
+ Fig. 6. Performance overview of feature selectors and ensembles.
+Boruta, Chi-Squared, L1-based selection, Mutual Information,
+PCA, RandomForest Importance, RFECV, RFE, and XGBoost
+Importance, applied uniformly across all six ensembles, with the penalties. RandomForest responded well to RFECV, Boruta,
+main results summarised in Table IV, while the full results are and L1-based selection, achieving accuracies near 99.72% with
+provided in Appendix B (Table B.1), available online. sustained efficiency. XGBoost demonstrated both high accuracy
+ The results, shown in Fig. 6, reveal substantial model-specific and low prediction time when combined with RFECV or Boruta,
+variation. For AdaBoost, both Boruta and L1-based selection solidifying its suitability for real-time detection.
+improved accuracy from 95.71% to approximately 97.6%, with ROC-AUC analysis, shown in Fig. 7, reinforced these trends.
+corresponding F1 gains, but at the cost of increased latency. Most selectors achieved near-perfect AUC values for well-
+Bagging benefited strongly from RFECV and Boruta, achieving aligned model–selector combinations. However, Chi-Squared
+accuracies as high as 99.49% and F1 scores exceeding 99.4%, produced consistently lower AUC values (≈0.93–0.95) across
+though these combinations also produced some of the slowest several models and showed recurring misclassifications in a
+prediction times. ExtraTrees reached near-perfect scores, often subset of classes, particularly 0, 4, and 10. The corresponding
+above 0.998 in accuracy and F1, when paired with Boruta or confusion-matrix results are provided in Appendix C (Fig. C.1),
+L1-based selection. LightGBM benefited primarily from Mutual available online. Learning-curves are also provided in Ap-
+Information and RandomForest Importance, which produced pendix C (Fig. C.2), available online. These curves indicate that
+moderate accuracy improvements without significant latency Boruta and L1-based selection allowed Bagging and ExtraTrees
+6368 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ that motivate the design of a more balanced feature-selection
+ strategy.
+ First, different selectors capture complementary forms of signal. Mutual Information is efficient and improves precision for
+ models such as LightGBM, RandomForest Importance is particularly effective for tree-based ensembles, and XGBoost Importance provides highly discriminative rankings with exceptional
+ inference efficiency. These complementary behaviors suggest
+ that no single selector fully captures the diversity of predictive
+ structure present in flow-level IDS data. Second, several selectors with strong predictive performance, most notably Boruta,
+ L1-based selection, and RFECV, incur substantial latency penalties, particularly when paired with high-capacity ensembles.
+ This makes them unsuitable for inline IDS deployments despite
+ their accuracy benefits. Third, many baseline models, especially
+ RandomForest, ExtraTrees, and LightGBM, exhibit signs of
+ overfitting that are mitigated when informative subsets are used.
+ This highlights the need for feature-selection mechanisms that
+ enhance generalization rather than merely boosting in-dataset
+ accuracy.
+ These observations motivate the development of a hybrid
+ feature selector that (i) combines complementary scoring mechanisms drawn from filter and embedded methods, (ii) imposes
+ time-bounded inference constraints, and (iii) improves robust-
+Fig. 7. ROC curves of feature selectors and each ensemble model. ness while avoiding the computational overhead of wrapperbased approaches. We define such a selector formally in Section V and evaluate it extensively in subsequent sections.
+
+ V. PROPOSED DETERMINISTIC HYBRID FEATURE SELECTION
+ TECHNIQUE
+ Building on the exploratory results of Section IV, we propose
+ a deterministic hybrid feature selection technique designed to
+ exploit the complementary strengths of Mutual Information
+ (MI), RandomForest Importance (RFI), and XGBoost Impor-
+Fig. 8. Prediction time per 1,000 flows (RTX 3080) for six ensembles and ten tance (XGI). The goal is to construct a single, operationally effiselectors. cient feature subset that preserves, or improves, detection quality
+ while respecting latency constraints in inline IDS settings.
+to converge rapidly to high accuracy, while RFECV-based approaches introduced greater variability but ultimately stabilised A. Problem Formulation
+at strong validation performance.
+ Prediction latency varied significantly, as reflected in Fig. 8. The exploratory study in Section IV revealed that (i) wide
+XGBoost Importance consistently yielded the fastest inference feature sets encourage overfitting in high-capacity ensembles,
+times, with XGBoost processing 1,000 flows in approximately (ii) individual FS methods exhibit distinct strengths and weak-
+1.77 seconds. Conversely, Bagging combined with RFE required nesses, and (iii) wrapper-based hybrids can be accurate but often
+more than 17 seconds. Several lightweight selectors, Mutual incur prohibitive inference costs. We therefore seek a principled
+Information and PCA most notably, improved model way to fuse three base selectors, MI, RFI, and XGI, into a single,
+performance with minimal increases in inference time, making consensus ranking from which a compact subset can be derived.
+them attractive for cost-sensitive deployments. Formally, let D denote the preprocessed training data (Sec-
+ These results demonstrate that while many selectors improve tion III) and let si (f ) ∈ [0, 1] be the normalised importance
+predictive performance, they present divergent computational score assigned to feature f by selector i ∈ {1, . . . , M }, with
+characteristics. Wrapper-based selectors (e.g., Boruta, RFECV, M = 3 for MI, RFI, and XGI. For any non-negative weight
+RFE) often deliver high accuracy but incur undesirable latency vector w = [w1 , . . . , wM ] on the simplex,
+overhead. Filter and embedded methods such as Mutual Infor- 
+ M
+mation, RandomForest Importance, and XGBoost Importance, wi = 1, wi ≥ 0, (1)
+however, offer more favorable accuracy–latency trade-offs. i=1
+
+ we define the combined importance score
+C. Empirical Observations and Design Requirements
+ 
+ M
+ The exploratory results across baseline and established fea- σ(f, w) = wi si (f ). (2)
+ture selector experiments reveal a number of recurring patterns i=1
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6369
+
+ TABLE V
+ NOTATION SUMMARY
+ Algorithm 1: Hybrid Feature Selection.
+ Require:Dataset D with labels L
+ Ensure:Selected feature set F (w , θ )
+ 1: D̄ ← Preprocess(D)  clean, encode, balance
+ 2: Obtain raw importance scores (all features at once)
+ 3: SM ← M(D̄)  MI
+ 4: SR ← R(D̄)  RFI
+Given a percentile threshold θ, this induces a feature subset 5: SX ← X (D̄)  XGI
+ F (w, θ) = {f | σ(f, w) > θ} . (3) 6: Normalize scores to [0,1]
+ 7: for each feature f do
+ Our aim is to choose (w, θ) such that a downstream classifier 8: ŜM [f ] ← SM [f ]/ max(SM )
+hF (w,θ) achieves strong macro-F1 while satisfying practical 9: ŜR [f ] ← SR [f ]/ max(SR )
+latency constraints. We express this via a validation loss on an
+ 10: ŜX [f ] ← SX [f ]/ max(SX )
+outer cross-validation fold Dval :
+ 11: end for
+ 1   
+ minimise Lval (w, θ) :=  y, hF (w,θ) (x) 12: Grid-search weight vector w on the simplex
+ w,θ |Dval |  w = (w1 , w2 , w3 ) in SIMPLEXGRID(δ) do
+ 13: for 
+ (x,y)∈Dval
+ i wi =1
+ 
+ M
+   14: Sc [f ] ← w1 ŜM [f ] + w2 ŜR [f ] + w3 ŜX [f ] for all f
+ subject to wi = 1, wi ≥ 0, latency hF (w,θ) ≤ τ,(4)  hybrid score σ(f, w)
+ i=1 15: for k ∈ {60, 65, . . . , 90} do  percentile sweep for θ
+where  is a macro-F1–aligned loss and τ encodes an application- 16: θ ← percentile(Sc , k)
+specific latency budget. In this work, we solve (4) determinis- 17: F (w, θ) ← { f | Sc [f ] > θ }  feature subset
+tically via a simplex-constrained grid search, as detailed below. 18: evaluate F (w, θ) via cross-val (macro-F1 , FPR,
+The notation used throughout this subsection is summarised in latency), update best (w , θ )  minimize validation
+Table V. loss under latency
+ 19: end for
+B. Hybrid Score Formulation 20: end for
+ 21: return F (w , θ ), θ
+ Let f ∈ {1, . . . , d} index the original features. For each feature we obtain three normalised importance scores,
+ C. Simplex-Based Fusion of MI, RFI, and XGI
+ sMI RFI XGI
+ f , sf , sf ∈ [0, 1],
+ The proposed fusion mechanism proceeds in three steps, (i)
+computed respectively from mutual information with the la- compute base importance scores for MI, RFI, and XGI, (ii)
+bel, RandomForest impurity decrease, and XGBoost gain, each normalise these scores, and (iii) perform a simplex-constrained
+rescaled to [0,1] across features as described in Section V-C. grid search over w and percentile thresholds to select the best
+ We collect these base scores into a vector combination. The overall procedure is summarised in Algo-
+  
+ XGI 
+ s(f ) = sMI RFI
+ f , sf , sf ∈ [0, 1]3 , rithm 1.
+ First, for each cross-validation training fold we compute:
+and define a fusion weight vector r MI scores M(D) for each feature, measuring mutual de-
+   pendence with the label.
+ w = wMI , wRFI , wXGI ∈ Δ2 , r RFI scores R(D) via decrease in tree impurity across a
+ 
+where Δ2 = { w ∈ R3≥0 : k wk = 1 } is the 2-simplex. The RandomForest ensemble.
+corresponding hybrid importance score for feature f is r XGI scores X (D) via cumulative gain in an XGBoost
+ model.
+ σ(f, w) = w s(f ) = wMI sMI
+ f + wRFI sf + wXGI sf , (5)
+ RFI XGI
+ These raw score vectors are then min–max normalised into
+which is consistent with the general formulation in (4). [0,1] to yield s1 , s2 , s3 . For any candidate weight vector w on
+ Given a candidate weight vector w, we obtain a feature subset the simplex, we form the combined score
+by applying a percentile-based threshold θ to the hybrid scores:
+   sc = w1 s1 + w2 s2 + w3 s3 . (7)
+ F (w, θ) = f : σ(f, w) > θ , (6)
+ To avoid stochasticity associated with population-based optiwhere θ is chosen as a quantile of the empirical score distribution misers, we perform a deterministic grid search on the simplex
+{σ(f, w)}df =1 . This percentile view is equivalent to selecting the with step δ = 0.05. For each w, we sweep a set of percentile
+top-k features for a suitable k, but offers a more direct handle thresholds and evaluate the resulting feature set F (w, θ) using
+on the resulting sparsity level. stratified cross-validation. The pair (w , θ ) that minimises
+ In the optimisation problem of Section V-A, we therefore the validation loss in (4) is retained. The optimisation is fully
+seek an operating point (w, θ) that maximises macro-F  1 onthe deterministic, given a fixed dataset, cross-validation protocol,
+validation folds under the latency constraint latency hF (w,θ) ≤ and grid resolution, the same weight vector and threshold are
+τ . False-positive rate is monitored as a secondary criterion when recovered across runs, avoiding the variance and budget sensicomparing candidate solutions. tivity characteristic of stochastic wrappers.
+6370 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Fig. 9. Data preprocessing and feature selection pipeline.
+
+D. Hybrid Feature Subset Construction selectors and replacing stochastic, budget-sensitive wrappers
+ The outcome of Algorithm 1 is a hybrid feature subset F = hyb with a deterministic, time-bounded simplex optimisation.
+F (w , θ ), which we subsequently use in ablation and robustness experiments. The key design element is the percentile-based F. Leakage-Safe Integration in the Pipeline
+thresholding of the combined scores. To ensure that the hybrid selector does not introduce infor-
+ Let Sc denote the combined importance scores under w . We mation leakage, we integrate it into the training pipeline in
+define a strictly fold-local manner, as depicted in Fig. 9. For each
+ θ = Qk = quantile(Sc , k  /100), (8) cross-validation fold, the procedure is,
+for some k ∈ {60, 65, . . . , 90} selected during the grid search.
+  1) Split data into training and validation partitions (stratified).
+The final hybrid subset is then 2) Apply preprocessing and imbalance handling (SMO-
+ TEENN) only on the training partition, as described in
+ F hyb = {f ∈ D | Sc (f ) > θ }. (9) Section III.
+ This construction enforces a controllable sparsity level, higher 3) Compute MI, RFI, and XGI scores on the training partition
+percentiles yield smaller, faster subsets, while lower percentiles and run Algorithm 1 to obtain F hyb for that fold.
+retain more features and potentially capture subtler patterns. In 4) Train the downstream classifier using only the features in
+our experiments, the learned thresholds typically select between F hyb .
+20% and 40% of the original feature space, striking a balance 5) Evaluate on the corresponding validation (or test) data,
+between accuracy and inference cost. All later references to “our which are never used in score computation or threshold
+hybrid subset” or “hybrid selector” refer to F hyb and the scoring tuning.
+procedure defined in Sections V-A–V-C. The final hybrid subset used in our ablation and robustness experiments is derived from the full training data using
+E. Relation to PSO/GA-Based Hybrid Selectors the same deterministic fusion procedure and hyperparameters
+ selected during cross-validation. Test folds remain untouched
+ Hybrid feature selection has often been implemented via throughout, ensuring that all reported performance metrics repopulation-based wrappers, notably, PSO and GA that search flect genuine generalisation rather than artefacts of leakage. We
+either over feature subsets or over fusion weights for multiple evaluate the operational impact of Hybrid-FS on false positives
+selectors. These methods can achieve high accuracy but typically and analyst workload in Section VII-E.
+require many fitness evaluations, leading to long and variable
+runtimes, and their stochastic nature can produce different subsets across runs for the same dataset and budget. VI. EVALUATION OF THE HYBRID FS FRAMEWORK
+ To place our approach in context, we reproduced two rep- This section presents a comprehensive evaluation of the
+resentative hybrids under the same preprocessing and cross- proposed deterministic Hybrid-FS framework. Building on the
+validation protocol as used for our method, a PSO wrapper exploratory insights in Section IV and the method introduced
+over RandomForest, and a GA-based rank fusion over MI, RFI, in Section V, we examine whether the hybrid subset improves
+and XGI. While detailed numerical comparisons appear in later classification performance, false-positive behavior, runtime efresults sections, we summarise the qualitative observations as ficiency, and robustness across datasets, models, and deployfollows. ment scales. In contrast to Section IV, which was explicitly
+ First, PSO/GA wrappers explore the combinatorial space exploratory, this section constitutes our conclusive evaluation
+of feature subsets directly, whereas our method operates in a of the framework under realistic deployment conditions.
+low-dimensional, simplex-constrained weight space and uses a
+percentile threshold to derive the subset. This shifts the optimisation burden from discrete subset search to continuous weight A. Ablation: Does Feature Selection Matter?
+tuning, which is more amenable to deterministic grid search. We quantify the effect of the proposed Hybrid-FS by retrain-
+Second, we observed that the deterministic simplex fusion yields ing the three strongest baseline classifiers, XGBoost, ExtraTrees,
+accuracy and macro-F1 that are competitive with, and in some and RandomForest, using both the full feature set and the hybrid
+cases slightly better than, PSO/GA hybrids, while reducing subset defined in Section V. As summarised in Table VI, the
+false-positive rates and avoiding the heavy and unstable search hybrid subset consistently improves accuracy and macro-F1 by
+overhead of stochastic wrappers. Importantly, the inference la- 0.4–0.7 pp while reducing inference latency by 12–15%. These
+tency of the resulting models remains comparable, as our opti- gains confirm that Hybrid-FS eliminates distracting, low-yield
+misation explicitly accounts for runtime alongside macro-F1. dimensions without harming decision boundaries. The improve-
+Thus, our contribution builds on the strengths of hybrid FS ments are especially notable in tail-latency behavior. The p99
+methods by maintaining the complementary use of multiple reductions reported later in Table X show that the hybrid subset
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6371
+
+ TABLE VI TABLE VIII
+ ABLATION STUDY ON CIC-IDS-2017: FULL FEATURE SET VERSUS HYBRID FALSE POSITIVES BEFORE (E0) VERSUS AFTER (E4, HYBRID-FS). ASSUMES
+ SUBSET. Δ IS THE DIFFERENCE HYBRID − FULL 100 K FLOWS/H, 95% BENIGN
+
+ TABLE VII TABLE IX
+ ISOLATION FOREST PERFORMANCE WITH/WITHOUT HYBRID-FS PER-ATTACK PRECISION(P) AND RECALL(R) ON CIC-IDS-2017
+
+meaningfully tightens worst-case inference time, addressing an TABLE X
+operational bottleneck for inline IDS pipelines. These findings PER-FLOW INFERENCE LATENCY (MS) WITH 95% CIS OVER 20 RUNS.
+ SIGNIFICANT GAINS (p < 0.05) MARKED WITH •
+reinforce the exploratory trends observed in Section IV, where
+individual selectors (MI, RFI, XGBI) already suggested substantial redundancy in the raw feature space.
+
+B. Cross-Model Validation
+ To assess whether Hybrid-FS generalises beyond tree-based
+learners, we evaluate a heterogeneous majority-vote ensemble
+combining logistic regression, RBF-SVM, and RandomForest.
+Using all raw features, this ensemble achieves 98.4% accuracy
+and a macro-F1 of 0.978 on CIC-IDS-2017. When trained on
+the Hybrid-FS subset, accuracy rises to 99.1% and macro-F1 to
+0.985, an improvement of 0.7 pp. Although the ensemble still
+trails the best tree-based model (XGBoost + Hybrid-FS, which
+reaches 0.992 macro-F1), this experiment shows that the hybrid
+subset benefits classifiers with substantially different inductive
+biases. The gains stem from removing noisy or redundant attributes rather than exploiting idiosyncrasies of any particular Fig. 10. IDS scaling: (a) throughput versus batch size, (b) inference time (10 k
+learning architecture. flows) versus feature count. Mean±95% CI over 20 runs, Tables XVI–X.
+ Unsupervised sanity check: To further test the generalisability of the hybrid subset, we trained an Isolation Forest on the approximately 9% and p99 by 14%. Although the absolute difsame balanced CIC-IDS-2017 split. Table VII shows that using ferences are modest (e.g., 0.44 ms to 0.40 ms at p50), tail-latency
+the 31-feature hybrid subset increases the AUC from 0.881 to improvements are operationally important because they govern
+0.902 while reducing inference time by 11%, indicating that the burst handling and queue stability in inline deployments. End-tobenefits persist even in unsupervised anomaly detection. end throughput gains (summarized in Table XVI), range from
+ 9–10% and are statistically significant (5×2 CV paired t-test,
+C. Trade-Offs: Accuracy, False Positives, and Latency p < 0.05). These results show that Hybrid-FS simultaneously
+ enhances predictive performance and computational efficiency.
+ A central requirement for practical IDS deployment is balancing detection quality with runtime efficiency and a low
+false-positive rate. We therefore analyze all three dimensions D. Comparison With PSO/GA-Based Hybrid Baselines
+jointly, accuracy and macro-F1, false-positive rate, and latency To contextualize Hybrid-FS against prior stochastic hybrid
+and throughput. Across all ensemble models and datasets, as selectors, we reproduce two representative baselines under the
+shown in Tables III, IV, and XIV, Hybrid-FS improves macro-F1 same leakage-safe preprocessing and evaluation pipeline as
+by 0.4–0.7 pp on CIC-IDS-2017, 0.3–0.6 pp on CSE-CIC- our method (Section III), (i) a PSO wrapper over a Random-
+IDS2018, and 0.4–0.8 pp on NF-UNSW-NB15, with the largest Forest base learner, and (ii) a GA-based rank-fusion hybrid
+gains observed for XGBoost and ExtraTrees, which benefit most over MI, RandomForest-importance, and XGBoost-importance
+from reduced feature redundancy. In terms of false-positive (Section V-E). In both cases, the search is executed on the trainrate, Hybrid-FS reduces false positives by 15–20% relative ing fold only and model selection uses stratified cross-validation
+to full-feature baselines, consistent with the improvements in within the training fold, search time is excluded so that we
+Table VIII, per-attack precision/recall in Table IX further indi- compare only per-flow inference cost.
+cate that this reduction in noise does not compromise detection Table XI summarizes macro-F1 , false-positive rate, and p50
+of rare attack types, which retain recall ≥ 0.93. inference latency across CIC-IDS-2017, CSE-CIC-IDS2018,
+ For latency and throughput, Table X and Fig. 10 show and NF-UNSW-NB15. Across datasets, Hybrid-FS is competistatistically significant latency reductions, p50 improves by tive in macro-F1 while consistently lowering FPR by 0.02–0.04
+6372 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE XI
+ HYBRID-FS VERSUS REPRESENTATIVE PSO/GA HYBRIDS (MACRO-F1 ↑,
+ FP-RATE ↓ , LATENCY P50IN MS ↓)
+
+ Fig. 11. Hybrid-FS ensemble performance across datasets.
+
+ higher emphasis on XGBI while retaining non-negligible con-
+ TABLE XII tributions from MI and RFI. Cross-validation and held-out test
+ COMPARISON WITH RECENT IDS FEATURE-SELECTION STUDIES scores remain exceptionally high (>0.998) across all datasets,
+ indicating that a single, low-variance fusion scheme can accommodate substantially different traffic profiles. Below we
+ highlight how each dataset responds to the selected subsets, with
+ detailed curves and metrics shown in Figs. 11, 12, and Table XIV.
+ Performance on CIC-IDS-2017: On CIC-IDS-2017,
+ Hybrid-FS preserves the relative ranking of ensemble models
+percentage points (approximately 15–25% relative) compared while shifting the operating point toward higher efficiency. As
+to the PSO/GA hybrids, with essentially unchanged p50 latency detailed in Table XIV, tree-based ensembles (RandomForest,
+(within 0.01 ms). Full PSO/GA search hyperparameters and ExtraTrees, XGBoost) achieve accuracies above 99.6%, with
+objective definitions are provided in Appendix D (Table D.1), XGBoost attaining the best accuracy and F1 at the lowest predicavailable online. tion time. The remaining models (e.g., AdaBoost, LightGBM)
+ benefit less uniformly, reflecting their sensitivity to feature se-
+E. SOTA Analysis lection, but do not exhibit catastrophic degradation. Overall, the
+ subset supports both strong performance and fast inference on
+ Table XII positions Hybrid-FS against recent hybrid featurethis canonical benchmark.
+selection methods for intrusion detection. This comparison is
+ Per-Attack Performance: Table IX provides precision
+intended for contextual positioning, as datasets, selection strateand recall for the ten attack types present in CIC-IDS-2017
+gies, and evaluation protocols may differ across studies, and
+ using the Hybrid-FS XGBoost model. Even the rarest classes
+reported values may not be directly comparable without repro-
+ (WEB-XSS at 0.15%) are detected with recall ≥ 0.93. High
+ducing the full pipeline. On CIC-IDS2017, we achieve a macrorecall on low-prevalence attack classes confirms that balancing
+F1 of 0.998 using 31 features, within 0.08 pp of the PSO-driven
+ via SMOTEENN, combined with the focused feature subset,
+ensemble of Louk & Tama [39], while requiring roughly half
+ mitigates “silent failures” on uncommon exploits.
+the inference time, indicating that strong predictive performance
+ Performance on CSE-CIC-IDS2018: On CSE-CICcan be obtained without substantial runtime cost. On CSE-CIC-
+ IDS2018, the Hybrid-FS subsets continue to deliver consistent
+IDS2018, Hybrid-FS improves macro-F1 by 0.6 pp over the
+ improvements across ensembles, as summarised in Table XIV.
+CFS–DE stacking approach of Zhao et al. [37]. Beyond peak
+ XGBoost remains the strongest overall model, combining the
+scores, prior work also shows sensitivity under dataset shifts
+ highest accuracy and F1 with the fastest prediction time, while
+(NEU-ICS-2023 in Fang et al. [44]), whereas our cross-dataset
+ RandomForest and ExtraTrees provide slightly lower but still
+results in Section VI-F show that Hybrid-FS remains effective
+ competitive scores. The fact that the same 31-feature subset
+when traffic distributions change. Additional discussion and an
+ supports high performance on both CIC-IDS-2017 and CSEextended comparison are provided in Appendix E (Table E.1),
+ CIC-IDS2018 underscores that the fusion mechanism is not
+available online.
+ overfitted to a single capture.
+ Performance on NF-UNSW-NB15: The NF-UNSW-
+F. Cross-Dataset Evaluation NB15 results probe generalisation to a dataset with different
+ We evaluated the proposed Hybrid-FS technique on the three traffic and attack characteristics. Hybrid-FS selects only 16 out
+datasets used in this work, CIC-IDS-2017, CSE-CIC-IDS2018, of 43 features yet maintains strong performance. RandomForand NF-UNSW-NB15, using the same hardware setup described est, ExtraTrees, and XGBoost all reach accuracies above 95%,
+in Section III. As summarized in Table XIII, Hybrid-FS con- with XGBoost again delivering the best accuracy/F1 and the
+sistently reduces the feature dimensionality while preserving lowest prediction time (Table XIV). This compressed subset
+the accuracy, macro-F1, and latency trade-offs documented in demonstrates that the fusion strategy adapts to a smaller fea-
+Section VI-C. Specifically, the selected subsets contain 31 of ture space without sacrificing detection quality, reinforcing the
+78 features for CIC-IDS-2017, 31 of 80 for CSE-CIC-IDS2018, cross-dataset robustness claims.
+and 16 of 43 for NF-UNSW-NB15. Inference Latency & Significance: Building on the trade-off
+ The fusion hyperparameters optimised via grid search, analysis in Section VI-C, we quantify inference speed on the
+namely threshold_percentile and the selector weights CIC-IDS-2017 and CSE-CIC-IDS2018 test splits using the hard-
+(wMI , wRFI , wXGBI ), exhibit stable patterns across datasets, as ware in Section III. Fig. 10 shows throughput with mean±95%
+shown in Table XV. In all three cases, the optimal threshold bootstrap confidence intervals over 20 runs (1,000 resamples),
+converges to θ = 60%, and the learned weights place slightly and Table X summarises per-flow latency via p50 and p99
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6373
+
+ TABLE XIII
+ IMPACT OF HYBRID-FS TECHNIQUE ON CIC-IDS-2017, CSE-CIC-IDS2018, AND NF-UNSW-NB15
+
+Fig. 12. ROC curves for ensemble models with Hybrid-FS.
+
+ TABLE XIV VII. CROSS-DATASET SCALABILITY AND ROBUSTNESS
+ PERFORMANCE COMPARISON OF HYBRID-FS ENSEMBLES
+ ANALYSIS
+ Having established in Section VI-F that Hybrid-FS preserves accuracy and latency trade-offs across CIC-IDS-2017,
+ CSE-CIC-IDS2018, and NF-UNSW-NB15, we now examine its
+ behaviour under scalability and robustness conditions. The three
+ datasets differ substantially in scale and threat composition,
+ CIC-IDS-2017 comprises approximately 2.83 million flows
+ spanning 14 attack types, CSE-CIC-IDS2018 contains 16.21
+ million flows and 7 attack categories, and NF-UNSW-NB15
+ includes 2.39 million flows distributed across 9 attack classes.
+ These disparities in volume and behavioural diversity provide a
+ natural stress test for Hybrid-FS as a candidate for deployment
+ in heterogeneous networks.
+ Accuracy and Discrimination: Under the Hybrid-FS subsets described in Section VI-F, XGBoost, ExtraTrees, and Ran-
+ TABLE XV domForest achieve accuracies of 99.85%, 99.70%, and 99.60%
+ FUSION SETTINGS AND SCORES FOR HYBRID-FS
+ on CIC-IDS-2017, and sustain accuracy levels above 97% on
+ the considerably larger CSE-CIC-IDS2018 dataset. The mean
+ ROC-AUC across all ten CIC attack classes is 0.991, with the
+ lowest per-class AUC (Web-XSS) still at 0.958, underscoring
+ the ability of the hybrid subset to support strong discrimination
+ even for low-prevalence exploits.
+ Precision–Recall Balance: Across datasets, the hybrid
+ feature subset delivers a 0.4–0.7 pp improvement in macro-F1
+(ms). Statistically significant differences are identified using a compared to the full feature set. These gains arise from two
+5×2 CV paired t-test (p < 0.05). complementary effects, (i) a 4–7% increase in recall for stealthy
+ Across both datasets, Hybrid-FS reduces feature counts attack types such as infiltration and port scans, and (ii) a 15–20%
+(CIC: 78→31, CSE: 80→31) and yields consistent latency and reduction in false positives, effectively mitigating unnecessary
+throughput improvements relative to the all-features baseline, SOC alerts. The operational impact of this improved precision–
+mirroring the trends in Section VI-C. In particular, p50 and recall balance is reflected in the detailed per-class analysis in
+p99 latency decrease in tandem while accuracy and macro-F1 Table VIII.
+remain unchanged within statistical uncertainty, indicating that Operational Scalability: Fig. 13 shows that XGBoost,
+the observed runtime benefits arise from reduced feature di- when using the 31-feature Hybrid-FS subset, processes up to
+mensionality rather than a shift to a weaker operating point. one million flows at a rate of approximately 5.5 × 102 flows/s.
+The alignment of these effects across two independent traces Doubling the feature count to 62 incurs only an 8% overhead, insuggests that the latency gains are a systematic property of the dicating that inference time scales sub-linearly with dimension-
+Hybrid-FS pipeline rather than an artefact of a single dataset. ality. Furthermore, as shown in Fig. 10, throughput decreases
+6374 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE XVIII
+ CROSS-DATASET CIC → NF-UNSW: BEFORE/AFTER LIGHTWEIGHT
+ CALIBRATION
+
+ the operating point toward predictable low-latency inference
+ through lower p99 latency and higher sustained rate on CPU.
+Fig. 13. Prediction time per 1,000 flows (RTX 3080) for Hybrid-FS. These properties are essential for resource-constrained inline
+ deployment under bursty traffic.
+ TABLE XVI Threat-Model Robustness: To assess resilience under un-
+THROUGHPUT (FLOWS/S) AT BATCH SIZE 104 WITH 95% CIS OVER 20 RUNS.
+ SIGNIFICANT GAINS (p < 0.05) MARKED WITH •
+ seen attack conditions, a model trained exclusively on CIC-
+ IDS-2017 was evaluated on NF-UNSW-NB15, which contains
+ entirely unseen attack types. The model still achieves 75.8%
+ accuracy and an AUC of 0.744 without retraining. Under FGSMbased adversarial perturbations ( = 0.05), macro-F1 decreases
+ by only 1.5%, providing additional evidence that Hybrid-FS contributes to robustness rather than merely improving performance
+ TABLE XVII
+ EDGE INFERENCE PROFILING: XGBOOST LATENCY/THROUGHPUT WITH ALL under closed-world assumptions.
+ FEATURES VERSUS HYBRID-FS Distribution Shift, Mitigation, and Outcome: Feature
+ distribution profiling reveals substantial shifts between CIC-
+ IDS-2017 and NF-UNSW-NB15 for key attributes such as
+ dst_bytes, flow_iat_std, and pkt_len_var (twosample KS tests yield p 0.01 for 6 of the top-10 ranked
+ features). These shifts concentrate errors in attack classes with
+ altered byte semantics and inter-arrival-time statistics, and in
+ NF-UNSW attack families absent from CIC. Without altering
+ the core model architecture, we explored three lightweight mitigation strategies, (i) recalibrating scalers on a 5% NF-UNSW
+by less than 10% when scaling from 2.8 M flows (CIC) to 16 M seed, (ii) employing class-specific decision thresholds, and
+flows (CSE), reaffirming the near-linear scalability required for (iii) applying stability screening to retain features consistently
+carrier-grade IDS deployments. ranked in the top-k across datasets. As reported in Table XVIII,
+ Edge deployment feasibility: To assess feasibility edge, these adjustments improve macro-F1 by approximately +0.05
+we profile the deployed XGBoost + Hybrid-FS pipeline in a on NF-UNSW, incur negligible latency overhead, and further
+CPU-only, single-thread setting using the workstation described reduce false positives.
+in Section III. Table XVII provides per-flow latency (p50/p99 Across three datasets, 26 attack categories, and a 6× range in
+with 95% bootstrap CIs over 20 runs) and sustained throughput traffic volume, the hybrid feature selector consistently improves
+at a fixed batch size of 104 flows. Hybrid-FS reduces dimension- accuracy, recall, and inference speed. These results validate
+ality from 78/80 to 31 features and yields consistent tail-latency its scalability and robustness for real-time, heterogeneous IDS
+improvements on CIC-IDS-2017, p50 decreases from 0.44 to deployments.
+0.40 ms and p99 from 1.40 to 1.20 ms on CSE-CIC-IDS2018,
+p50 decreases from 0.46 to 0.41 ms and p99 from 1.48 to
+1.25 ms. These p99 values correspond to an implied single- A. Robustness to Adversarial & Out-of-Box Traffic
+thread service capacity of ≈833 flows/s (CIC) and ≈800 flows/s We evaluate adversarial robustness of the Hybrid-FS detec-
+(CSE), indicating sufficient burst-handling margin for inline tors (XGBoost, ExtraTrees, RandomForest) under two stresoperation. Consistently, throughput increases by about 9-10% sors, (i) feature-space perturbations (FGSM) and (ii) protocol-
+(520→556 flows/s on CIC, 505→542 flows/s on CSE), matching conformant packet synthesis (DeepPackGen). In all settings,
+the sub-linear scaling behaviour observed in Fig. 10 and support- models are frozen (no retraining), the operating threshold is fixed
+ing the near-linear dataset-scale results discussed above. In the at 0.5, and we report macro-F 1 and the absolute change Δ F1
+time-ordered 24-hour SOC replay (Section VII-B), the target versus clean performance.
+load of 100,000 flows/hour (≈27.8 flows/s) is sustained without Threat model: For FGSM [45], we apply L∞ -bounded
+batching, while maintaining the same p50/p99 latency profile, perturbations with  ∈ {0.02, 0.05, 0.10} to malicious flows
+indicating substantial processing margin for burst handling in only in normalized feature space, while preserving categorical
+inline operation. encodings and clipping perturbed values to a feasible range. For
+ The edge pipeline benefits directly from the compact 31- DeepPackGen [46], we use 5 independent seeds and generate
+feature set. Fewer attributes must be populated per flow and 5000 flows per budget (2,000 and 4,000 steps) under protocolconsumed by the classifier, which reduces per-flow processing validity constraints. Table XIX shows that degradation is modest
+work and improves tail stability. Consequently, Hybrid-FS shifts and scales with attack strength, at =0.05, macro-F 1 drops by
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6375
+
+ TABLE XIX TABLE XX
+ CIC-IDS-2017 ADVERSARIAL TEST: MACRO-F1 AND ΔF1 (HYBRID-FS) REPRESENTATIVE FP/FN PATTERNS AND MITIGATIONS
+
+ alert rates, and observe tail latency metrics. When cross-dataset
+ drift emerges, as discussed in Section VI-F, light recalibration,
+ such as scaler realignment or the application of class-specific
+1.45–2.00 pp across models, and even at =0.10 residual macro- thresholds, typically restores approximately +0.05 macro-F1
+F1 remains > 0.96. DeepPackGen reduces macro-F1 by 2.2–3.5 without requiring architectural modifications. Overall, Hybridpp at 2k–4k budgets. Importantly, per-flow inference latency FS reduces false-positive rates by 15–19% and recovers 2.5–3.7
+remains unchanged from Section VII-B (Hybrid-FS p50/p99: analyst-hours per day at a 100k-flow scale, while maintaining
+0.40/1.20 ms), so robustness does not come at a runtime cost. the detection performance established in our main results.
+Out-of-box transfer under dataset shift (CIC→ NF-UNSW)
+and lightweight mitigation are analyzed in Section VI-F and C. Failure Analysis: Representative FP/FN Patterns
+Table XVIII.
+ Full protocol details for the adversarial robustness tests To improve operational interpretability, we inspected repre-
+(FGSM surrogate construction, clipping bounds, DeepPackGen sentative false positives/negatives and summarized recurring
+seed/budget settings, and data-fold usage) are provided in Ap- error regimes together with mitigations that do not require
+pendix F, available online. architectural changes. We select high-impact cases from the
+ hold-out split and identify salient Hybrid-FS features using local
+ one-at-a-time sensitivity.
+B. Operational Case Study: 24-Hour SOC Replay Patterns observed: Across datasets, three patterns recur,
+ We conduct a 24-hour, time-ordered SOC replay at a sus- (i) feature overlap between high-throughput benign bursts and
+tained rate of 100,000 flows per hour, with 95% benign traffic, volumetric DoS along byte/packet and inter-arrival statistics (ii)
+following the methodology described in Section III and using low-signal short flows (e.g., Web-XSS) yielding near-boundary
+the Hybrid-FS configurations shown in Table XV. The deployed scores; and (iii) dataset shift (NF-UNSW) compressing bedetector combines XGBoost with Hybrid-FS, using 31 features nign/attack margins for byte- and timing-related features.
+for CIC/CSE and 16 for NF-UNSW, a default decision threshold Actionable mitigations: In practice, these errors are mitof 0.5, and frozen model weights. All inference runs on the igated by (i) class-specific thresholds for boundary classes
+workstation detailed in Section III. (DoS/Web-XSS), (ii) light calibration when moving across data
+ Across the replay, per-flow runtime remained comfortably (training-fold only), and (iii) stability-screened features that
+within inline operational budgets. Median and p99 latencies remain top-ranked across datasets. Representative cases are
+were 0.40 ms and 1.20 ms, as summarised in Table X, and summarized in Table XX, the full case table is provided in
+represent statistically significant gains over the corresponding Appendix G (Table G.1), available online.
+all-features baselines. Throughput sustained 100 k flows per
+hour without requiring batching, and the p99 latency improved D. Scalability: Flows and Dimensionality
+by approximately 14%, as illustrated in Fig. 10.
+ We stress-tested the hybrid-FS XGBoost by (i) feeding pro-
+ These runtime efficiencies directly translate into measurable
+ gressively larger flow batches (10k → 1M) and (ii) synthetically
+operational benefits. Using 95,000 benign flows per hour to
+ injecting duplicate, noise-decorrelated features to raise the input
+project false alarms, Hybrid-FS reduces the false-positive rate
+ dimensionality from 31 → 200. Fig. 10(a) shows throughput
+from 0.11–0.16% to 0.09–0.13%. Table VIII shows that this
+ in flows/s as batch size increases, and the Fig. 10(b) depicts
+reduction corresponds to 19–28 fewer false positives per hour,
+ inference time per 10 k-flow batch versus feature count. With
+averaging 22 alerts avoided. At a conservative triage rate of 20 s
+ the 31 “essential” attributes in place, the hybrid-FS XGBoost
+per alert, this reduction yields between 2.5 and 3.7 analyst-hours
+ sustains a throughput of roughly 5.5 × 102 flows/s. Expanding
+saved each day. Importantly, these efficiency gains are achieved
+ the feature set to 62 raises inference time for the standard 10,000
+without degrading macro-F1 or AUROC, as demonstrated in
+ -flow batch from 18s to 19.5s, only about 8% overhead, demon-
+Sections VI–VII, and without incurring any latency penalties
+ strating ample margin for future feature enrichments without
+noted in Table X.
+ jeopardizing real-time performance.
+ For deployment, we recommend a two-phase roll-out strategy.
+ Note: XGBoost’s prediction time grows primarily with tree
+The first phase operates in shadow mode using SPAN or mirrored
+ depth, unused columns add only memory-copy overhead, hence
+traffic to validate precision and recall and to ensure that the
+ the modest +8% latency at double the feature count.
+p99 latency remains at or below 2 ms. Once the false-positive
+rate remains within the range captured in Table VIII for seven
+consecutive days, the system can transition to an inline allow-log E. False Positives and Analyst Workload
+configuration. During production, operators should track feature We now quantify the impact of Hybrid-FS on false alarms and
+population shifts (for example, using PSI), monitor class-wise translate it into analyst time. Since post–Hybrid-FS confusion
+6376 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+matrices are not explicitly plotted in this section, we obtain the The following key limitations arise from these design choices.
+false-positive rate at the default operating point directly from (L1) Feature modality and encrypted traffic: The framework
+the ROC curves, with “Before” denoting E0 (all features) and relies on tabular, flow-level features with supervised ensembles.
+“After” denoting E4 (Hybrid-FS). While such summaries remain usable under encryption, we do
+ Provenance and computation: E0 values are taken from the not exploit payload-derived signals, deep representations, or
+baseline ROC/metric overview (Fig. 6), and E4 values are taken self-/semi-supervised encoders, claims are therefore limited to
+from the Hybrid-FS ROC curves (Fig. 12). For each dataset, FPR patterns captured by the evaluated benchmarks.
+is the false-positive axis value at the default decision threshold (L2) Online dynamics and drift: Models and decision thresh-
+0.5 on the plotted ROC operating point.2 To convey operational olds are tuned offline and fixed at test time. The framework
+impact, we compute false alarms per hour (FP/h) using the does not include explicit online adaptation or drift mitigation
+relation FP/h = FPR × 95,000, assuming a conservative traffic beyond cross-dataset validation and lightweight CIC → NFprofile of 100,000 flows/hour with 95% benign traffic (as in our UNSW threshold transfer, operational deployments may require
+scalability setup). periodic retuning.
+ E. Analyst-time implications: With a conservative triage (L3) Dataset representativeness: Evaluation is restricted to esrate of 20 s per alert, CIC and CSE each save 19 × 24 = 456 tablished research benchmarks. Industrial control, IoT-specific,
+alerts/day, i.e., 456 × (20/3600) = 2.53 analyst-hours/day, and organisation-level traces are not included, limiting external
+while NF-UNSW saves 28 × 24 = 672 alerts/day, i.e., 3.73 validity under different protocol mixes and noise conditions.
+hours/day. These reductions are achieved without degrading (L4) Deployment tier and runtime budgets: Hybrid-FS remacro-F1 or AUROC and without introducing additional infer- duces inference cost, but not all model-selector combinations
+ence latency, as detailed in Sections VI and VII. satisfy strict inline latency constraints. XGBoost+Hybrid-FS of-
+ Across datasets, Hybrid-FS yields a 15–19% reduction in fers the best accuracy-latency trade-off, while heavier ensembles
+false positives (Table VIII), averaging 22 fewer false alarms are more appropriate for nearline or higher-resource settings.
+per hour under the stated traffic profile, with no degradation in (L5) Threat-model boundary: Robustness is assessed under
+detection quality or runtime. two evasion stressors, feature-space perturbations and protocolvalid crafted traffic, using frozen models. Stronger adversaries,
+ VIII. DISCUSSION, LIMITATIONS, AND FUTURE WORK including poisoning, backdoors, endpoint compromise, and
+ flow-extractor manipulation, are out of scope.
+ Our results show that deterministic hybrid feature selection
+ These limitations motivate several directions. Hybrid-FS can
+improves the operational profile of flow-based IDS without
+ be combined with richer modalities (payload-derived signals or
+sacrificing detection performance. Across three benchmarks and
+ learned embeddings where permissible) and with lightweight
+multiple ensembles, Hybrid-FS matches or exceeds full-feature
+ drift monitoring and periodic configuration under changeaccuracy and macro-F1 while using fewer features and reducing
+ control. It also remains to add per-instance explanations and to
+inference time. The gains persist across selectors, suggesting
+ validate on industrial/IoT and long-duration operational traces.
+that fusing Mutual Information, Random Forest importance, and
+ Finally, transfer learning and embedding-based IDS pipelines
+XGBoost gain into a fixed subset is more robust than any single
+ are promising settings in which Hybrid-FS operates on learned
+criterion. Compared with PSO/GA-based hybrids, the simplexrepresentations rather than raw flow attributes.
+based fusion attains comparable or slightly better macro-F1 and
+false-positive rates with a smaller, fully reproducible parameter
+surface.
+ Practically, Hybrid-FS shifts the operating point to-
+ IX. CONCLUSION
+ward predictable low-latency CPU inference. The deployed
+XGBoost+Hybrid-FS configuration reduces dimensionality This work examined how deterministic hybrid feature selec-
+(78/80→31), tightens tail latency (p99), and improves through- tion can enhance ensemble-based IDS by improving operational
+put under the CPU-only single-thread profile, while sustain- efficiency without compromising detection quality. We introing the same p50/p99 profile during the 24-hour SOC replay duced Hybrid-FS, a simplex-based fusion of Mutual Informaat 100,000 flows/hour. This aligns with edge gateways/RSUs tion, Random Forest importance, and XGBoost gain, integrated
+where queue stability and burst handling are governed by tail within a leakage-safe pipeline and optimized directly for macrolatency rather than mean cost. F1, false-positive rate, and latency. Across three flow-based
+ While the reported performance is strong, the near-perfect datasets, Hybrid-FS preserves high accuracy while reducing discores observed across several settings, require careful interpre- mensionality, improving throughput by about 9–10%, lowering
+tation. We avoid leakage by fitting preprocessing, resampling, p50/p99 latency (0.44→0.40 ms, 1.40→1.20 ms), and cutting
+and selection strictly on training folds and leaving validation false positives by 15–19%. It also matches or exceeds PSO/GA
+and test distributions untouched. Cross-dataset and adversarial hybrids in F1 while avoiding stochastic overhead and instability.
+evaluations provide partial robustness checks, but the study re- Our evaluation includes explicit cross-dataset and adversarial
+mains limited to controlled flow-level benchmarks and bounded robustness analysis, demonstrating stable performance under
+threat models. Thus, the results should be viewed as leakage-safe distribution shift and mild perturbations. Limitations include our
+upper bounds on these datasets, not guarantees for arbitrary exclusive focus on tabular, flow-level features and the use of a
+environments. single global operating point per model and dataset, selected
+ via percentile-based thresholding on validation folds rather than
+ 2 FPR is FP/(FP + TN) for the benign class, on ROC plots it is the x- online calibration. Future work will extend the framework with
+coordinate at the chosen operating threshold. adaptive thresholding and drift-aware calibration mechanisms,
+BILAL et al.: EVALUATION TO INTEGRATION: HYBRID FEATURE SELECTION FRAMEWORK WITH ENSEMBLE MACHINE LEARNING 6377
+
+and explore integrating payload-aware or self-supervised repre- [23] A. Khraisat, I. Gondal, P. Vamplew, and J. Kamruzzaman, “Survey of
+sentations in settings where privacy policies and runtime budgets intrusion detection systems: Techniques, datasets and challenges,” Cybersecurity, vol. 2, no. 1, pp. 1–22, 2019.
+permit. [24] I. Alam et al., “A survey of network virtualization techniques for Internet of
+ Things using SDN and NFV,” ACM Comput. Surv., vol. 53, no. 2, pp. 1–40,
+ REFERENCES 2020.
+ [25] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized
+ [1] N. Moustafa, “A new distributed architecture for evaluating AI-based
+ application identification via encrypted traffic analysis using graph neural
+ security systems at the edge: Network ton_IoT datasets,” Sustain. Cities
+ networks,” IEEE Trans. Inf. Forensics Secur., vol. 16, pp. 2367–2380, 2021.
+ Soc., vol. 72, 2021, Art. no. 102994.
+ [26] W. J. Scheirer, A. de Rezende Rocha, A. Sapkota, and T. E. Boult, “Toward
+ [2] A. Boukerche and R. W. Coutinho, “Design guidelines for machine
+ open set recognition,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35,
+ learning-based cybersecurity in Internet of Things,” IEEE Netw., vol. 35,
+ no. 7, pp. 1757–1772, Jul. 2013.
+ no. 1, pp. 393–399, Jan./Feb. 2021.
+ [27] W. J. Scheirer, L. P. Jain, and T. E. Boult, “Probability models for open
+ [3] G. Rjoub et al., “A survey on explainable artificial intelligence for cyberseset recognition,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 36, no. 11,
+ curity,” IEEE Trans. Netw. Service Manag., vol. 20, no. 4, pp. 5115–5140,
+ pp. 2317–2324, Nov. 2014.
+ Dec. 2023.
+ [28] L. D. Manocchio, S. Layeghy, W. W. Lo, G. K. Kulatilleke, M. Sarhan,
+ [4] A. Oseni et al., “An explainable deep learning framework for resilient
+ and M. Portmann, “Flowtransformer: A transformer framework for flowintrusion detection in IoT-enabled transportation networks,” IEEE Trans.
+ based network intrusion detection systems,” Expert Syst. Appl., vol. 241,
+ Intell. Transp. Syst., vol. 24, no. 1, pp. 1000–1014, Jan. 2023.
+ p. 122564, 2024.
+ [5] T. Saha, N. Aaraj, N. Ajjarapu, and N. K. Jha, “SHARKS: Smart hacking
+ [29] T. E. T. Djaidja, B. Brik, S. M. Senouci, A. Boualouache, and Y.
+ approaches for risk scanning in Internet-of-Things and cyber-physical
+ Ghamri-Doudane, “Early network intrusion detection enabled by attensystems based on machine learning,” IEEE Trans. Emerg. Topics Comput.,
+ tion mechanisms and RNNs,” IEEE Trans. Inf. Forensics Secur., vol. 19,
+ vol. 10, no. 2, pp. 870–885, Second Quarter, 2022.
+ pp. 7783–7793, 2024.
+ [6] M. A. Khatun, S. F. Memon, C. Eising, and L. L. Dhirani, “Machine
+ [30] W. Wang, S. Jian, Y. Tan, Q. Wu, and C. Huang, “Robust unsupervised
+ learning for healthcare-IoT security: A review and risk mitigation,” IEEE
+ network intrusion detection with self-supervised masked context recon-
+ Access, vol. 11, pp. 145869–145896, 2023.
+ struction,” Comput. Secur., vol. 128, 2023, Art. no. 103131.
+ [7] C. Xu, N. Wang, L. Zhu, K. Sharif, and C. Zhang, “Achieving search-
+ [31] M. Shen et al., “Machine learning-powered encrypted network traffic
+ able and privacy-preserving data sharing for cloud-assisted E-healthcare
+ analysis: A comprehensive survey,” IEEE Commun. Surv. Tut., vol. 25,
+ system,” IEEE Internet Things J., vol. 6, no. 5, pp. 8345–8356, Oct. 2019.
+ no. 1, pp. 791–824, First Quarter, 2023.
+ [8] Z. Halim et al., “An effective genetic algorithm-based feature selection
+ [32] Z. Jiang, J. Li, Q. Hu, W. Meng, W. Pedrycz, and Z. Su, “Scalable graphmethod for intrusion detection systems,” Comput. Secur., vol. 110, 2021,
+ aware edge representation learning for wireless IoT intrusion detection,”
+ Art. no. 102448.
+ IEEE Internet Things J., vol. 11, no. 16, pp. 26955–26969, Aug. 2024.
+ [9] F. Amiri, M. R. Yousefi, C. Lucas, A. Shakery, and N. Yazdani, “Mutual
+ [33] S. Mohammadi, H. Mirvaziri, M. Ghazizadeh-Ahsaee, and H. Karimipour,
+ information-based feature selection for intrusion detection systems,” J.
+ “Cyber intrusion detection by combined feature selection algorithm,” J.
+ Netw. Comput. Appl., vol. 34, no. 4, pp. 1184–1199, 2011.
+ Inf. Secur. Appl., vol. 44, pp. 80–88, 2019.
+[10] T. Hamed, R. Dara, and S. C. Kremer, “Network intrusion detection system
+ [34] H. Wu and W. Wang, “A game theory based collaborative security detection
+ based on recursive feature addition and bigram technique,” Comput. Secur.,
+ method for Internet of Things systems,” IEEE Trans. Inf. Forensics Secur.,
+ vol. 73, pp. 137–155, 2018.
+ vol. 13, no. 6, pp. 1432–1445, Jun. 2018.
+[11] C. Khammassi and S. Krichen, “A GA-LR wrapper approach for fea-
+ [35] A. Nazir, Z. Memon, T. Sadiq, H. Rahman, and I. U. Khan, “A novel
+ ture selection in network intrusion detection,” Comput. Secur., vol. 70,
+ feature-selection algorithm in IoT networks for intrusion detection,” Senpp. 255–277, 2017.
+ sors, vol. 23, no. 19, 2023, Art. no. 8153.
+[12] S. M. Kasongo, “An advanced intrusion detection system for IIoT based on
+ [36] M. Bakro et al., “An improved design for a cloud intrusion detection system
+ GA and tree based algorithms,” IEEE Access, vol. 9, pp. 113199–113212,
+ using hybrid features selection approach with ML classifier,” IEEE Access,
+ 2021.
+ vol. 11, no. 2023, pp. 64228–64247, 2023.
+[13] P. Nimbalkar and D. Kshirsagar, “Feature selection for intrusion detection
+ [37] R. Zhao, Y. Mu, L. Zou, and X. Wen, “A hybrid intrusion detection system
+ system in Internet-of-Things (IoT),” ICT Exp., vol. 7, no. 2, pp. 177–181,
+ based on feature selection and weighted stacking classifier,” IEEE Access,
+ 2021.
+ vol. 10, pp. 71414–71426, 2022.
+[14] J. Zhao, R. Masood, and S. Seneviratne, “A review of computer vision
+ [38] A. J. Rabash, M. Z. A. Nazri, A. Shapii, and M. K. Hasan, “Nonmethods in network security,” IEEE Commun. Surv. Tut., vol. 23, no. 3,
+ dominated sorting genetic algorithm-based dynamic feature selection for
+ pp. 1838–1878, Third Quarter, 2021.
+ intrusion detection system,” IEEE Access, vol. 11, pp. 125080–125093,
+[15] A. Sivanathan, H. H. Gharakheili, and V. Sivaraman, “Managing IoT
+ 2023.
+ cyber-security using programmable telemetry and machine learning,”
+ [39] M. H. L. Louk and B. A. Tama, “PSO-driven feature selection and hybrid
+ IEEE Trans. Netw. Service Manag., vol. 17, no. 1, pp. 60–74, Mar. 2020.
+ ensemble for network anomaly detection,” Big Data Cogn. Comput., vol. 6,
+[16] M. Elsisi, M.-Q. Tran, K. Mahmoud, D.-E. A. Mansour, M. Lehtonen, and
+ no. 4, 2022, Art. no. 137.
+ M. M. Darwish, “Towards secured online monitoring for digitalized GIS
+ [40] M. S. Noori, R. K. Sahbudin, A. Sali, and F. Hashim, “Feature drift
+ against cyber-attacks based on IoT and machine learning,” IEEE Access,
+ aware for intrusion detection system using developed variable length
+ vol. 9, pp. 78415–78427, 2021.
+ particle swarm optimization in data stream,” IEEE Access, vol. 11,
+[17] X. Shen, L. Zhu, C. Xu, K. Sharif, and R. Lu, “A privacy-preserving
+ pp. 128596–128617, 2023.
+ data aggregation scheme for dynamic groups in fog computing,” Inf. Sci.,
+ [41] D. Stiawan et al., “An approach for optimizing ensemble intrusion detecvol. 514, pp. 118–130, 2020.
+ tion systems,” IEEE Access, vol. 9, pp. 6930–6947, 2020.
+[18] S. Biswas, K. Sharif, F. Li, B. Nour, and Y. Wang, “A scalable blockchain
+ [42] C. Wu and W. Li, “Enhancing intrusion detection with feature selection
+ framework for secure transactions in IoT,” IEEE Internet Things J., vol. 6,
+ and neural network,” Int. J. Intell. Syst., vol. 36, no. 7, pp. 3087–3105,
+ no. 3, pp. 4650–4659, Jun. 2019.
+ 2021.
+[19] S. M. Kasongo and Y. Sun, “A deep learning method with wrapper based
+ [43] A. Dahou et al., “Intrusion detection system for IoT based on deep
+ feature extraction for wireless intrusion detection system,” Comput. Secur.,
+ learning and modified reptile search algorithm,” Comput. Intell. Neurosci.,
+ vol. 92, 2020, Art. no. 101752.
+ vol. 2022, no. 1, 2022, Art. no. 6473507.
+[20] T. Tu, Y. Su, Y. Tang, W. Tan, and S. Ren, “A more flexible and robust
+ [44] Y. Fang, Y. Yao, X. Lin, J. Wang, and H. Zhai, “A feature selection based
+ feature selection algorithm,” IEEE Access, vol. 11, pp. 141512–141522,
+ on genetic algorithm for intrusion detection of industrial control systems,”
+ 2023.
+ Comput. Secur., vol. 139, 2024, Art. no. 103675.
+[21] F. Deldar and M. Abadi, “Deep learning for zero-day malware detection
+ [45] I. J. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing
+ and classification: A survey,” ACM Comput. Surv., vol. 56, no. 2, pp. 1–37,
+ adversarial examples,” 2014, arXiv:1412.6572.
+ 2023.
+ [46] S. Hore, J. Ghadermazi, D. Paudel, A. Shah, T. Das, and N. Bastian,
+[22] P. Mishra, V. Varadharajan, U. Tupakula, and E. S. Pilli, “A detailed inves-
+ “Deep packGen: A deep reinforcement learning framework for adversarial
+ tigation and analysis of using machine learning techniques for intrusion
+ network packet generation,” ACM Trans. Privacy Secur., vol. 28, no. 2,
+ detection,” IEEE Commun. Surv. Tut., vol. 21, no. 1, pp. 686–728, First
+ pp. 1–33, 2025.
+ Quarter, 2019.

@@ -1,0 +1,1564 @@
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+3127
+
+TIME-VAD: Text-Informed Magnitude
+Enhancement Feature Learning for Vehicle
+Accident Detection and Anticipation
+Sumit Mishra , Medhavi Mishra , Pranjay Shyam, and Dongsoo Har , Senior Member, IEEE
+
+Abstract—Vehicular accidents pose a substantial risk to
+drivers, underscoring the persistent and vital need for heightening safety measures. Early accident anticipation mechanisms
+are imperative for proactive measures, while detection accuracy
+is pivotal for prompt response and effective post-accident mitigation. Accurate and early anticipation of accidents for automated
+driving assistance systems in vehicles or CCTV in cities remains
+a complex task due to the intricate spatial-temporal interactions
+within traffic videos. This study presents text-informed magnitude
+enhancement in contrastive multiple-instance feature learning
+for vehicle accident detection and anticipation (TIME-VAD).
+Text is a better representative of concepts when compared to
+images in video, thus multi-modal learning is suitable. Also, the
+traditional assumption about feature magnitude of accidents and
+normal frames in magnitude based multiple-instance learning
+using weak supervision may not hold. This has led to the development of a novel weak-supervised learning strategy involving
+magnitude enhancement from textual concepts. For a better
+frame-level perception of accident risks in videos, dynamic temporal attentions are refined using the proposed dilated temporal
+conv-attention (DTCA) block. In-depth component-level analysis
+is performed to showcase the model’s efficacy while elucidating
+its operational mechanisms. Evaluation is conducted on three
+benchmark datasets, considering both earliness and accuracyrelated metrics. Extensive experiments demonstrate that our
+TIME-VAD model outperforms the existing models. Compared to
+the previous top-performing supervised model achieving 84.7%
+accuracy, TIME-VAD achieves a 94.44% accuracy (measured by
+ROC-AUC) on the largest DoTA dataset. Notably, our model
+also excels in measuring how early it detects accidents compared
+to previous methods. The code will be released on https://
+github.com/sumitmishra209/TIME-VAD
+Index Terms—Artificial surveillance, multi-modal learning,
+accident detection, real-time systems.
+Received 25 July 2024; revised 23 December 2024 and 6 June 2025;
+accepted 24 November 2025. Date of publication 10 December 2025; date of
+current version 10 March 2026. This work was supported by Korea Institute
+for Advancement of Technology (KIAT) grant funded by the Ministry of
+Trade, Industry and Energy (MOTIE) (Development of 22-kW Variable Type
+Electric Vehicle (EV) Charging System for Building Up Global Chain of
+Intelligent/Universal Mechanical Parking System) under Grant P0028821. The
+Associate Editor for this article was J. Xun. (Corresponding author: Sumit
+Mishra.)
+Sumit Mishra is with the Robotics Program, Korea Advanced Institute
+of Science and Technology, Daejeon 34141, South Korea (e-mail: sumitmishra209@kaist.ac.kr).
+Medhavi Mishra and Dongsoo Har are with the CCS Graduate School
+of Mobility, Korea Advanced Institute of Science and Technology, Daejeon
+34141, South Korea (e-mail: medhavi132@kaist.ac.kr; dshar@kaist.ac.kr).
+Pranjay Shyam is with Amazon Fulfillment Technologies and Robotics,
+Seattle, WA 98109 USA (e-mail: pranjayy@amazon.com).
+Digital Object Identifier 10.1109/TITS.2025.3637912
+
+I. I NTRODUCTION
+URVEILLANCE systems, prevalent due to the widespread
+deployment of CCTV cameras, pose a significant challenge: the inherent limitations in human monitoring capabilities [1]. However, the advent of artificial intelligence
+(AI) offers a transformative solution by automating accident
+detection and anticipation. A fundamental aspect of effective
+accident detection and anticipation is understanding anomalies.
+It is imperative to comprehend that anomalies pave the way to
+accidents, rendering accidents as anomalies when juxtaposed
+with regular traffic patterns. For example, a person suddenly
+starting to run fast on a heavy traffic road with approaching
+vehicles can be an anomaly that could lead to an accident.
+Many anomaly detection datasets include vehicle accidents as
+one class among others, such as explosions, acts of crime,
+and acts of violence. However, vehicle accident detection
+tasks require different treatments than other anomaly classes.
+The challenges posed by accidents stem from their inherent
+unpredictability and context-dependent manifestations. Each
+accident class varies significantly, presenting a multifaceted
+hurdle that does not align neatly with conventional clustering, classification, or regression paradigms. This necessitates
+adaptations from these areas for accident detection. Recent
+surveys highlight the growing importance of vision-based
+traffic accident detection and anticipation systems [60], with
+approaches ranging from cognitive modeling [58] to ego-view
+understanding [59]. Some works address anomalies along with
+vehicle accidents, and some focus solely on vehicle accidents,
+highlighting the unique requirements of accident detection
+tasks [4].
+Video accident detection and anticipation by leveraging
+deep learning (DL) and other classes of AI emerge as a
+promising avenue due to their ability to mine semantic patterns from automatically learned features. Through end-to-end
+optimization for feature extractions and accident assessments,
+diverse DL models exhibit the capacity to anticipate accidents
+across multiple levels spanning frame, temporal-spatial, and
+pixel domains and concurrently detect motion. The accident
+anticipation task involves identifying accidents before they
+happen, while detection focuses on recognizing the start of
+an accident event. As illustrated in Fig. 1, our proposed
+framework integrates both detection and anticipation capabilities through a unified architecture. The DL model’s output
+probability when compared with a threshold determines if an
+
+S
+
+1558-0016 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+3128
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+Fig. 1. TIME-VAD framework architecture for unified accident detection and
+anticipation.
+
+event in a frame is classified as a near accident or an accident.
+For both tasks, feature extraction and further processing are
+crucial steps in any DL model workflow. Therefore, we address
+these tasks together as accident detection based on earliness
+and accuracy. Existing efforts predominantly focus on unsupervised accident detection [5], [6], [7], [8], [9], [10], [11],
+[12], [13], [14], [18] that primarily model normal behavior and
+identify deviations from it without utilizing labeled accident
+data. They often rely on factors like motion trajectories or
+low-level features extracted from image patches to detect
+and anticipate accidents, exhibiting strength in simplifying
+the accident detection problem by generalizing to diverse
+accident distributions. While effective in certain scenarios,
+existing work may struggle in crowded scenes or fail to
+generalize in complex environments. Other limitations involve
+high false-positive rates, poor adaptation to environmental
+changes, and the inability to leverage readily available accident
+examples that can give prior knowledge about accidents. These
+constraints may hinder DL models’ practical utility [19].
+Building a fully supervised classification approach is
+difficult due to the heterogeneous nature and unknown manifestations of accidents until occurrence and the challenge
+of full supervision for all accident classes [19]. To overcome these challenges, self or weak supervision is explored
+to improve accident detection accuracy. Improved detection
+accuracy can be achieved through semi-supervised methods
+that extract normal patterns or by employing limited or
+weak supervised techniques such as multiple instance learning
+(MIL), which utilizes easy-to-annotate video-level labels for
+training [20]. Recent advancements in text and image-based
+contrastive learning have showcased notable efficacy with the
+
+availability of DL models, like Contrastive Language-Image
+Pre-Training (CLIP) [22], pretrained with large databases.
+These models offer features that can be directly utilized or
+further refined through contrastive methods. However, the
+challenge in training unsupervised and supervised accident
+detection frameworks demands a distinct approach to feature
+refinement. Therefore, a better technique different from the
+traditionally applied supervised [23] or unsupervised contrastive learning [24] is required in accident detection. Textual
+representations often articulate concepts more explicitly than
+images, prompting the exploration of employing contrastive
+supervision using text. Leveraging text-based signals might
+offer a more comprehensive and generic portrayal of accidents.
+Given the same concept for image and textual data, it is
+anticipated that image features corresponding to text features
+should exhibit similar trends in magnitude. This correlation
+should be a pivotal consideration in structuring the framework
+for MIL. From this viewpoint, the present work seeks to tackle
+these intricate challenges by proposing a novel approach leveraging text anchor-based contrastive weak-supervised feature
+enhancement within a MIL framework (Fig. 2), which has
+been tailored specifically for vehicle accident detection (VAD).
+Following are the main contributions of this work.
+• A novel framework, Text-Informed Magnitude Enhancement Feature Learning for Vehicle Accident Detection
+(TIME-VAD) is introduced. It leverages CLIP features for
+contrastive fine-tuning using text-based anchors, proving
+more effective in accident detection by harnessing the
+explicit concepts articulated in textual data.
+• Upon analyzing accident and normal traffic concepts in
+textual form, it is observed that, contrary to traditional
+assumptions, the magnitudes of normal CLIP features
+are higher than those of accident features. Consequently,
+a reversal of magnitudes is implemented to enhance
+learning by using weak-supervised magnitude-based MIL.
+• To refine temporal features, a dilated temporal convattention (DTCA) block is proposed, dynamically attending to salient temporal segments. This innovative block
+aims to enhance feature representation in the temporal
+domain.
+• While accident detection and anticipation are related,
+previous studies have addressed them separately, focusing
+on either timeliness or correctness. Our study achieves
+superior performance for both tasks independently and
+provides pragmatic results when combined.
+• Comprehensive analyses and experiments are conducted
+across three diverse datasets, evaluating metrics related
+to the correctness and timeliness of accident frame
+detection. The proposed framework can showcase superior performance as compared to state-of-the-art models,
+underscoring its efficacy in accurately and promptly
+detecting traffic accidents.
+Our work primarily focuses on vehicle accident detection,
+employing AI for real-time identification. The swift responses
+enabled by AI not only expedite aid to accident scenes,
+promising a significant reduction in casualties but also prioritize the improvement of advanced driving assistance systems
+(ADAS) [2]. By swiftly detecting accidents and promptly
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+notifying drivers via ADAS or using it in collision-avoidance
+assistance systems, such as automatic emergency braking and
+lane-keeping assistance, vehicular safety could be bolstered
+[3]. Consequently, our work resides at the juncture of pressing
+societal needs and technological innovation, seeking to harness
+AI’s potential for accident detection in surveillance and ADAS
+applications. The rest of this article is organized as follows.
+Section II reviews the existing accident detection works as well
+as other related tasks. Our proposed method is introduced in
+Section III. The comparison and component analysis experiments on the benchmarks are given in Section IV. Finally,
+Section V concludes the paper.
+II. L ITERATURE R EVIEW
+
+3129
+
+bag-level annotations that substantially enhance instancelevel accuracy across medical image datasets have been
+introduced. Similar to supervised and unsupervised learning,
+supervised and unsupervised contrastive learning face the same
+constraints, prompting further innovative strategies. Recent
+approaches leverage various techniques including two-stream
+networks [64] and monocular depth-enhanced 3D modeling
+[62] to improve detection capabilities. Previous studies have
+investigated weakly supervised anomaly detection based on
+temporal cues and feature discrimination [34], [36]. For traffic
+accident analysis, text-informed approaches [16], [65] have
+shown superior performance over image-based anchors in
+representing complex traffic concepts such as “accident scene”
+and “normal traffic”, which are better expressed textually.
+
+A. Weakly Supervised Anomaly and Accident Detection
+
+C. Multimodal Traffic Accident Detection and Anticipation
+
+Weakly supervised video anomaly detection capitalizes on
+using both normal and abnormal data with varying levels
+of supervision, leveraging video-level annotations to enhance
+anomaly detection [25], [26], [45], [46]. Unlike general
+anomaly detection, traffic accident detection presents unique
+challenges requiring temporal reasoning about evolving dangerous situations and early detection capabilities [60], [63].
+The DL-based MIL has emerged as a key methodology within
+weakly supervised techniques [20], [27], [28], [29], [30],
+[31]. However, challenges persist in accurately predicting
+accident frames due to the complexity of the context leading to
+accidents, which prompts the exploration of novel adaptations.
+Recent advancements using DL encompass temporal context
+aggregation [28] and the integration of attention mechanisms
+[30] in the classification module. These aim to better discern
+abnormal events amidst normal video sequences. Encoderbased methods have also gained prominence, training both
+feature encoders and classifiers to refine predictions and optimize feature representations more efficiently. These strategies
+incorporate pseudo-label generation and self-training schemes
+[27], [28]. Recent advancements include self-supervised consistency learning [61] and text-driven temporal modeling [65]
+for improved detection accuracy.
+
+Recent advances in traffic accident detection have evolved
+beyond general anomaly detection to address domain-specific
+challenges through multimodal approaches. While multimodal
+anomaly detection traditionally leveraged audio-visual data
+[37], traffic scenarios present unique constraints. Extracting external road audio from enclosed vehicle environments
+or obtaining clear audio in CCTV feeds poses significant
+challenges, making textual input a viable alternative for multimodal learning [16], [65]. Long video event retrieval and
+description methods [38] employ superframe segmentation to
+mitigate computational complexity, underscoring the need for
+language-based methods in processing vast accident-related
+video content.
+Contemporary traffic accident analysis approaches encompass cognitive modeling [58] for causal understanding and
+ego-view analysis [59] for driver-centric perception. Recent
+surveys [60] emphasize the shift toward vision-based systems
+with multimodal integration. Text-based anomaly detection
+[17] has emerged using weakly supervised MIL while considering classification probability on video level, while systematic
+reviews [63] identify real-time processing and early detection
+as critical requirements. Advanced architectures include selfsupervised consistency learning [61], two-stream networks
+[64], and depth-enhanced 3D modeling [62]. Unlike general
+approaches focusing on classification probability for video,
+our method addresses frame-level vehicle accidents through
+feature magnitude enhancement within a text-informed multimodal framework, leveraging semantic understanding for
+improved discrimination in vehicular contexts.
+
+B. Contrastive Learning for Anomaly and Accident Detection
+Among recent anomaly detection techniques, the integration
+of contrastive learning methods has drawn significant attention.
+Some approaches, e.g., [32], [33], [34], directly integrate
+contrastive learning, showcasing novel models leveraging contrastive attention modules with classifiers. These methods
+refine anomalous predictions through attention mechanisms,
+significantly improving frame-level receiver operating characteristic - area under the curve (ROC-AUC) and highlighting
+their effectiveness in weakly-supervised anomaly detection
+scenarios. However, while these methods offer potential solutions, challenges persist. For instance, the direct application
+of contrastive learning exhibits limitations, motivating efforts
+to pair it with MIL for enhanced anomaly detection [36].
+Hence, contrastive self-supervised learning within the realm
+of MIL is explored to overcome challenges posed by class
+imbalances [35]. Instance-level pseudo labels derived from
+
+III. M ETHODOLOGY
+In this section, the problem statement is presented and
+the proposed method TIME-VAD is described in detail.
+The pipeline to train and optimize the TIME-VAD is also
+presented.
+A. Problem Statement
+In the MIL-based method, which is a weakly supervised
+VAD, the training videos are labeled solely at the video
+level. Videos with accidents are referred to as an abnormal
+video and is labeled as 1 (positive) while videos without
+
+3130
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+any accidents are referred to as normal and is labeled as
+0 (negative). Thus only video label Y ∈ {0, 1} is provided.
+Let T denote the number of snippets (frames) in a video,
+K the number of selected features for MIL learning, m the
+separation margin, D the feature dimension (768 for CLIP),
+and L, M the numbers of positive and negative text anchors
+respectively. The operations largest-K and least-K select the K
+features with highest and lowest magnitudes respectively. The
+MIL-based methods treat the video as a bag and each snippet
+as an instance, defining a positive video as a positive bag
+of features Ba = (a1 , a2 , . . . , aT ) and a negative video as a
+negative bag of features Bn = (n1 , n2 , . . . , nT ). In this context,
+any video V = {vi }Ti=1 , comprising of T snippets. The objective
+of VAD is to learn a function fθ that maps snippet features
+either from Ba or Bn to their accident scores or probability
+within the range of 0 to 1 such that the following assumption
+max fθ (ai ) > max fθ (ni )
+i∈Ba
+
+(1)
+
+i∈Bn
+
+is valid. Formulating VAD as a classification task for outputting accident score, a MIL ranking objective function and
+MIL ranking loss are proposed in [20]. The objective function
+as shown in Eq. (1) aims to ensure that the snippet with the
+highest classification score in the positive bag ranks higher
+than the one with the highest classification score in the
+negative bag. The loss based on this objective is given as
+
+
+(2)
+L (Ba , Bn ) = max 0, max fθ (ni ) − max fθ (ai )
+i∈Bn
+
+i∈Ba
+
+To maintain a significant margin between positive and negative
+instances, a hinge-based ranking is used. This loss, when
+considering the maximum probability of 1 as a hinge, is given
+as
+
+
+L (Ba , Bn ) = max 0, 1 − max fθ (ai ) + max fθ (ni )
+(3)
+i∈Ba
+
+i∈Bn
+
+MIL-based methods in accident detection encounter inherent challenges that impede their efficacy. These methods face
+ambiguities in achieving a high probability score for the
+actual accident snippet of a video. This results in potentially
+misaligning the highest accident score snippet with the actual
+accident snippet. Issues arise when at the start of optimization,
+fθ predicts normal snippets in typical videos with the highest
+classification score. This potentially reinforces errors during
+training, hindering training convergence, and blurring the
+distinction between normal and accident behavior. Moreover,
+videos with multiple accident snippets may lack sufficient
+instances for robust learning. This is because only the highest
+classification score is used, impacting the training process.
+To overcome MIL challenges, the snippet feature magnitudes (L1 or L2 norm), instead of classification scores, are used
+in training by robust temporal feature magnitude (RTFM) [39]
+to differentiate between normal and abnormal snippets. The
+RTFM assumes that the low magnitude of the snippet’s feature
+signifies normal behavior, while higher magnitudes indicate
+accidents. In addition, the RTFM learning considers K snippets
+instead of just one. The learning enforces a criterion where
+the mean of the largest-K feature magnitudes in abnormal
+video snippets is higher than that of the mean of the largest-K
+
+feature magnitudes in normal video snippets. For better separability, a margin m is considered between the largest-K
+feature magnitudes of abnormal video snippets and the
+largest-K feature magnitudes of normal video snippets. This
+criterion provides a more robust metric for accident detection.
+Based on the largest-K feature magnitudes, the MIL loss
+function in RTFM is given by
+L (Ba , Bn ) = max (0, m − dθ )
+
+(4)
+
+where
+1 X
+1 X
+largest-K (kai k2 ) −
+largest-K (kni k2 )
+K
+K
+max (kai k2 ) > max (kni k2 ) .
+
+dθ =
+
+Also, the RTFM approach enforces alignment between the
+classification score of the largest-K magnitude snippets and
+their respective videos. This involves training a binary crossentropy-based classification loss function, L f ( fθ , y) where
+y ∈ (1, 0) such that y for the largest-K magnitude features
+of snippets from an accident video is 1 and y for largest-K
+magnitude features of snippets from a normal video is 0. The
+y for largest-K magnitude features of snippets from a normal
+video is 0 as there is no accident snippets in normal videos.
+The variable fθ is a function of x, which is the largest-K
+magnitude of feature embeddings from each of Ba and Bn .
+By jointly training normal and abnormal samples in both
+feature and scoring spaces, the method aims to ensure a
+comprehensive learning process. This video label classification
+loss for the largest-K features of snippets from accident and
+normal videos is given as
+X
+
+L f ( fθ , y) =
+− y log( fθ (x)) + (1 − y) log(1 − fθ (x)) (5)
+x∈largest-K
+
+B. Time-VAD Framework
+In the existing RTFM method, several limitations are identified, prompting the development of the TIME-VAD framework
+shown in Fig. 2. The RTFM framework involves challenges in
+distinguishing positive snippet embedding from negative snippet embedding, as their classification scores kept fluctuating
+while training. To address this, the TIME-VAD framework
+incorporated contrastive text anchor-based training to improve
+the distinction between positive and negative snippet embeddings. Anomaly detection studies [18], [39], [45], [46] used
+preprocessed features such as optical flow [43], and object
+bounding boxes [42] along with features from RGB or Gray
+pixels like I3D [40] or C3D [41]. Incorporating additional
+features along with I3D and C3D image-based backbones
+improves results but preprocessing additional features is computationally heavy as well as time-consuming. TIME-VAD
+employs the CLIP feature extraction backbone, capitalizing on
+its ability to comprehend multimodal (text and image) information, unlike conventional image-based backbones. Thus, a
+richer representation of data is enabled by using only the
+CLIP RGB pixel features. This is particularly beneficial in
+scenarios requiring nuanced contextual understanding across
+modalities. Furthermore, the assumption that accident frames
+exhibit higher magnitudes than normal frames did not hold
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+3131
+
+Fig. 2. TIME-VAD feature learning framework with color-coded processing paths: red for accident-related (accident video, positive anchors, accident frames)
+and purple for normal-related (normal video, negative anchors, normal frames) components. Accident videos contain both accident frames (red) and normal
+frames (purple).
+
+universally. This is observed particularly in the case of CLIP,
+where this pattern is reversed. Hence, The TIME-VAD has
+enhanced the magnitude using MIL accordingly. Additionally,
+to refine features before classification, a DTCA block is
+introduced in TIME-VAD.
+1) Clip Feature Extraction and Text Anchor Analysis: The
+TIME-VAD integrates the CLIP feature extraction backbone,
+deviating from conventional image-based models like I3D
+and C3D. CLIP’s unique strength lies in its capacity to
+understand multimodal information, associating images with
+their respective texts. Unlike standard image-centric models, CLIP trained through contrastive learning comprehends
+the nuanced relationships between images and text. This
+broader comprehension enables CLIP to encapsulate not only
+visual data but also semantic and contextual information,
+significantly enhancing accident detection capabilities. The
+CLIP model [vit-large-patch14-336] [47], serving as TIMEVAD’s feature extraction backbone, undergoes training on
+vast datasets, incorporating distinct image-description pairs.
+This model employs an image encoder built around the ViT
+architecture [48], which features variations in layer count,
+patch size (14 × 14), and input image dimensions (336 × 336
+pixels). Simultaneously, its text encoder employs a transformer
+architecture [49] with an expanded layer count, amplifying its
+grasp of textual contexts for a more comprehensive understanding. Both texts and images have 768 dimension feature
+vectors.
+Positive and negative text anchors can be either manually
+designed or learned. However, hand-crafted text prompts do
+not require additional training procedures and still achieve
+decent results [15]. Hence, we have manually designed multiple positive and negative text anchors. The text anchors are not
+exhaustive, as the fundamental purpose of weak supervision is
+acknowledging that exhaustively listing all possible accident
+scenarios is impractical and unnecessary. To develop effective
+anchors covering the accident types represented in textual
+descriptions of accidents and normal driving events from the
+
+Fig. 3. CLIP text anchor analysis: Magnitude distribution histogram shows
+embedding frequency per magnitude bin, with accident anchors having lower
+mean magnitude than normal anchors. The cosine similarity matrix between
+accident and normal anchors, lying in the range of 0.575-0.8, reveals difficulty
+in distinguishing events in the textual modality.
+
+W3AL database [73] GPT4, along with manual refining, is
+used to generate representative text anchors. During training,
+we considered the average effect for the corresponding set
+of anchors accordingly. A magnitude distribution analysis is
+conducted on 19 negative and 27 positive text anchors listed in
+Table I. The analysis, illustrated in Fig. 3, showcases anchor
+frequency against magnitude. For positive anchors, the mean
+
+3132
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+TABLE I
+T EXT FOR P OSITIVE AND N EGATIVE A NCHORS U SED
+IN TIME-VAD T RAINING
+
+magnitude was registered at 15.38, contrasting with 17.93 for
+negative anchors. This disparity challenges the assumption that
+accident frames always exhibit higher magnitudes than normal
+frames. Additionally, examining cosine similarity, which is the
+dot product of unit vectors between positive and negative text
+anchor vectors (as shown in Fig. 3), revealed a range spanning
+from 0.575 to 0.8. This exploration highlighted the challenges
+in discerning between “accident scene” and “normal traffic”.
+This was particularly evident in textual representations, which
+are albeit clearer compared to their visual counterparts. These
+complexities underscore the intricate nature of the problem domain, especially in visual conceptualizations of such
+scenarios.
+2) TIME-VAD: TIME-VAD introduces an innovative architecture leveraging the CLIP backbone [22], harnessing the
+power of multimodal information. Initially, normal and accident videos are simultaneously input, and each frame from
+both videos undergoes 10-crop data augmentation for robust
+data. The CLIP backbone [vit-large-patch14-336] [47] extracts
+features from each frame of the video and encodes them in a
+768-dimension (D) vector. Employing the DTCA block refines
+these features in the temporal domain to consider a given
+video rather than the frame images of that video independently.
+This enhances the features’ representation for temporal context
+understanding.
+Subsequently, from both the accident and normal videos,
+K frame feature embeddings with the least magnitude are
+selectively extracted. These frame feature embeddings that
+are processed through the proposed architecture undergo three
+primary loss functions. The first loss involves employing
+features with the least-K magnitude from both videos, emphasizing magnitude-enhanced MIL. The second loss employs
+features with the least-K magnitude, from both videos, in a
+classification head. Here, the classification probability of K
+features associated with the accident video is driven towards
+1, while those of the normal video features are pushed towards
+0, intensifying the discernment between normal and accident
+instances. Furthermore, the third loss integrates contrastive
+
+Fig. 4. Schematic of Dilated Temporal Conv-Attention (DTCA) block. The
+block consists of four main components with unique color coding: attention
+blocks (green) for global temporal context, C1 blocks (blue) for dimension
+adjustment, C2 blocks (orange) for dilated convolutions with varying dilation
+rates, and L1 blocks (yellow) for feature processing. The input feature
+dimensions are mentioned within the blocks and the corresponding output
+feature dimensions are mentioned along the output lines extending from
+the block and connecting to other blocks. For Conv-1D (C1), the channel
+dimensions are adjusted as per the required output feature dimension.
+
+textual anchor-based training. Utilizing L positive and M negative text anchors features that have dimension D are computed
+using CLIP. For the least-K magnitude features extracted from
+the accident and normal videos, cosine similarity calculations
+are performed with each of the L positive and M negative
+anchor features, respectively. These tailored losses, strategically designed within the framework, enhance the model’s
+ability to distinguish accident instances from normal patterns,
+paving the way for more robust accident detection in video
+data.
+3) Dilated Temporal Conv-Attention (DTCA) Block:
+Inspired by attention techniques in video understanding, the proposed DTCA captures multi-resolution local
+temporal dependencies and global temporal dependencies between video frames. The DTCA block is illustrated in Fig. 4. Multi-scale temporal representations are
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+learned using the CLIP pre-computed features: F(clip).
+For local temporal dependency, dilated convolutions are
+employed over the temporal dimension using a pyramid
+of dilated convolution (PDC) [50]. The dilated convolution operation PDC(n) , for n equal to 1, 2, and 4, is
+given by
+PDC(n) = Conv1D (F(clip), kernel size = 3, dilation = n)
+(6)
+Further features from each of PDC are processed using RELU
+non-linearity, batch normalization layer, and dropout layer for
+regularization.
+To capture the global temporal context, the attention block
+within the transformer [49] is used to process features along
+the time dimension. Let F(c) denote input features to the
+attention block, which is convoluted with a 1 × 1 convolution
+and a learnable position encoding represent element-wise
+added to the convoluted features. To reduce spatial dimension, position encoding-added convoluted features are again
+convoluted using 1 × 1 convolution. Using these features as
+F(c1 ), F(c2 ), and F(c3 ), attention block estimates pairwise
+correlations between features, generating an attention map
+M ∈ R(T ×T ) given as
+
+
+F(c1 ) · F(c2 )T
+· F(c3 )
+(7)
+M = Softmax
+√
+D
+This attention map M is then matrix multiplied with F(c3 ),
+and convoluted again using 1 × 1 convolution to get features F ∈ R(T ×D) . For better global temporal attention,
+initial features F(clip) are divided into three spatial domains:
+F(c) ∈ R(T ×(0→D/2),(D/2→D),(0→D)) . Each of these features F(c)
+undergoes separate processing using three separate attention
+blocks.
+Each of the three features processed using attention blocks
+as well as the three features processed using PDC are concatenated and convoluted with a 1 × 1 convolution. This reduces
+spatial dimensions from F ∈ R(T ×6D) to F ∈ R(T ×D) . In addition, these features are processed using RELU non-linearity,
+batch normalization layer, and dropout layer. A skip connection utilizing the original feature (F(clip)) is element-wise
+added, producing the final temporal feature representation.
+These features are finally used for selecting the least-K magnitude features of accident and normal video frames. Normal
+frames, with the least-K magnitude, are selected with a dropout
+of 0.7 to maintain good generalization. Also, training batches
+of pairs consisting of an accident and a normal video are
+processed. After separating the features of normal and accident
+videos from a pair, a multi-layer perceptron with 3 layers
+is deployed as a classification head. This classification head
+outputs a score for each frame of input video out of which
+K scores, one for each frame feature embedding having the
+least-K magnitudes are chosen for loss calculation while
+training.
+C. Optimization Procedure
+1) Magnitude Enhanced Multiple Instance Learning Loss in
+Time-VAD: In TIME-VAD, the optimization process employs
+magnitude-enhanced MIL loss. This loss function, L (Ba , Bn ),
+
+3133
+
+relies on the discrepancy dθ . Here, dθ is calculated as the
+difference between the mean of the least-K feature magnitude
+from normal video snippets and abnormal video snippets.
+Here, the snippet is considered as a frame of the video.
+The loss is triggered when this difference is less than a
+margin m. This formulation aims to ensure that the minimum
+magnitude of snippet feature embedding within the normal
+video is greater than the minimum magnitude of snippet
+feature embedding within the abnormal video, enhancing the
+distinction between these snippet feature embeddings during
+model optimization. Following RTFM, instead of just taking
+the least feature magnitude of the snippet’s feature, the mean
+of the least-K feature magnitudes of normal video snippets
+is compared with the least-K feature magnitudes of abnormal
+video snippets. This magnitude-enhanced MIL loss is given by
+L (Ba , Bn ) = max (0, m − dθ )
+
+(8)
+
+where ai ∈ Ba and ni ∈ Bn represent individual frame feature
+embeddings, and
+1 X
+1 X
+least-K (kni k2 ) −
+least-K (kai k2 )
+dθ =
+K
+K
+min (kni k2 ) > min (kai k2 )
+2) Frame Classifier Loss in Time-VAD: Within TIMEVAD, the frame classifier loss is integral to the learning
+process. This loss, L f ( fθ , y), operates based on the binary
+cross-entropy formula, summing over a subset of instances
+designated by the least-K magnitude of frame features, where
+y ∈ (1, 0) such that y for least-K magnitude features of snippets
+from an accident video is 1 and y for least-K magnitude
+features of snippets from a normal video is 0. Since frame
+labels are not available directly, we use the least-K magnitude
+of feature embeddings to match their classification probability
+with the corresponding video labels. This results in weak
+supervision on frame level based on video labels. fθ is a
+function of x, which is the least-K magnitude of feature
+embeddings from each of Ba and Bn . Frame classification loss
+aims to optimize the model by minimizing the classification
+error between abnormal and normal snippets based on video
+labels, enabling effective discrimination between these categories during training. This video label classification loss for
+the least-K feature magnitude of snippets from accident and
+normal videos is given as
+X
+
+L f ( fθ , y) =
+− y log( fθ (x))+(1−y) log(1 − fθ (x))
+(9)
+x∈least-K
+
+where x specifically refers to the least-K magnitude feature
+embeddings selected for classification.
+3) Text Anchor-Based Contrastive Loss in Time-VAD:
+Differentiating itself from traditional supervised contrastive
+loss [23], TIME-VAD employs the text anchor-based contrastive loss (Lcont ). Unlike traditional contrastive learning
+that includes both attraction and repulsion terms, our formulation focuses solely on attracting relevant features to their
+corresponding anchors, avoiding explicit repulsion between
+cross-category pairs to prevent potential interference in the
+weak supervision setting. Loss function Lcont , leverages the
+similarity scores between anchor vectors and frame features
+in x, which are the least-K magnitude of feature embeddings
+
+3134
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
++
+from Ba and Bn . Here, x is comprised of both accident ( fleast-K
+)
+−
+and normal ( fleast-K ) frame feature embeddings, which have the
+least-K magnitude in the respective accident (Ba ) and normal
+(Bn ) video. This process is guided by binary labels (amask and
++
+−
+nmask ) for fleast-K
+and fleast-K
+. The text anchor-based contrastive
+loss (Lcont ) is then given by
+
+TABLE II
+ACCIDENT DATASETS U SED IN E XPERIMENTS
+
++
+−
+Lcont ( fleast-K
+, fleast-K
+, a+ , a− )
++
+= LCL (sim( fleast-K
+, a+ ), amask )
+−
++ LCL (sim( fleast-K
+, a− ), nmask )
+
+(10)
+
+where sim denotes the cosine similarity scores between frame
+features with least-K magnitude and anchor vectors and binary
+masks are constructed as follows: amask are binary labels with
+the length of 2K that have K entries as 1 for each of least-K
+magnitude features from an accident video and K entries as 0
+for each of least-K magnitude features from a normal video.
+nmask are binary labels with the length of 2K, which have
+K entries as 0 for each of least-K magnitude features from
+an accident video and K entries as 1 for each of least-K
+magnitude features from a normal video. a+ and a− denote the
+positive and negative anchor vector embeddings, respectively.
+The video-level label y determines the mask construction,
+establishing the direct relationship between video labels and
+text anchor vectors used for contrastive learning.
+In addition, the contrastive loss function LCL in Eq. (10)
+encapsulates the probabilistic interpretation of similarity
+scores between frame features and anchor vectors. The function calculates the mean negative logarithm of the softmax
+probabilities of similarity scores scaled by a temperature
+parameter (temp). These probabilities are multiplied by binary
+masks (maski ), assigning weights to each score based on
+whether the instance is labeled as 0 or 1. As discussed,
+frame masks are made using video labels, which provide weak
+supervision on the frame level based on video labels. This
+mechanism enables a nuanced understanding of similarity,
+facilitating effective separation between accident and normal
+instances in the contrastive learning process within TIMEVAD. The contrastive loss function LCL is given by
+LCL (simi , maski )
+= −mean2K
+i=1
+
+!!
+esimi /temp
+maski × log P sim /temp 
+e i
+× (1 − maski )
+(11)
+
+where simi represents the similarity score of the ith frame
+feature, maski ∈ {0, 1} denotes the binary mask, and temp is
+the temperature parameter used to scale the similarity scores.
+4) Total Loss in Time-VAD: For a total loss, temporal
+smoothness, and sparsity regularisation are also needed as used
+in [20]. The temporal smoothness (L s ( fθ , f)) enforces a similar
+anomaly score for neighboring snippets. It is given by
+L s ( fθ , f) =
+
+T −1
+X
+
+fθ (fi ) − fθ (fi+1 )
+
+2
+
+(12)
+
+i=1
+
+where f denotes feature embeddings of (Ba , Bn ). Following
+the same notations, the sparsity regularisation loss (Lr ( fθ , f))
+
+imposes a prior in which abnormal events are rare in each
+abnormal video and is given by
+T
+
+Lr ( fθ , f) =
+
+1X
+fθ (fi )
+T
+
+(13)
+
+i=1
+
+The total loss (Lt ) is the weighted sum of L (Ba , Bn ), L f ( fθ , y),
+Lcont , L s ( fθ , f), Lr ( fθ , f), and is given as
+Lt = w1 × L (Ba , Bn ) + w2 × L f ( fθ , y) + w3 × Lcont
++ w4 × L s ( fθ , f) + w5 × Lr ( fθ , f)
+(14)
+where w j are respective weights for j ∈ [1, 5]. During training,
+CLIP features were pre-calculated and stored to avoid recalculating them in every epoch, saving GPU memory usage. This
+is equivalent to freezing the backbone. Text anchors as well as
+video frame CLIP embeddings are used for training. The total
+loss is used to train the DTCA block and the classification
+head, as shown in Fig. 4. During testing, the CLIP backbone,
+DTCA block, and classification head are frozen, and no loss is
+calculated. Only video frame CLIP embeddings will be used
+for testing. The model outputs a score for each frame of the
+video, representing the frame’s accident probability.
+IV. I MPLEMENTATION AND E XPERIMENTAL R ESULTS
+A. Datasets
+Three datasets named car crash dataset (CCD) [45], dashcam accident dataset (DAD) [51], and detection of traffic
+anomaly (DoTA) [4] are used in this paper. The key attributes
+and compositions of these datasets are provided in Table II.
+CCD and DAD offer unique perspectives on traffic accident
+videos taken from different cameras, showcasing diverse scenarios and attributes. CCD, with its 10 frames per second
+(FPS) videos, presents a substantial collection of 1,200 positive
+and 2,400 negative samples, while DAD’s 20 FPS videos comprise 455 positive and 829 negative samples. A comparative
+analysis between these datasets highlights noteworthy distinctions [46]. CCD predominantly features accidents involving
+the ego-vehicle (53.4%) with variable appearance features and
+random accident start time within the last 2 seconds of the
+video. Contrastingly, DAD videos often depict complex urban
+traffic accidents where ego-vehicles are not involved (90%
+of cases) and specifically containing an accident within the
+last 0.5 seconds. To supplement the scarcity of large-scale
+annotated datasets, DoTA dataset contains 4,677 videos with
+varying lengths for accident cases only. However, the proposed
+method needs both accident and normal videos. Thus in DoTA
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+dataset, 4,130 negative samples for training were formed by
+combining normal samples from DAD and CCD datasets. The
+testing subset, comprising of 1,402 positive videos, remains
+unchanged to maintain consistency with original samples for
+fair comparison with baselines.
+B. Details of Implementation
+Instead of generating snippets with multiple frames, we
+analyzed each frame individually in our experiments. The
+margin m was consistently set to 100, while K was maintained
+at 4. In the DTCA architecture, a dropout rate of 0.3 was
+applied in L1, and its classification head comprised three fully
+connected perceptron (FCP) layers (sized 512, 128, and 1)
+separated by dropout layers and ReLU activations. Normal
+feature selection employed a dropout of 0.7, whereas no
+dropout was applied for accident feature selection. T was set
+to 50 in DTCA, which allowed capturing a 5-second temporal
+context with a 10 FPS dataset. During real-world testing
+involving cross-dataset evaluation, DAD’s 100-frame videos
+were downsampled to 10 FPS for testing on CCD, resulting
+in 50 frames, as done in [46]. Conversely, training using
+the DoTA dataset involved converting variable-length videos
+to a standard representation of 50 frames through equally
+spaced frame sampling. During the testing phase, predictions
+were made using a sliding window approach with 50-frame
+windows.
+Optimizing TIME-VAD involved using the Adam optimizer
+with a weight decay of 0.0005 and a batch size of 32 instances,
+each instance combining a normal and an accident video.
+This paired video sampling in each batch naturally handles
+video-level class balance during training, while the differential
+dropout rates (0.7 for normal frames, none for accident frames)
+along with sparsity regularization loss help address frame-level
+class imbalance. Learning rates were set at 0.0001 for DAD
+and DoTA, and 0.0005 for CCD. The loss weights w1 , w2 , w3 ,
+w4 , and w5 in Eq. (14) were set as 0.0001, 1, 0.002, 0.0008,
+and 0.008, respectively, to maintain comparable loss magnitudes. In Eq. (11), temp was set as 0.1. Implementation was
+done using PyTorch, running on Nvidia GeForce GTX 1080
+GPU with 12GB memory. During inference, the CLIP model
+requires 45.23 msec per frame for CLIP feature extraction.
+Additionally, our model takes 18.82 msec per frame to predict
+the accident score. Given that human reaction times are not
+typically this fast, most datasets and analyses are conducted
+at a rate of 10 FPS. Hence, TIME-VAD can handle this frame
+rate efficiently. Furthermore, to compare our model with DSTA
+[46] and GCRNN [45], we used the models provided by
+the authors on GitHub for calculating metrics that were not
+directly available in the respective studies. Lastly, we have
+reported the available metrics of various models from the
+published results of respective studies for baseline comparison.
+
+3135
+
+detection can not be guaranteed, as it depends on the specific
+nature of the accident. For example, accidents caused by
+sudden events like explosions may not be detected at an earlier
+stage. However, studies like DSTA [46] and GCRNN [45]
+focused only on the earliness metric, which is a one-sided
+aspect of evaluation.
+1) Correctness Metrics: Under this category, the model’s
+ability to detect accident on frame level is measured using:
+Receiver Operating Characteristic - Area Under the
+Curve (ROC-AUC): In essence, the Area Under the Curve
+(AUC) quantifies the model’s ability to discriminate between
+positive and negative instances at the frame level [4]. AUC
+is derived from the ROC curve, which depicts the trade-off
+between true positive and false positive rates across different
+classification thresholds. Hence, the AUC serves as a comprehensive measure. Higher AUC values signify more effective
+model performance, with a perfect model achieving an AUC
+of 1, while an AUC of 0.5 corresponds to random guessing.
+2) Earliness Metrics: These metrics assess the timeliness
+of accident anticipation and include:
+Mean Time-to-Accident (mTTA): This metric assesses the
+earliness of accident anticipation based on positive predictions
+[45], [51]. Time-to-Accident (TTA) measures the time taken in
+seconds, for the system to anticipate an accident at different
+classification thresholds. For various threshold values, TTA
+results are obtained. Then, mTTA representing the mean time
+taken in seconds is calculated as the average of all TTA values
+across these thresholds. This signifies the average duration
+between the system’s identification of an impending accident
+and the actual occurrence. Hence, mTTA provides an overall
+measure of how early the model predicts an accident across
+different threshold settings.
+Average Precision (AP): This metric evaluates the preciseness in predicting future accidents within a video [45],
+[51]. Using confidence scores, an accident is anticipated if a
+threshold is reached. True positive predictions occur when the
+method accurately anticipates an accident before it happens
+at frame y in the video. Conversely, false positives and
+false negatives arise when incorrect predictions are made
+for non-accident and accident videos, respectively. Varying
+the threshold, precision-recall pairs are formed to plot a
+precision-recall curve. The average precision is the area under
+the precision-recall curve that reflects the system’s overall
+accuracy in early anticipation of accidents across the videos.
+While ROC-AUC provides a general measure of frame-level
+classification performance, Average Precision (AP) offers a
+more realistic evaluation for accident anticipation systems.
+Unlike ROC-AUC which considers all frame predictions,
+AP only evaluates predictions made before accidents occur,
+ensuring the metric reflects real-world early warning capabilities. Additionally, AP incorporates time-to-accident weighting,
+rewarding models that detect accidents earlier rather than just
+detecting them accurately.
+
+C. Evaluation Metrics
+The evaluation of a model for accident anticipation involves
+assessing two critical aspects: correctness and earliness of
+prediction. While correctness (accuracy) is vital for any VAD
+system, it is important to note that earliness (timeliness) of
+
+D. Evaluation of the Time-VAD
+1) Experimental Analysis of Contrastive Features: Uniform Manifold Approximation and Projection (UMAP) [52]
+is a dimensionality reduction technique used to visualize
+
+3136
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+TABLE III
+C OMPARISON OF ROC-AUC S CORES BASED ON ACCIDENT AND N ORMAL
+F RAME E MBEDDING M AGNITUDES
+
+TABLE IV
+C OMPARATIVE A NALYSIS OF ACCIDENT A NTICIPATION
+M ODELS ON CCD DATASET
+Fig. 5. UMAP plot of CLIP embeddings from 32 randomly selected least
+magnitude frames of positive (green) and negative (yellow) test videos.
+Frame embeddings are juxtaposed with positive (blue) and negative (red) text
+anchors.
+
+high-dimensional data in a lower-dimensional space while
+maintaining its inherent structure and relationships. This study
+applied UMAP to visualize embeddings generated by the
+TIME-VAD model trained on CCD. The UMAP plot, as
+depicted in Fig. 5, showcases embeddings obtained from
+randomly selected 32 positive and 32 negative test videos.
+Considering the least four magnitudes of frame embeddings
+from each video, the total embeddings constitute 128 positive
+test embeddings and 128 negative test embeddings. These
+frame embeddings were then contrasted with 27 positive and
+19 negative text anchors. The UMAP visualization demonstrates clear clustering patterns that support our approach.
+As shown in Fig. 5, while text anchors and their corresponding frame embeddings may appear separated in this
+two-dimensional projection, they follow consistent relational
+trends across both UMAP dimensions. Specifically, positive
+text anchors and positive test frame embeddings form distinct
+clusters that are well-separated from the clusters of negative
+text anchors and negative test frame embeddings. The positive frame samples consistently maintain higher values in
+both UMAP dimensions compared to negative frame samples, following the same pattern observed between positive
+and negative text anchors. This parallel alignment of trends,
+rather than absolute proximity in the reduced space, validates
+our contrastive learning approach’s effectiveness in meaningfully organizing the embedding space and establishing proper
+relationships between the magnitude of textual and visual
+embeddings for positive and negative cases.
+2) Experimental Analysis for Magnitude Enhanced Feature
+Learning: An experimental analysis was conducted to explore
+the impact of considering the magnitude of accident and
+normal frame instances on the ROC-AUC metric across three
+datasets: DAD, CCD, and DoTA. For each of the datasets, the
+model is trained and then tested on the test set of the respective
+dataset. Experiments were performed for two different cases
+on each dataset. In the first case, it was assumed that accident
+frames tend to have larger magnitude embeddings, while
+normal traffic frames exhibit smaller magnitude embeddings.
+In the second case, it was assumed that accident frames
+tend to have smaller magnitude embeddings, while normal
+
+traffic frames exhibit larger magnitude embeddings. Results
+of the ROC-AUC metric for the different cases are enlisted
+in Table III. The results depict that the second assumption
+led to significant improvements in ROC-AUC metrics for
+the relatively challenging DAD and DoTA datasets: from
+75.36% to 84.43% for DAD and from 64.26% to 94.44%
+for DoTA dataset. Conversely, the relatively simpler dataset,
+CCD, showed a marginal change in performance: ROC-AUC
+remained comparably high regardless of the approach used,
+scoring 95.5% and 95.38% in the respective cases.
+3) Comparison to the State-of-the-Art Models: We performed an experimental analysis on the CCD dataset that
+demonstrates the effectiveness of our method when compared
+with other accident anticipation models based on framelevel ROC-AUC metric. As presented in Table IV, among
+the assessed methods, the proposed TIME-VAD model significantly outperforms existing models. TIME-VAD model
+showcases a notable ROC-AUC score of 95.38%, while other
+methods, such as DSTA and GCRNN, show relatively lower
+performance with ROC-AUC scores of 53.19% and 47.87%,
+respectively. A notable observation from the training behavior is the trade-off between early anticipation (measured by
+AP) and correct anticipation (measured by frame-level ROCAUC). Models situated on the Pareto-optimal frontier strike
+an efficient balance, indicating that enhancing the AP often
+comes at the expense of a decrease in frame-level ROCAUC [53]. However, even when we optimized for maximizing
+AP, the ROC-AUC metric did not fall too much and was
+significantly higher than the existing methods. Selecting an
+optimal model for implementation should align with specific
+user requirements, which account for diverse environmental
+factors influencing accident anticipation systems.
+Our experimental analysis on the DoTA dataset emphasizes the superior performance of the proposed TIME-VAD
+model in terms of frame-level ROC-AUC score, as enlisted
+in Table V. In comparison to a spectrum of unsupervised,
+weak-supervised, and supervised methods, our model consistently outperforms the previous methods. Specifically, when
+considering unsupervised methods such as ConvAE [5] and
+ConvLSTMAE [54] with both gray and flow inputs, as
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+TABLE V
+C OMPARATIVE A NALYSIS OF ACCIDENT A NTICIPATION M ODELS
+D OTA DATASET. T EXT I NPUT I S O NLY U SED FOR T RAINING
+FOR A LL M ETHODS
+
+3137
+
+TABLE VI
+ON
+
+well as the AnoPred model [7], our proposed TIME-VAD
+showcases significant improvements. Moreover, even against
+supervised methods like fully connected network (FC), LSTM
+[56], Encoder-Decoder [57], and TRN [44], the TIME-VAD
+model exhibits remarkable advancement, securing a substantial
+ROC-AUC score of 94.44%. Notably, the TIME-VAD model
+surpasses the performance of unsupervised and supervised
+approaches, proving its efficacy in accident anticipation, and
+demonstrating its potential as a reliable solution in this
+domain.
+Furthermore, using the CCD dataset, our experiments
+focused on gauging the model’s readiness or earliness to
+anticipate accidents by evaluating two critical metrics: AP
+and mTTA, as displayed in Table VI. Notably, among the
+various models and their respective performance scenarios,
+case (b) of TIME-VAD showcased the highest values for both
+AP and mTTA. Compared to a recent method (W3AL) [73]
+that achieves AP of 99.7% with 3.93 mTTA, TIME-VAD (b)
+outperforms it by reaching 99.97% with 4.99 mTTA, though
+such saturation of high AP necessitates frame-level ROC-AUC
+evaluation for meaningful comparison. This underlines the
+proposed model’s superior readiness to anticipate accidents
+at an earlier stage. Also, when compared with case (b) of
+TIME-VAD model, earliness metrics for DSTA and GCRNN
+
+C OMPARATIVE A NALYSIS FOR E ARLINESS M ETRICS W ITH C ORRESPOND ING C ORRECTNESS M ETRIC ON CCD DATASET
+
+models are less but comparable. However, ROC-AUC score
+is significantly low for both DSTA and GCRNN models in
+comparison to the TIME-VAD. For video level analysis at 80%
+recall, TIME-VAD’s anticipation-focused variant (a) achieves
+TTA of 2.92s with precision of 0.78. The detection-focused
+variant (b) demonstrates higher precision (1.0) with longer
+TTA of 4.86s at 80% recall, illustrating the effective tradeoff between early warning and detection accuracy.
+As discussed, higher ROC-AUC values might result in
+lower earliness-related metrics, reflecting a trade-off between
+the earliness metric and the correctness metric (frame-level
+ROC-AUC metric). Interestingly, observations from DSTA
+[46] and GCRNN [45] models suggest potential overfitting
+issues. These issues are specifically due to learning from
+accident-irrelevant cues within the scene. This can be the
+main reason for the significantly low ROC-AUC for both
+DSTA and GCRNN models. In response, we developed a more
+balanced model denoted as case (c) in Table VI, aiming to
+achieve a harmonious performance across all three metrics.
+To achieve the TIME-VAD model case (c), we increased the
+weight of frame classifier loss (L f ( fθ , y)) to 10 and then
+finetuned the model of the case (a) in Table VI. This balanced
+approach in the TIME-VAD model, where all three metrics,
+AP, mTTA, and ROC-AUC demonstrate commendable performance, showcases its potential as a promising solution for
+accurate and timely accident anticipation. To further validate
+the findings, a detailed analysis of precision-recall characteristics is conducted across different threshold values for all three
+TIME-VAD variants, as shown in Fig. 6. The comprehensive
+evaluation reveals distinct performance characteristics, with
+TIME-VAD (a) demonstrating superior overall performance
+by achieving the highest area under precision-recall curve
+(PR-AUC) (0.703) and ROC-AUC (0.954), reaching peak
+precision values of around 0.95 at higher thresholds while
+maintaining robust recall, validating its optimization for
+detection accuracy. TIME-VAD (b), optimized for early anticipation, exhibits lower but still competitive performance
+(PR-AUC: 0.379, ROC-AUC: 0.910), reflecting the inherent
+trade-offs when prioritizing temporal anticipation over pure
+detection accuracy. TIME-VAD (c) achieves intermediate performance (PR-AUC: 0.538, ROC-AUC: 0.920), successfully
+
+3138
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+Fig. 6. Comprehensive performance analysis of TIME-VAD variants on the CCD dataset showing (from left to right): Precision vs threshold, Recall vs
+threshold, Precision-Recall curve, and ROC curve. Three optimization strategies are compared: TIME-VAD (a) optimized for detection accuracy, TIME-VAD
+(b) optimized for early anticipation, and TIME-VAD (c) as a balanced approach fine-tuned from variant (a).
+
+TABLE VII
+A BLATION S TUDY R ESULTS FOR D IFFERENT C OMBINATIONS OF L OSS
+C OMPONENTS FOR CCD DATASET. X I NDICATES I NCLUSION W HILE
+× I NDICATES O MISSION OF R ESPECTIVE L OSS C OMPONENT
+
+balancing between the two optimization strategies. Notably, all
+variants maintain strong discriminative ability with ROC-AUC
+values above 0.91, while the precision-recall analysis reveals
+more nuanced differences in handling class imbalance, with
+the threshold sensitivity analysis demonstrating that TIMEVAD (a) maintains the most stable precision-recall trade-offs
+across different operating points, validating the effectiveness
+of the framework.
+4) Comparative Analysis of Temporal Models: Different
+temporal modelling methods to capture frame events are
+compared by replacing DTCA in TIME-VAD architecture on
+CCD test dataset. Also, the inference time per frame from
+the temporal method part only is noted. The DTCA model
+achieved the highest ROC-AUC of 95.38% with an inference
+time of 2.84ms per frame. The Long Short-Term Memory
+(LSTM) model with two bidirectional layers and 384 hidden
+units per direction reached 94.12% ROC-AUC but required
+3.75ms per frame. Temporal Convolutional Network (TCN)
+with three stacked dilated convolutional layers (dilation rates
+1, 2, 4) demonstrated good efficiency with 91.73% ROC-AUC
+and the fastest inference time of only 0.85ms. The Transformer
+architecture consisting of three multi-head attention blocks (8
+heads each) matched TCN’s detection capability with 91.72%
+ROC-AUC and required 1.37ms per frame. Convolutional
+LSTM (Conv-LSTM), combining two convolutional layers
+(dilations 1, 2) with a two-layer bidirectional LSTM, achieved
+89.58% ROC-AUC but had the highest computational cost at
+5.59ms per frame.
+
+5) Ablation Study for Loss: To evaluate the effectiveness
+of different components of our loss function, we conducted
+an ablation study by keeping the temporal smoothness and
+sparsity regularization losses constant and varying the presence
+of other losses, namely, text anchor-based contrastive loss
+(Lcont ), frame classification loss (L f ( fθ , y)), and magnitude
+enhanced multiple instance learning loss (L (Ba , Bn )). Our
+goal is to optimize the ROC-AUC metric for CCD dataset.
+We reported three different metrics in Table VII: ROC-AUC,
+mTTA, and AP. The values for the ROC-AUC metric, summarized in Table VII, reveal that the combination of all three
+losses resulted in the highest ROC-AUC of 95.38%. The use
+of only text anchor-based contrastive loss led to significantly
+lower performance across all metrics. Combinations including the magnitude enhanced multiple instance learning loss
+generally performed well, particularly when combined with
+other losses. The inclusion of frame classification loss and
+magnitude enhanced multiple instance learning loss together
+yielded better results compared to when either was used alone.
+This ablation study demonstrates the importance of combining
+different loss components to enhance accuracy and robustness.
+6) Experiment for Assessing Model’s Generalizability:
+Experiments were conducted to assess the model’s ability
+to generalize by training on the CCD dataset and testing
+on the DAD test subset, simulating real-world applications.
+The results are enlisted in Table VIII. In these cross-domain
+evaluations, the readiness of models for accident anticipation in uncontrolled settings was scrutinized. During this
+rigorous testing, DSTA’s performance significantly declined
+for accident earliness-related metrics (AP). Similarly, our
+model exhibited limited efficacy in predicting accidents early.
+However, comparative analysis revealed that our model outperformed DSTA in the generalization experiment. This is
+demonstrated as AP in DSTA decreased by 64.12% while for
+TIME-VAD the decrement is 55.38%.
+Remarkably, our model showcased improved performance
+in terms of ROC-AUC, demonstrating its enhanced adaptability and robustness when tested in real-world scenarios.
+In Table VIII, the underlined metrics highlight the primary
+assessment parameters for a given model, emphasizing the
+notable variations in model performance between controlled
+training settings and real-world applications. The findings
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+3139
+
+TABLE VIII
+T ESTING IN R EAL -W ORLD S CENARIO . T RAINING I S D ONE ON CCD AND
+T ESTING I S D ONE ON DAD T EST-S ET. R ELEVANT M ETRICS FOR E ACH
+M ETHOD A RE U NDERLINED . AP AND ROC-AUC A RE
+IN % AND M TTA I S IN S
+
+Fig. 7. Qualitative comparison of accident probability for an accident video
+with accident event starts from the 30th frame onwards. Selected frames with
+numbers are presented.
+
+Fig. 8. Qualitative analysis of accident probability for normal videos by
+TIME-VAD. First and last frames are shown for each plot.
+
+suggest that while our model presents promising capabilities
+in generalization, there is a need for further optimization to
+bolster its performance in accident earliness metrics when
+deployed in uncontrolled environments. However, as pointed
+out, earliness metrics are dependent on the nature of the dataset
+that captures relevant vehicles. This is not the case in the DAD
+dataset, as the aforementioned ego-vehicles are not present in
+most of the samples along with hard samples of accident cases.
+Thus, for DAD the earliness metrics testing has moderate
+performance with AP of 44.61%.
+7) Qualitative Results: Qualitative analysis of different
+models unveils critical insights into their behavior and the
+
+cues they prioritize in accident anticipation. Notably, when
+presented with a challenging sample from the CCD dataset, as
+shown in Fig. 7, DSTA [46] and GCRNN [45] exhibited signs
+of over-fitting, displaying a sharp inclination in accident probability right from the video’s onset. This inclination, however,
+seemed more influenced by scene characteristics than actual
+accident cues, indicating a susceptibility to learning from
+accident-irrelevant features. In contrast, our model showcased
+a more nuanced and consistent prediction approach. On a
+close examination of the video, the imminent accident seems
+perceptible around the 15th frame, and the actual incident
+occurs on the 30th frame. Our model consistently gauged the
+
+3140
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+evolving likelihood of an accident occurrence, demonstrating
+a more accurate and tempered assessment compared to the
+overtly biased predictions observed in the other models.
+Furthermore, as illustrated in Fig. 8, the TIME-VAD maintains consistently low accident probabilities across various
+normal driving scenarios, including routine maneuvers such
+as turning, lane changes, and stopping at red signal. While
+some scenarios show elevated accident probabilities toward
+the end of the sequences due to potentially risky maneuvers,
+all videos are correctly classified as normal when using a
+high threshold of 0.9, demonstrating the model’s robust discrimination capability while maintaining high precision. This
+robust performance on non-accident scenarios further validates
+our model’s ability to discriminate between genuine accident
+precursors and normal driving events.
+V. C ONCLUSION
+In this study, we introduced TIME-VAD, a model based
+on text-informed feature magnitude enhancement using contrastive multiple-instance learning. Through extensive evaluation across diverse benchmark datasets, TIME-VAD outperforms existing state-of-the-art models in both accuracy and
+early accident detection. This innovative framework exhibits
+superior discriminative capabilities, particularly in identifying
+subtle anomalies and ensuring sample efficiency crucial for
+traffic video analysis. The inclusion of the DTCA block further
+refines temporal attention, enhancing the model’s ability to
+perceive nuanced accident risks within video frames. Our
+study highlights the effectiveness of TIME-VAD, showcasing an accuracy of 94.44% (measured by ROC-AUC) on
+the challenging DoTA dataset, which has the largest sample
+size. Additionally, for the smaller sample size dataset of
+DAD, TIME-VAD achieves an accuracy of 84.43%. In terms
+of generalization, when the model is trained with CCD, a
+dataset of moderate sample size, and tested on DAD, the
+accuracy for DAD reaches 95.50%, surpassing the CCD test
+accuracy by 0.12%. Furthermore, TIME-VAD excels in early
+accident detection, achieving AP of 99.97% and an mTTA
+of 4.99 seconds on the CCD dataset. This work contributes
+to establishing a valuable foundation for advancing accident anticipation systems. It also showcases the potential of
+multi-modal integration for proactive safety enhancement in
+transportation systems.
+R EFERENCES
+[1]
+
+[2]
+
+[3]
+
+[4]
+
+P. Shyam, S. Mishra, K. J. Yoon, and K. S. Kim, “Infra sim-to-real:
+An efficient baseline and dataset for infrastructure based online object
+detection and tracking using domain adaptation,” in Proc. IEEE Intell.
+Vehicles Symp. (IV), Jun. 2022, pp. 1393–1399.
+S. Mishra, P. K. Rajendran, L. F. Vecchietti, and D. Har, “Sensing
+accident-prone features in urban scenes for proactive driving and
+accident prevention,” IEEE Trans. Intell. Transp. Syst., vol. 24, no. 9,
+pp. 9401–9414, Sep. 2023.
+Z. Wang, A. Cosio, and J. Wang, “Implementation resource allocation for
+collision-avoidance assistance systems considering driver capabilities,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 8, pp. 12822–12832, Aug.
+2022.
+Y. Yao et al., “DoTA: Unsupervised detection of traffic anomaly in
+driving videos,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 1,
+pp. 444–459, Jan. 2023.
+
+[5]
+
+M. Hasan, J. Choi, J. Neumann, A. K. Roy-Chowdhury, and
+L. S. Davis, “Learning temporal regularity in video sequences,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016,
+pp. 733–742.
+[6] W. Luo, W. Liu, and S. Gao, “A revisit of sparse coding based anomaly
+detection in stacked RNN framework,” in Proc. IEEE Int. Conf. Comput.
+Vis. (ICCV), Oct. 2017, pp. 341–349.
+[7] W. Liu, W. Luo, D. Lian, and S. Gao, “Future frame prediction for
+anomaly detection—A new baseline,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit., Jun. 2018, pp. 6536–6545.
+[8] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+pp. 1705–1714.
+[9] J. T. Zhou, J. Du, H. Zhu, X. Peng, Y. Liu, and R. S. M. Goh,
+“AnomalyNet: An anomaly detection network for video surveillance,”
+IEEE Trans. Inf. Forensics Security, vol. 14, no. 10, pp. 2537–2550, Oct.
+2019.
+[10] R. T. Ionescu, F. S. Khan, M.-I. Georgescu, and L. Shao, “Object-centric
+auto-encoders and dummy anomalies for abnormal event detection
+in video,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2019, pp. 7842–7851.
+[11] T. N. Nguyen and J. Meunier, “Anomaly detection in video sequence
+with appearance-motion correspondence,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis. (ICCV), Oct. 2019, pp. 1273–1283.
+[12] D. Xu, Y. Yan, E. Ricci, and N. Sebe, “Detecting anomalous
+events in videos by learning deep representations of appearance and
+motion,” Comput. Vis. Image Understand., vol. 156, pp. 117–127,
+Mar. 2017.
+[13] M. Z. Zaheer, A. Mahmood, M. H. Khan, M. Segu, F. Yu, and
+S.-I. Lee, “Generative cooperative learning for unsupervised video
+anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 14744–14754.
+[14] T. Wang et al., “Generative neural networks for anomaly detection in
+crowded scenes,” IEEE Trans. Inf. Forensics Security, vol. 14, no. 5,
+pp. 1390–1399, May 2019.
+[15] S. He et al., “Region generation and assessment network for occluded
+person re-identification,” IEEE Trans. Inf. Forensics Security, vol. 19,
+pp. 120–132, 2024.
+[16] K. Yang, J. Fang, T. Zhu, and J. Xue, “Accident-CLIP: Text-video
+benchmarking for fine-grained accident classification in driving scenes,”
+in Proc. Int. Conf. Auto. Unmanned Syst., 2023, pp. 487–498.
+[17] P. Wu et al., “VadCLIP: Adapting vision-language models for weakly
+supervised video anomaly detection,” in Proc. AAAI Conf. Artif. Intell.,
+2024, vol. 38, no. 6, pp. 6074–6082.
+[18] Y. Yao, M. Xu, Y. Wang, D. J. Crandall, and E. M. Atkins,
+“Unsupervised traffic accident detection in first-person videos,” in
+Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst. (IROS), Nov. 2019,
+pp. 273–280.
+[19] G. Pang, C. Shen, L. Cao, and A. Van Den Hengel, “Deep learning
+for anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2,
+pp. 1–38, 2021.
+[20] W. Sultani, C. Chen, and M. Shah, “Real-world anomaly detection in
+surveillance videos,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit., Jun. 2018, pp. 6479–6488.
+[21] T. You and B. Han, “Traffic accident benchmark for causality
+recognition,” in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland:
+Springer, 2020, pp. 540–556.
+[22] A. Radford et al., “Learning transferable visual models from natural
+language supervision,” in Proc. Int. Conf. Mach. Learn., vol. 139, 2021,
+pp. 8748–8763.
+[23] P. Khosla et al., “Supervised contrastive learning,” in Proc. NIPS, 2020,
+pp. 18661–18673.
+[24] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. Int. Conf.
+Mach. Learn., 2020, pp. 1597–1607.
+[25] J. Zhang, L. Qing, and J. Miao, “Temporal convolutional network
+with complementary inner bag loss for weakly supervised anomaly
+detection,” in Proc. IEEE Int. Conf. Image Process. (ICIP), Sep. 2019,
+pp. 4030–4034.
+[26] C. He, J. Shao, and J. Sun, “An anomaly-introduced learning method
+for abnormal event detection,” Multimedia Tools Appl., vol. 77, no. 22,
+pp. 29573–29588, Nov. 2018.
+[27] S. Li, F. Liu, and L. Jiao, “Self-training multi-sequence learning with
+transformer for weakly supervised video anomaly detection,” in Proc.
+AAAI Conf. Artif. Intell., vol. 36, no. 2, 2022, pp. 1395–1403.
+
+MISHRA et al.: TIME-VAD: TEXT-INFORMED MAGNITUDE ENHANCEMENT FEATURE LEARNING
+
+[28] J.-C. Feng, F.-T. Hong, and W.-S. Zheng, “MIST: Multiple instance
+self-training framework for video anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 14009–14018.
+[29] H. Lv, C. Zhou, Z. Cui, C. Xu, Y. Li, and J. Yang, “Localizing anomalies
+from weakly-labeled videos,” IEEE Trans. Image Process., vol. 30,
+pp. 4505–4515, 2021.
+[30] Y. Zhu and S. Newsam, “Motion-aware feature for improved video
+anomaly detection,” 2019, arXiv:1907.10211.
+[31] J. Wu et al., “Weakly-supervised spatio-temporal anomaly detection in
+surveillance video,” 2021, arXiv:2108.03825.
+[32] S. Chang, Y. Li, S. Shen, J. Feng, and Z. Zhou, “Contrastive attention for video anomaly detection,” IEEE Trans. Multimedia, vol. 24,
+pp. 4067–4076, 2022.
+[33] P. Wang, K. Han, X.-S. Wei, L. Zhang, and L. Wang, “Contrastive
+learning based hybrid networks for long-tailed image classification,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+2021, pp. 943–952.
+[34] M. Z. Zaheer, A. Mahmood, M. Astrid, and S.-I. Lee, “Clustering
+aided weakly supervised training to detect anomalous events in surveillance videos,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 10,
+pp. 14085–14098, Oct. 2024.
+[35] K. Liu et al., “Multiple instance learning via iterative self-paced supervised contrastive learning,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2023, pp. 3355–3365.
+[36] P. Wu and J. Liu, “Learning causal temporal relation and feature
+discrimination for anomaly detection,” IEEE Trans. Image Process.,
+vol. 30, pp. 3513–3527, 2021.
+[37] P. Wu et al., “Not only look, but also listen: Learning multimodal
+violence detection under weak supervision,” in Proc. Eur. Conf. Comput.
+Vis. (ECCV), Aug. 2020, pp. 322–339.
+[38] S. Wan, X. Xu, T. Wang, and Z. Gu, “An intelligent video
+analysis method for abnormal event detection in intelligent transportation systems,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7,
+pp. 4487–4495, Jul. 2021.
+[39] Y. Tian, G. Pang, Y. Chen, R. Singh, J. W. Verjans, and G. Carneiro,
+“Weakly-supervised video anomaly detection with robust temporal feature magnitude learning,” in Proc. IEEE/CVF Int. Conf. Comput. Vis.
+(ICCV), Oct. 2021, pp. 4975–4986.
+[40] J. Carreira and A. Zisserman, “Quo vadis, action recognition? A new
+model and the kinetics dataset,” in Proc. IEEE Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jul. 2017, pp. 6299–6308.
+[41] D. Tran, L. Bourdev, R. Fergus, L. Torresani, and M. Paluri, “Learning
+spatiotemporal features with 3D convolutional networks,” in Proc. IEEE
+Int. Conf. Comput. Vis. (ICCV), Dec. 2015, pp. 4489–4497.
+[42] Z. Cai and N. Vasconcelos, “Cascade R-CNN: Delving into high
+quality object detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit., Jun. 2018, pp. 6154–6162.
+[43] E. Ilg, N. Mayer, T. Saikia, M. Keuper, A. Dosovitskiy, and T. Brox,
+“FlowNet 2.0: Evolution of optical flow estimation with deep networks,”
+in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+pp. 2462–2470.
+[44] M. Xu, M. Gao, Y.-T. Chen, L. Davis, and D. Crandall, “Temporal
+recurrent networks for online action detection,” in Proc. IEEE/CVF Int.
+Conf. Comput. Vis. (ICCV), Oct. 2019, pp. 5532–5541.
+[45] W. Bao, Q. Yu, and Y. Kong, “Uncertainty-based traffic accident
+anticipation with spatio-temporal relational learning,” in Proc. 28th ACM
+Int. Conf. Multimedia, Oct. 2020, pp. 2682–2690.
+[46] M. M. Karim, Y. Li, R. Qin, and Z. Yin, “A dynamic spatial–temporal
+attention network for early anticipation of traffic accidents,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 7, pp. 9590–9600,
+Jul. 2022.
+[47] Hugging Face. OpenAI CLIP (ViT-L/14). Accessed: Jul. 13, 2024.
+[Online].
+Available:
+https://huggingface.co/openai/clip-vit-largepatch14-336
+[48] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+for image recognition at scale,” 2020, arXiv:2010.11929.
+[49] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 30, 2025, pp. 5998–6008.
+[50] F. Yu and V. Koltun, “Multi-scale context aggregation by dilated
+convolutions,” 2015, arXiv:1511.07122.
+[51] F.-H. Chan, Y.-T. Chen, Y. Xiang, and M. Sun, “Anticipating accidents in
+dashcam videos,” in Proc. Asian Conf. Comput. Vis., 2016, pp. 136–153.
+[52] L. McInnes, J. Healy, and J. Melville, “UMAP: Uniform manifold approximation and projection for dimension reduction,” 2018,
+arXiv:1802.03426.
+
+3141
+
+[53] Y. Censor, “Pareto optimality in multiobjective problems,” Appl. Math.
+Optim., vol. 4, no. 1, pp. 41–59, Mar. 1977.
+[54] Y. S. Chong and Y. H. Tay, “Abnormal event detection in videos using
+spatiotemporal autoencoder,” in Proc. Int. Symp. Neural Netw. Cham,
+Switzerland: Springer, May 2017, pp. 189–196.
+[55] W. Liu, W. Luo, Z. Li, P. Zhao, and S. Gao, “Margin learning embedded
+prediction for video anomaly detection with a few anomalies,” in Proc.
+28th Int. Joint Conf. Artif. Intell., Aug. 2019, pp. 3023–3030.
+[56] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+Comput., vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
+[57] K. Cho et al., “Learning phrase representations using RNN
+encoder–decoder for statistical machine translation,” 2014,
+arXiv:1406.1078.
+[58] L. Li, J. Fang, and J. Xue, “Cognitive traffic accident anticipation,”
+IEEE Intell. Transp. Syst. Mag., vol. 16, no. 5, pp. 17–32, May 2024,
+doi: 10.1109/MITS.2024.3378460.
+[59] J. Fang et al., “Abductive ego-view accident video understanding for
+safe driving perception,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2024, pp. 22030–22040.
+[60] J. Fang, J. Qiao, J. Xue, and Z. Li, “Vision-based traffic accident
+detection and anticipation: A survey,” IEEE Trans. Circuits Syst.
+Video Technol., vol. 34, no. 4, pp. 1983–1999, Apr. 2024, doi: 10.1109/
+TCSVT.2023.3307655.
+[61] J. Fang, J. Qiao, J. Bai, H. Yu, and J. Xue, “Traffic accident detection via self-supervised consistency learning in driving scenarios,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 7, pp. 9601–9614,
+Jul. 2022.
+[62] H. Liao et al., “Real-time accident anticipation for autonomous driving through monocular depth-enhanced 3D modeling,” Accident Anal.
+Prevention, vol. 207, Nov. 2024, Art. no. 107760.
+[63] Y. Ali, F. Hussain, and M. M. Haque, “Advances, challenges, and future
+research needs in machine learning-based crash prediction models: A
+systematic review,” Accident Anal. Prevention, vol. 194, Jan. 2024, Art.
+no. 107378.
+[64] L. Shi and F. Guo, “Two-stream video-based deep learning model for
+crashes and near-crashes,” Transp. Res. C: Emerg. Technol., vol. 166,
+Sep. 2024, Art. no. 104794.
+[65] R. Liang, Y. Li, J. Zhou, and X. Li, “Text-driven traffic anomaly detection with temporal high-frequency modeling in driving videos,” IEEE
+Trans. Circuits Syst. Video Technol., vol. 34, no. 9, pp. 8684–8697, Sep.
+2024, doi: 10.1109/TCSVT.2024.3390173.
+[66] Z. Zhou, X. Dong, Z. Li, K. Yu, C. Ding, and Y. Yang, “Spatio-temporal
+feature encoding for traffic accident detection in VANET environment,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 10, pp. 19772–19781, Oct.
+2022.
+[67] U. Tiwari, S. Majhi, M. Balazia, and F. Bremond, “What matters in
+autonomous driving anomaly detection: A weakly supervised horizon,”
+in Proc. Eur. Conf. Comput. Vis. (ECCV), Aug. 2024, pp. 160–170.
+[68] Y. Chen, Z. Liu, B. Zhang, W. Fok, X. Qi, and Y.-C. Wu, “MGFN:
+Magnitude-contrastive glance-and-focus network for weakly-supervised
+video anomaly detection,” in Proc. AAAI Conf. Artif. Intell., 2023,
+vol. 37, no. 1, pp. 387–395.
+[69] H. Zhou, J. Yu, and W. Yang, “Dual memory units with uncertainty
+regulation for weakly supervised video anomaly detection,” in Proc.
+AAAI Conf. Artif. Intell., Jun. 2023, vol. 37, no. 3, pp. 3769–3777.
+[70] S. Majhi, R. Dai, Q. Kong, L. Garattoni, G. Francesca, and F. Brémond,
+“OE-CTST: Outlier-embedded cross temporal scale transformer for
+weakly-supervised video anomaly detection,” in Proc. IEEE/CVF Winter
+Conf. Appl. Comput. Vis. (WACV), Jan. 2024, pp. 8559–8568.
+[71] L. Rossi, V. Bernuzzi, T. Fontanini, M. Bertozzi, and A. Prati, “Memoryaugmented online video anomaly detection,” in Proc. IEEE Int. Conf.
+Acoust., Speech Signal Process. (ICASSP), Apr. 2024, pp. 6590–6594.
+[72] Y. Zhang and H. Li, “Cross-temporal fusion memory network for traffic
+accident detection,” in Proc. Chin. Conf. Pattern Recognit. Comput. Vis.
+(PRCV), Oct. 2024, pp. 387–401.
+[73] H. Liao et al., “When, where, and what? A benchmark for accident
+anticipation and localization with large language models,” in Proc. 32nd
+ACM Int. Conf. Multimedia, Oct. 2024, pp. 8–17.
+[74] T. Wang et al., “GSC: A graph and spatio-temporal continuity based
+framework for accident anticipation,” IEEE Trans. Intell. Vehicles,
+vol. 9, no. 1, pp. 2249–2261, Jan. 2024.
+[75] H. Liao et al., “CRASH: Crash recognition and anticipation system
+harnessing with context-aware and temporal focus attentions,” in Proc.
+32nd ACM Int. Conf. Multimedia, Oct. 2024, pp. 11041–11050.
+[76] J. Zhang, Y. Guan, C. Wang, H. Liao, G. Zhang, and Z. Li, “LATTE:
+A real-time lightweight attention-based traffic accident anticipation
+engine,” Inf. Fusion, vol. 122, Oct. 2025, Art. no. 103173.
+
+3142
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 3, MARCH 2026
+
+Sumit Mishra received the B.Tech. degree in
+electronics and communication engineering from
+Dr. A.P.J. Abdul Kalam Technical University, India,
+in 2016, and the M.S. degree from the Robotics
+Department, Korea Advanced Institute of Science
+and Technology, South Korea, in 2023, where he
+is currently pursuing the Ph.D. degree in robotics.
+Earlier, he was with Learnogether Technologies Pvt.
+Ltd., as a Research Consultant. His research interests include vision-language models, multimodal
+foundation models, cross-modal alignment by deep
+learning, explainable AI for safety-critical systems, and computer vision for
+intelligent transportation systems.
+
+Medhavi Mishra received the B.Tech. degree in
+production and industrial engineering from the
+Motilal Nehru National Institute of Technology,
+Allahabad, India, in 2016, and the M.S. degree in
+mobility from Korea Advanced Institute of Science
+and Technology, South Korea, in 2025, where she
+is currently pursuing the Ph.D. degree in mobility. Earlier, she was with HighRadius Technologies
+Pvt. Ltd., as a Techno-Functional Consultant. Her
+research interests include traffic simulation and modeling, multi-modal perception, and deep learning
+applications in intelligent transportation systems.
+
+Pranjay Shyam received the B.Tech. degree in electronics and communication engineering from Shiv
+Nadar University (SNU), India, in 2016, the M.Sc.
+degree in electrical engineering from the Technical
+University of Denmark (DTU), and the M.S. and
+Ph.D. degrees from the Mechanical Engineering
+Department, Korea Advanced Institute of Science
+and Technology (KAIST), South Korea, in 2018
+and 2022, respectively. He is currently an Applied
+Scientist with Amazon Fulfilment Technologies and
+Robotics, USA. His research interests include multimodal scene reconstruction and understanding.
+
+Dongsoo Har (Senior Member, IEEE) received the
+B.Sc. and M.Sc. degrees in electronics engineering from Seoul National University, and the Ph.D.
+degree in electrical engineering from Polytechnic
+University, Brooklyn, NY, USA. He is currently
+a Faculty Member with KAIST. He has authored
+and published more than 100 papers in international
+journals and conferences. He has also presented
+invited talks and keynote in international conferences. His research interests include optimization of
+communication system operation and transportation
+system development with embedded artificial intelligence. He was a member
+of the Advisory Board and the program chair, the vice chair, and the general
+chair of international conferences. He was a recipient of the Best Paper Award
+from ETRI Journal and the Best Paper Award (Jack Neubauer Award) from
+IEEE T RANSACTIONS ON V EHICULAR T ECHNOLOGY.

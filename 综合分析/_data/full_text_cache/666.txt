@@ -1,0 +1,798 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026 2481
+
+ Enhancing Anomaly Alert Prioritization Through
+ Calibrated Standard Deviation Uncertainty
+ Estimation With an Ensemble of Auto-Encoders
+ Jordan F. Masakuna , D’Jeff K. Nkashama , Arian Soltani , Marc Frappier , Pierre-Martin Tardif ,
+ and Froduald Kabanza
+
+ Abstract—Deep auto-encoders (AEs) are widely employed deep
+learning methods in the field of anomaly detection across diverse
+domains (e.g., cybersecurity analysts managing large volumes
+of alerts, or medical practitioners monitoring irregular patient
+signals). In such contexts, practitioners often face challenges of
+scale and limited processing resources. To cope, strategies such
+as false positive reduction, human-in-the-loop review, and alert
+prioritization are commonly adopted. This paper explores the
+integration of uncertainty quantification (UQ) methods into alert
+prioritization for anomaly detection using ensembles of AEs.
+UQ models highlight doubtful classification decisions, enabling
+analysts to address the most certain alerts first, since higher Fig. 1. An uncertainty-aware anomaly detector [54].
+certainty typically correlates with greater accuracy. Our study
+reveals a nuanced issue where applying UQ to ensembles of
+AEs can produce skewed distributions of large reconstruction
+errors (errors exceeding a pre-defined threshold), which may of the increasing complexity of threats, demands efficient
+falsely suggest high uncertainty when standard deviation is approaches to alert management [7]. To address this critical
+used as the metric. Conventionally, a high standard deviation issue, analysts employ a range of strategies, among which
+indicates high uncertainty. However, contrary to intuition, large automated triage, false positive reduction, human-in-the-loop
+reconstruction errors often reflect AE is strongly confident that and alert prioritization stand out [57]. These strategies could
+an input is anomalous—not uncertainty about it. Moreover,
+ensembles of AEs generate reconstruction errors with varying be used, for instance, to bolster the security of networks (such
+ranges, complicating interpretation. To address this, we propose strategies could also be useful to networks of autonomous
+an extension that calibrates the standard deviation distribution robots [27]).
+of uncertainties, mitigating erroneous prioritization. Evaluation This paper aims to shed light on a crucial aspect of alert
+on 10 benchmark datasets demonstrates that our calibration management—alert prioritization [2] (which involves determiapproach improves the effectiveness of UQ methods in prioritizing alerts, while maintaining favorable trade-offs across other nation of the likelihood of an alert to be associated with a
+key performance metrics. genuine security threat). This is particularly pertinent in the
+ realm of intrusion detection (focuses specifically on identi-
+ Index Terms—Auto-encoders, security anomaly detection, alert
+prioritization, uncertainty estimation. fying security threats within a system) or anomaly detection
+ (AD)—identifying deviations from normal behavior, which
+ I. I NTRODUCTION can include security threats—where distinguishing genuine
+ threats from benign anomalies is paramount. The emphasis
+I N THE rapidly evolving landscape of system monitoring,
+ analysts are confronted with the formidable task of navigating through an overwhelming influx of alerts [41], a challenge
+ here lies on leveraging uncertainty quantification (UQ) methods to enhance the prioritization process. UQ methods play
+exacerbated by the constraints posed by limited processing a pivotal role in deciphering the confidence levels associated
+resources. The sheer volume of alerts, often a consequence with classification decisions. By discerning doubtful decisions,
+ UQ models provide cybersecurity analysts with a valuable tool
+ Received 6 December 2024; revised 12 July 2025 and 24 November 2025; to address the most certain alerts first. This not only optimizes
+accepted 10 February 2026. Date of publication 12 February 2026; date of
+current version 19 February 2026. The associate editor coordinating the review the allocation of resources but also enhances the overall
+of this article and approving it for publication was A. Detti. (Corresponding efficacy of the cybersecurity response. Here, a prediction is
+author: Jordan F. Masakuna.) both a classification decision (as is an instance anomalous?)
+ Jordan F. Masakuna is with the University of Sherbrooke, Sherbrooke,
+QC, Canada, and also with the University of Kinshasa, Kinshasa, Democratic and an assessment of uncertainty (as is the decision doubtful?).
+Republic of the Congo (e-mail: Jordan.masakuna@unikin.ac.cd). As shown in Figure 1, UQ and anomaly classification
+ D’Jeff K. Nkashama, Arian Soltani, Marc Frappier, Pierre-Martin are two parallel processes jointly applied to evaluate an
+Tardif, and Froduald Kabanza are with the University of Sherbrooke,
+Sherbrooke, QC J1K 2R1, Canada. input. Anomaly classification determines whether the input is
+ Digital Object Identifier 10.1109/TNSM.2026.3664298 benign or anomalous. UQ assesses the confidence/uncertainty
+ 1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2482 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+in that classification. Together, these processes provide a more errors for a given data point often exhibit skewness. This
+reliable decision-making framework by combining predictive skewness can cause the standard deviation of the reconclassification with confidence evaluation. In other words, UQ struction errors to become artificially large—exceeding the
+does not alter the classification outcome itself. Rather, it chosen threshold—and thus disproportionately influence the
+serves as a post-hoc mechanism that evaluates the confidence final decision for that data point. Our goal is to mitigate
+associated with a decision and supports alert prioritization (i.e., the impact of this skewness when evaluating standard deviation
+the less uncertain a predicted anomaly, the higher its alert for uncertainty quantification.
+is prioritized). However, if the confidence of a classification An AE model that is uncertain about a classification decidecision on an input is truly insufficient—corresponding to sion is more likely to mislabel a sample. It should be noted
+very high uncertainty—it could be rejected. that classification and UQ are distinct tasks here. During
+ Our research centers on the examination of UQ applied to an prediction, each AE-based model, independently trained, proensemble of auto-encoders (AEs)—a particular unsupervised duces a reconstruction error (an AE operates by attempting to
+deep learning (DL) architecture—in the context of AD. Our reconstruct an input x in minimizing the reconstruction error
+emphasis on AEs is driven by the unique challenges posed as much as possible). Then a class is determined by comparing
+by AD systems, where the scarcity of labelled data makes the reconstruction error to a classification threshold, to indicate
+supervised learning approaches impractical. AEs excel in whether the underlying data point is anomalous or not (0 for
+learning intrinsic patterns within the data without the need normality and 1 for abnormality). The combined classification
+for labelled data points, making them particularly well-suited decisions from all individual predicted classes, using majority
+for the AD task. This investigation aims to delve into the vote [28], are considered to classify the underlying data point,
+nuanced interplay between UQ methods and AEs within the and individual reconstruction errors are considered to calculate
+AD domain, offering insights into their effectiveness and the uncertainty associated with the classification decision. In
+potential applications in unsupervised scenarios. other words, classification determines whether a data point is
+ Different UQ models exist in literature [1] and have different normal or anomalous, while uncertainty quantification assesses
+modelling assumptions and, hence, can yield different uncer- whether the classification decision is doubtful. These two are
+tainty distributions, depending also on the uncertainty metrics closely related: for example, an anomalous data point that is
+used. Entropy and standard deviation are most commonly used mistakenly classified as normal should ideally be assigned a
+metrics to assess predictive uncertainty (other metrics include high uncertainty score.
+Kullback-Leibler divergence, Brier score and log loss), but Our work makes the following contributions:
+they capture different aspects of uncertainty, are applicable • Calibration method. We identified an interpretation issue
+in various contexts (e.g., intrusion detection systems, finance in ensembles of AEs when using standard deviation for
+and manufacturing) and provide complementary insights (the uncertainty quantification. Importantly, large reconstrucformer is often used to measure the impurity of predictions tion errors (i.e., errors exceeding a pre-defined threshold)
+while the latter measures variability of a set of predictions). do not necessarily correspond to high uncertainty. In
+We observe that ensemble-like UQ methods applied on AEs practice, a large error often indicates that the AE is confican produce large uncertainties on large reconstruction errors dent the input lies outside the distribution of benign data
+(relative to a pre-defined classification threshold) when stan- [4], [48]—that is, it is anomalous—rather than uncertain
+dard deviation is used as uncertainty metric. This occurs when about its prediction. We then propose a technique and
+the reconstruction error distribution is skewed. In such cases, an algorithm to calibrate uncertainty distributions from
+using standard deviation as the uncertainty metric means that ensembles of AEs for anomaly detection when using
+a high standard deviation indicates high uncertainty. This standard deviation as the uncertainty metric.
+quantification could be erroneous because, according to AEs, • Alert prioritization strategy. We introduce a novel assolarge reconstruction errors could mean small uncertainty i.e., ciation between low uncertainty and high reconstruction
+a large reconstruction error often indicates that the model is error, enabling more effective prioritization of alerts. We
+confident the input is anomalous—not that it is uncertain about argue that uncertainty quantification can be combined
+it. Also, as an ensemble, different AEs produce reconstruction with contextual alert features (e.g., attack patterns, severerrors with varying ranges. ity, threat source) to support practical prioritization.
+ Uncertainty can be divided into two main types: aleatoric • Empirical evaluation. We validate the approach on
+and epistemic. Standard deviation, our UQ metric, is effec- non-temporal/tabular anomaly detection datasets, demontive at quantifying epistemic uncertainty. In other words, an strating its utility in anomaly detection.
+ensemble of AEs using standard deviation across reconstruc- Scope and limitations. Our method builds on existing
+tion errors primarily captures epistemic uncertainty (model standard-deviation-based UQ; it is not a new UQ framework.
+uncertainty)—i.e., variability in predictions due to differences We do not aim to produce fully reliable uncertainty distribuamong ensemble members [8], [26]. tions (cf. [54]), and our focus on tabular datasets may limit
+ What we aim to convey is that when standard deviation is generalizability to sequential or temporal domains.
+used as an uncertainty metric, the interpretation is straight- While our approach shares similarities with [54]—primarily
+forward: a high standard deviation implies high uncertainty, because ensembles of models can be given a Bayesian interwhile a low standard deviation implies low uncertainty. How- pretation, albeit with certain caveats [14], [21]—we emphasize
+ever, when using an ensemble of AEs, the reconstruction three key differences:
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2483
+
+ • Different uncertainty objective. [54] employs Bayesian Several methods have been proposed to address this challenge,
+ AEs to model total uncertainty (epistemic and aleatoric) each offering unique approaches and considerations. One
+ by converting negative log-likelihood estimates as uncer- common approach is risk-based prioritization, which involves
+ tainty metric and uses this to reject predictions. In assessing the potential impact and likelihood of system alerts.
+ contrast, we focus on ensembles of deep AEs using For instance in cybersecurity, by considering factors such as
+ standard deviation as uncertainty metric and design a the asset value, threat severity, and exploitability, security
+ calibration procedure that aligns standard-deviation-based teams can prioritize alerts based on their overall risk to
+ uncertainty with reconstruction error, enabling alert pri- the organization. Incorporating threat intelligence feeds can
+ oritization rather than rejection. This shift addresses a enhance alert prioritization by providing contextual informadistinct operational need in alert monitoring, where ana- tion about emerging threats and attack patterns. By integrating
+ lysts must triage alerts under resource constraints rather external sources of threat intelligence into the prioritization
+ than discard them. process, security teams can better understand the relevance
+ • Calibration technique. We tackle the problem of mis- and potential impact of security alerts [25]. Some approaches
+ leading uncertainty estimates—where large reconstruction focus on automating the response to security alerts, thereby
+ errors can spuriously inflate uncertainty—by introduc- reducing the burden on human analysts and accelerating
+ ing a calibration strategy that produces more reliable incident response times. Automated response mechanisms can
+ uncertainty scores. This methodological contribution is range from pre-defined playbooks to dynamic decision-making
+ not present in [54] (indeed, [54] is a UQ method, not a based on real-time analysis of alert data [31]. DL techniques
+ calibration method) and directly improves the utility of have also been employed for system alert prioritization. These
+ ensemble-based UQ in practice. methods utilize algorithms to analyze historical data, identify
+ • Practical efficiency. “Pure” Bayesian approaches are patterns, and predict the significance of system alerts [3], [55].
+ computationally demanding, limiting their deployment This study focuses on DL techniques to quantify uncertainties
+ in real-time anomaly detection pipelines. Our ensemble- for alert prioritization.
+ based method offers a lighter-weight calibration method Uncertainty quantification (UQ). Various UQ techniques
+ that scales better to operational environments while still exist to quantify uncertainties (e.g. Bayesian neural networks
+ providing actionable uncertainty information. [16], Variational AEs (VAEs) [18] and ensemble DL methods
+It is important to note that the problem tackled here (i.e., (EDL) [26], [53]). Bayesian neural networks and VAEs treat
+calibrating UQ from an ensemble of AEs using standard model parameters or architecture as random variables and
+deviation as the metric) is unprecedented and represents a place prior distributions over them, and learn their posteunique research challenge with no established prior work. rior distribution. It is important to note that UQ techniques
+ yield different uncertainty profiles due to differing modeling assumptions. We focus on ensemble-like setups only
+ II. R ELATED W ORK AND BACKGROUND
+ for uncertainty quantification (e.g., multiple runs of Monte
+A. Related Work Carlo dropout (MCD) [11] or VAEs, and EDL) as they
+ Anomaly detection (AD) consists of examining specific provide straightforward interpretability and valuable practical
+data points and detecting occurrences that deviate from the insights—most ensemble-like UQ methods have Bayesian
+established pattern of behaviors. AD is not new and the first interpretation. However, there are alternative standalone methsolutions were manual. But as data increases very rapidly man- ods in literature for providing uncertainty estimations (e.g.,
+ual tracking becomes almost impractical. Various automated Gaussian processes [35], quantile regression [19] and confor-
+AD methods have been proposed in literature, from classical to mal prediction (CP) [44]). In our experiments, EDL, DAGMM
+DL approaches [36] (DL for feature extraction with pre-trained [58], MCD and VAEs (using AEs) will be employed—chosen
+models [49] such as ResNet, VGG and AlexNet composed specifically for their ability to leverage standard deviation.
+with a one-class SVM [15]; learning feature representation of Our study reveals a nuanced issue where applying UQ to an
+normality such as AEs [23] and its variants such as DAGMM ensemble of AEs can lead to skewed distributions of large
+[58] and DUAD [23], GANs [43] and predictability modelling- reconstruction errors, falsely indicating large uncertainties on
+based methods [46]; and end-to-end anomaly score learning certain classification decisions, contrary to the functioning of
+such as LSTM [24]). Furthermore, several issues have been AEs (with AEs, large reconstruction errors indicate that the
+considered, dictating trends of contributions in AD. For exam- model is confident the input is anomalous). We aim to develop
+ple, using AEs, models are trained on normal data points only. a calibration method to scale standard deviation uncertainties
+However, because of constraints of reality, the training data set falsely indicating large uncertainties.
+can be contaminated, i.e., it can contain abnormal data points, Calibration methods consist of correcting outcome distriunbeknownst to users. This work considers uncontaminated bution of DL methods, especially, when the (non-calibrated)
+training data sets. Though the methods above are the main outcomes might not align with some underlying properties
+baselines, this work considers vanilla AEs only. We consider [38]. Existing calibration methods for UQ consider classi-
+AEs because AE-based models have consistently demonstrated fication task [34]. The same concepts can be applied to
+good results in recent development of AD systems [12], [39]. unsupervised task. Producing calibrated uncertainty distribu-
+ Alert prioritization. The prioritization of alerts is crucial to tion is also important for model interpretability, i.e., the
+effectively manage resources and respond to potential threats. reliability of a DL model’s confidence in its decisions is
+2484 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+critical for high-risk applications, for example AD systems. Once the AE is trained, DAGMM uses the latent represen-
+Accurate uncertainty estimates provide a valuable extra bit tations learned by the encoder to fit a GMM to the data. The
+of information to establish trustful AD systems [13]. For GMM models the distribution of the latent representations as
+classification tasks, calibration is that a model’s predicted a mixture of Gaussian distributions, where each component
+probabilities of outcomes reflect true probabilities of those represents a cluster of data points with similar characteristics.
+outcomes [33]. DAGMM optimizes the parameters of the GMM to maximize
+ the likelihood of the latent space under the mixture model.
+B. Background After training AE and fitting GMM, anomalies are identified
+ as data points with small likelihood under the learned GMM.
+ 1) Problem Setting: Let X denote a data set given by
+ Data points that deviate significantly from the normal data
+ X = X − ∪ X + = {xi }i=1
+ N
+ , (1) distribution in the latent space are considered anomalies.
+ 4) Ensemble Deep Learning (EDL): refers to a technique
+where X − and X + are the sets of normal and abnormal data
+ where multiple DL models (AEs for in this case), often of the
+points respectively. Every xi in X has its label yi ∈ {0, 1}
+ same type or architecture, are trained and combined to improve
+(yi = 0 for xi ∈ X − and yi = 1 otherwise). Our setting is as
+ performance [53]. Each individual model in the ensemble
+follows. An AE model is trained on X − only. So, the model
+ might be trained with different weight and bias initializations,
+attempts to minimize a loss function (which represents the
+ subsets of the training data, or hyperparameters, leading to
+sum of reconstruction error ei on each data point xi versus
+ a diverse set of models. The combination of classification
+its reconstructed copy x̂i ) that, using an `2 -norm for instance
+ decisions from multiple models can often result in better
+(other loss metrics could be used), is
+ performance in terms of accuracy, generalization, and robustei = kxi − x̂i k . (2) ness compared to a single model. Decisions from individual
+ classifiers could be weighted, based on their performance
+ Let ∆ = ∆− ∪ ∆+ be the set of reconstruction errors where during training (or using prior knowledge), before fusion [29].
+∆ = {ei : xi ∈ X − } and ∆+ = {ei : xi ∈ X + }.
+ −
+ Distinction between reconstruction errors from the K models
+ 2) Auto-Encoder (AE): An AE is made of two neural is used to assess uncertainty. Common methods for combining
+networks, an encoder, fθ , and a decoder, gφ (the full model is classification decisions in EDL include voting [28] or using
+denoted by hΘ ). An encoder consists of learning a latent space more sophisticated techniques such as stacking or boosting
+of input space. Once a latent space is learned, a decoder tries to [42]. To classify a data point using the kth model h(k) Θ , a
+reconstruct the input instance xi from its latent representation threshold η(k) is set during the training regime for inference.
+zi [56]. The goal is then to minimize reconstruction error given Ideally, it should be given as in (5). A new data point xi is
+in (3) by searching for optimal model parameters θ and φ, that flagged as anomalous if e(k)i > η . Otherwise, it is normal. A
+ (k)
+best reproduce input instances. It should be noted that since theoretical threshold for AEs is given by
+UQ models used here are ensemble-like approaches where
+uncertainties are computed using multiple runs of a model
+ n o
+ η(k) = max e(k)
+ i : ∀xi ∈ X −
+ . (5)
+(for MCD or VAEs) or multiple AEs (for EDL), our previous
+notations would slightly change to annotate the run of a model.
+ In practice, a validation data set is used to determine the
+A total of K runs would be considered for each UQ method.
+ optimal thresholds, which is the approach we adopt here. It
+The notations fθ will then be replaced by fθ(k) to indicate the
+ should be noted that the detection of doubtful decisions based
+encoder of the kth run of an AE, gφ by g(k) (k)
+ φ , hΘ by hΘ , zi by
+ (k) (k) (k) (k) on uncertainty can be sensitive to the choice of uncertainty
+zi , x̂i by x̂i , ei by ei and ŷi by ŷi . threshold [54].
+ The objective function of h(k)Θ is given by 5) Variational AEs (VAEs): are a type of AEs and are
+ trained using variational inference, where the model learns
+ X (k)
+ min ei , (3)
+ Θ to approximate the true data distribution by optimizing a
+ xi ∈X −
+ lower bound on the log-likelihood of the data [18]. The
+where e(k)
+ i is defined in (2) and Θ = (θ, φ) denote model’s key difference between classical AEs and VAEs is in how
+parameter. From what precedes, it is evident that they represent and learn the latent space. VAEs introduce
+ x̂i(k) = gφ (z(k) (k) (k) (k) a probabilistic interpretation of the latent space and use
+ i ) = gφ ( fθ (xi )) . (4)
+ variational inference to train the model, allowing them to
+ 3) Deep Autoencoding Gaussian Mixture Model capture uncertainty and generate more diverse and meaning-
+(DAGMM): is a DL anomaly detection algorithm that ful representations compared to classical AEs. The objective
+combines the strengths of AE-based feature learning and function for training VAEs typically consists of two terms:
+Gaussian mixture models (GMMs) for unsupervised learning the reconstruction loss, which measures the fidelity of the
+tasks [58]. DAGMM is designed to detect anomalies in reconstructed data, and the Kullback-Leibler (KL) divergence
+high-dimensional data, such as images, time-series, or between the learned latent distribution and a predefined prior
+tabular data. It utilizes an AE network to learn a low- distribution. Mathematically, the objective function for training
+dimensional representation of the input data. By training the VAEs can be expressed as:
+AE on normal data samples, DAGMM learns to capture the
+underlying characteristics of the normal data distribution. LVAE = −Eq(z|x) [log p(x|z)] + DKL (q(z|x)||p(z)) , (6)
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2485
+
+where q(z|x) denotes the approximate posterior distribution
+over latent variables given input data x, p(x|z) represents the
+likelihood of generating data x given latent variables z, and
+p(z) represents the prior distribution over latent variables. DKL
+denotes the KL divergence, given by
+ Z
+ P(x)
+ DKL (PkQ) = P(x) log dx (7)
+ Q(x)
+At each run of the same trained VAE, a different reconstruction
+error could be obtained. This is what makes an ensemble-like
+predictions from which uncertainty is quantified.
+ 6) Monte Carlo Dropout (MCD): is a method for estimating uncertainty in deep neural networks (AEs in this case)
+by applying dropout at inference time and performing Monte
+Carlo sampling [11]. Dropout is a regularization technique
+commonly used during training to prevent overfitting. During
+training, dropout randomly sets a fraction of the neurons to
+zero, effectively removing them from the network. At inference time, MCD applies dropout stochastically and performs
+multiple forward passes through the network with different
+dropout masks. It then computes statistics, such as the mean
+and variance, of the predictions across these forward passes
+to estimate uncertainty.
+
+ III. O UR P ROPOSED A PPROACH : M OSEMBOLI
+ We propose a standard deviation uncertainty quantification calibration, named Mosemboli1 (whose architecture is
+shown in Figure 2b), to enhance expression of uncertainty
+distribution obtained from existing UQ methods. Similarly to
+[54], our proposed calibration method is built on top of a
+UQ method—its inputs are uncertainty distribution obtained
+from existing UQ methods. It is important to note that our
+proposed method does not change classification decisions, Fig. 2. Mosemboli: (2a) proposed architecture and (2b) an illustration of
+ reconstruction error distribution mixture and how adjacent zones can overlap
+but uncertainty distributions only. Our observation is as fol- to determine the scaling factor.
+lows: since an AE is a threshold-based method, it should
+be less uncertain on its anomalous classification decisions
+with large reconstruction errors where all K classification validation set is found in the neighborhood of η(k) defined in
+decisions converge (i.e., all models agree on the nature of (5). Here, the zone where a threshold could be found is viewed
+the underlying data point)—this is a fundamental principle of as an uncertainty zone. This means that, given an instance xi ,
+AEs; otherwise, the model should have large uncertainty (the its uncertainty will be large if its reconstruction error is found
+same observation was made in [54] but with entropy alone to be in the uncertainty zone. Conversely, an AE model should
+as metric where they summarized the anomaly probabilities have relatively small uncertainty for reconstructions where
+from all Bayesian AEs posterior samples via expectation, errors are outside of the uncertainty zone. Thus, there would
+so standard deviation was not considered)—the deviation be three distributions for reconstruction errors on normal,
+between a reconstruction error and a fixed threshold is used anomalous and uncertain data points where each implements
+to enhance the expression of uncertainty distribution obtained an uncertainty distribution in a subpopulation of the error
+from UQ methods. Hence, the proposed calibration method, reconstruction space. The 3 distributions should be combined
+inspired by the Gaussian distribution mixture method [40], to produce a calibrated uncertainty distribution. Before delvconsists of arranging reconstruction errors into 3 segments (see ing further, we introduce some properties that Mosemboli
+Figure 2b), namely: normality, abnormality and uncertainty satisfies.
+zones, where uncertainties in reconstructing inputs are then
+expressed in terms of how the three segments or distributions
+overlap when plotting the reconstruction errors. A. Properties of the Calibration Method
+ It was indicated that it is not trivial to determine a threshold
+ Given K trained versions of a UQ model (see Figure 2a),
+using AEs. In practice, an optimal value of threshold using a
+ each version h(k) (k)
+ Θ produces a reconstruction error ei on data
+ 1 Mosemboli means a calibrator in Lingala, a local language spoken in the instance xi . Here, a model’s version means a run from the
+Democratic Republic of Congo. probabilistic UQ method. An uncertainty σi is the standard
+2486 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+deviation given by Algorithm 1 Mosemboli
+ v
+ u K 1: function MOSEMBOLI(h(1) (K)
+ Θ , · · · , hΘ , η, ϕ, d, Xval )
+ 2 K
+ uX (k)  (k) X 2: E ← []
+ σi = t pi ei − µi where µi = p(k) (k)
+ i ei , (8)
+ 3: for xi ∈ Xval do
+ k=1 k=1
+ 4: ei ← 0
+with p(k) (k)
+ i denoting the probability associated with ei , given,
+ 5: for h(k) (1) (K)
+ Θ ∈ {hΘ , · · · , hΘ } do
+ (k)
+for instance, by 6: ei ← ei + kxi − hΘ (xi )k
+ e(k) 7: E.push(ei )
+ p(k)
+ i =
+ i
+ , (9) 8: end for
+ si
+ 9: δ− ← (η − min(E)) d
+where
+ K
+ X 10: δ+ ← (max(E) − η) d
+ si = e(k)
+ i .
+ 11: end for
+ k=1 12: (Γ− , Γ+ , Γ∗ ) ← (∅, ∅, ∅)
+ 13: for xi ∈ Xval do
+Equation (8) is what a UQ method should produce as measures
+ 14: if ei < η − (1 − ϕ)δ− then
+of uncertainty. Uncertainty distribution should be calibrated
+ 15: Γ− ← ∆− ∪ {xi }
+only for situations where classification decisions converge (all
+ 16: else if ei > η + (1 − ϕ)δ+ then
+members of the ensemble are in agreement on the nature of the
+ 17: Γ+ ← ∆+ ∪ {xi }
+underlying data point), i.e., only data points xi associated with
+ 18: else
+reconstruction errors e(k) satisfying the following conditions:
+ i
+ 19: Γ∗ ← ∆∗ ∪ {xi }
+for normal data
+ 20: end if
+ e(k)
+ i <η
+ (k)
+ ∀k , (10)
+ 21: end for
+and for anomalous data 22: fit(D− , Γ− )
+ 23: fit(D+ , Γ+ )
+ e(k)
+ i ≥η
+ (k)
+ ∀k . (11) 24: fit(D∗ , Γ∗ )
+Equations 10 and 11 are a form of normalization of reconstruc- 25: return (D− , D+ , D∗ )
+tion errors (a form of agreement in classification decisions) 26: end function
+from various models, and need to hold on samples which
+uncertainties require calibration. ri− , ri+ and ri∗ denote the
+probability that the mean reconstruction error êi of a data anomalous data as the larger reconstruction errors get the
+point xi be a member of normal, abnormal or uncertain zones larger is the chance that the instance is anomalous.
+respectively. The calibrated uncertainty ρi on the average êi is • (symmetry): there is a zone where the AE model is indecisive on the relation between the reconstructed version
+ ri∗ of the input and the input itself, i.e., the distribution in
+ ρi = × σi , (12)
+ ri− + ri+ + ri∗ this zone is symmetric. Mathematically, ∃ ε > 0 such that
+where ri∗ can be viewed as a scaling factor [38]. ∗
+ rη−ε = rη+ε
+ ∗
+ . (15)
+ An AE-based calibration method to enhance uncertainty
+distribution should satisfy 3 properties, which are taken from Equation (15) indicates that the distribution curve in the
+the basic functioning principle of AEs: expected behavior of uncertainty area can be divided around the AE threshold
+a system is drawn from the same learnable data distribution η to produce two equal halves where the model finds it
+(i.e., normality) while unexpected behavior is difficult to learn. difficult to distinguish categories of instances.
+ • (normality): the more similar the reconstructed version Mosemboli should satisfy these 3 properties. However, accordof an input is to the input the less uncertain the model ing to (12), this might not be the case as the value of ρi
+ should be. Mathematically, for êi ≥ ê j and êi ≤ η, depends also on σi . This means that for some values of σi ,
+ (e.g., σi = 0), ρi might not be regular.
+ ri− ≤ r−j . (13)
+ Equation (13) indicates the less ei gets the smaller r∗ (ei ) B. Proposed Algorithm
+ gets, i.e., this better aligns with expected behavior of AEs To quantify a scaling factor ri∗ the following are considered:
+ on normal data as the less reconstruction errors get the reconstruction errors on (a) normal data points follow a distrihigher is the chance that the instance is normal. bution D− , (b) abnormal data points follow another distribution
+ • (abnormality): the more dissimilar the reconstructed D+ , and (c) uncertain data points follow another distribution
+ copy of an input is to the input the less uncertain the D∗ . It is intended to design an uncertainty quantification
+ model should be. Mathematically, for êi ≤ ê j and êi ≥ η, method that will indicate large uncertainty when reconstruction
+ errors fall on the uncertainty zone.
+ j ≥ ri .
+ r+ +
+ (14)
+ Let π−i denote a probability that a data point xi is normal
+ Equation (14) indicates the larger êi gets the smaller ri∗ (i.e., the larger π−i gets the more chance the underlying data
+ gets, i.e., this better aligns with the behavior of AEs on point is normal), π+ i denote a probability that a data point xi
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2487
+
+Algorithm 2 An Example of How to Use Mosemboli corresponding to normal data points,
+ 1: procedure MAIN(h(1) (K)
+ Θ , · · · , hΘ , η, ϕ, d, Xval , Xtest ) Γ+ = {xi ∈ Xval |ei > η + (1 − ϕ)δ+ } , (21)
+ (1) (K)
+ 2: (D− , D+ , D∗ ) ←MOSEMBOLI(hΘ , · · · , hΘ , η, ϕ, d, Xval )
+ 3: for xi ∈ Xtest do to anomalous data points and
+ 4: (ei , σi ) ←BASELINE-UQ(h(1) (K)
+ Θ , · · · , hΘ , xi ) Γ∗ = {xi ∈ Xval |η − (1 + ϕ)δ− ≤ ei ≤ η + (1 + ϕ)δ+ } , (22)
+ 5: π−i ∼ D− (ei )
+ 6: π+ +
+ i ∼ D (ei )
+ to data points on the uncertainty zone where ϕ denotes some
+ 7: π∗i ∼ D∗ (ei ) level of overlapping between every pair of direct adjacent
+ π∗ distributions (i.e., overlaps between distributions of normality
+ 8: ρi ← π− +π+i +π∗ σi
+ 9:
+ i
+ print(σi , ρi )
+ i i and symmetry, and between symmetry and abnormality). Here,
+10: end for
+ we set reconstruction errors in Γ− to follow the exponential
+11: end procedure
+ distribution with parameters (µ− , α− ), in Γ+ to follow the
+ cumulative exponential distribution with parameters (µ+ , α+ )
+ and in Γ∗ to follow the Gaussian distribution with parameters
+ (µ∗ , α∗ ). We fit the three sets Γ− in (20), Γ+ in (21) and Γ∗
+is anomalous, and π∗i denote a probability that a data point xi
+ in (22) to estimate distribution parameters using SciPy [51].
+is uncertain. The mixture of the 3 distributions is
+ Thus, the three probability distributions π−i , π+i and πi defined
+ ∗
+
+ πi in (16) are then densities in Γ , Γ and Γ respectively. We
+ 0 −1
+ − + ∗
+ 1 @π+
+ πi = − i
+ A. (16) mainly use d = 0.3 and ϕ = 0.4 throughout our experiments
+ πi + π+i + πi
+ ∗
+ π ∗
+ (other values could be used—in fact, other values were used
+ i
+ and produced similar results, which is desirable—the proposed
+The calibrated uncertainty ρi on an instance xi is
+ calibration method is not sensitive to these parameters).
+ π∗i
+ ρi = × σi . (17)
+ i + πi
+ πi + π+
+ − ∗ D. Toy Example
+Thus, as shown in Figure 2a, the proposed method outputs To illustrate our proposed method, let’s consider the
+two scaled values êi and ρi which denote the average error scenario where 5 reconstruction errors (refer to (23)) are
+reconstruction from versions of a UQ method and the cali- generated from 5 AE models on a single data point:
+ 0 1
+brated standard deviation respectively. Our resulting algorithm 1
+is detailed in Algorithm 1 (and an example of how it can be B1.2C
+ e=B B1.4C ,
+ B C
+used is given in Algorithm 2). The code is available at https:// C (23)
+anonymous.4open.science/r/ddm-8D63/. @1.3A
+ 2.5
+C. On the Implementation of the Proposed Algorithm with the classification threshold set, for example, to 0.8
+ Recall that the proposal considers already trained models. for all the 5 models (but each model could have its own
+Models are trained on normal data points only. Further, cali- classification threshold). All the members exhibit reconstrucbration requires parameters for the three reconstruction error tion errors surpassing the threshold, implying the anomalous
+distributions (we use exponential, Gaussian and cumulative nature of the underlying instance. So, the final class of x
+exponential distributions). The method to get distributions’ is y x = 1. We need now to quantify uncertainty associated
+parameters to measure the inter-zone overlap is through recon- to this classification decision. To consider a classification
+struction errors of a held-out validation data set Xval . We decision doubtful, the associated uncertainty should exceed
+need to estimate six parameters (two for each of the three some uncertainty threshold. When using standard deviation
+distributions), namely: (µ− , α− ) for the exponential distribu- as an uncertainty metric with, for example, the uncertainty
+tion, (µ+ , α+ ) for the cumulative exponential distribution and threshold set to 0.3, the associated uncertainty σ for predicting
+(µ∗ , α∗ ) for the Gaussian distribution. Let d− and d+ denote the data point is approximately 0.6, considerably large in this
+the width of reconstruction errors on the left and right sides instance (0.6 > 0.3). For this case, despite the counterintuitive
+of η (the value of η is determined using a held-out validation nature, as per the functioning of AEs, this large standard
+dataset) respectively, given by deviation implies small uncertainty (that is because individual
+ large reconstruction errors indicate that all five models are cond− = η − min ei and d+ = max ei − η . (18) fident the underlying data input is anomalous)—the intuitive
+ xi ∈Xval xi ∈Xval
+ nature is that a small standard deviation should indicate small
+Let d denote the radius of the uncertainty zone. We define the uncertainty. We then need a scaling factor κ to rectify this
+following measures, counterintuitive effect. For instance, setting κ = 0.1 results
+ in a calibrated standard deviation uncertainty of κσ = 0.06,
+ δ− = d × d− and δ+ = d × d+ . (19) indicating indeed small uncertainty in this case. This paper
+We set the three reconstruction error samples as follows revolves around the narrative of calibrating standard deviation
+ uncertainty when employing vanilla AEs in an ensemble
+ Γ− = {xi ∈ Xval |ei < η − (1 − ϕ)δ− } , (20) fashion.
+2488 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 3. Visualisation of training data sets.
+
+ IV. E XPERIMENTAL I NVESTIGATION TABLE I
+A. Experimental Setup T HE C HARACTERISTICS OF DATA S ETS TO T RAIN
+ UQ M ETHODS
+ To assess the contribution of the proposed method (Mosemboli) to existing UQ methods (namely, EDL-AE, DAGMM,
+MCD and VAEs), the following metrics will be used:
+accuracy (ACC), F1 -score (F1 ), inversion number [9] (IN),
+root mean square calibration error [33] (RMSCE), correctly
+rejection rates (CRR), and analysis of variance of uncertainties. We count (in percentage) number of instances where
+the model correctly rejects misclassified decisions. CRR is
+used to validate alert prioritization. We vary the uncertainty threshold τ from 10th to [10, 35]th percentile so that
+only alerts with smaller uncertainties are considered for v ∈ [0, 0.3), the effect size is negligible; for v ∈ [0.3, 0.5), it is
+prioritization—predicted alerts with uncertainties below the medium; and it is large when v ≥ 0.5.
+threshold are given higher priority than those with higher We use these data sets to demonstrate the effectiveness
+uncertainties. We use IN to quantify the difference between of our approach (some of these data sets are originally
+the predicted ranking and the ground truth ranking of alerts designed for anomaly detection, while others are multi-class
+(here, the ground truth ranking of alerts refers to the expected classification data sets that we adapt into anomaly detection).
+rankings by AEs). An inversion occurs when the order of alerts The distributions of these data sets are visualized in Figin the predicted ranking is opposite to their order in the ground ure 3, and their characteristics are summarized in Table I:
+truth ranking—a smaller IN suggests that the model is effective (1) CICIOT is a collection of real-time data containing 33
+in correctly prioritizing alerts. It is important to highlight that attacks that are executed in an IoT network [32]. (2) CIFARaccuracy and F1 -score are computed based on the model’s 10 is a widely used data set in the field of machine learning
+classification decisions, whereas IN, RMSCE, WA, and WR and computer vision, consisting of color images across 10
+are calculated using the uncertainties associated with the different classes [20]. Classes include airplanes, automobiles,
+model’s reconstruction errors. Further, to form an ensemble birds, cats, deer, dogs, frogs, horses, rabbits, and ships.
+for UQ, we consider a set of 5 candidates as suggested by (3) CREDIT is credit fraud data set comprising financial
+[21] and [34]. To evaluate ACC and F1 , each kth version of transaction records annotated with binary labels indicating
+the model estimates its classification decision, ŷ(k)i , using its
+ fraudulent or legitimate transactions [52]. (4) ECG consists
+classification threshold and a majority vote is applied to obtain of recordings of electrical activity of the heart, capturing
+the final flag [28]. Given Λ = {xi ∈ Xtest |σi ≥ τ ∧ ŷi , yi }, expected waveform patterns and anomalies [17]. (5) revised
+ IDS contains simulated complex network traffics and several
+ #Λ
+ CRR = . (24) types of attacks [45]. (6) revised KDD is an intrusion detection
+ #Xtest data set [47], containing simulated military traffics and several
+We expect calibrated UQ methods to preserve the same ACC, types of attacks. (7) KITSUNE is a collection of 9 network
+F1 and RMSCE (our proposed method does not minimize attack data sets captured from either an IP-based commercial
+RMSCE because this metric is meant to measure calibration surveillance system or an IoT network [30]. (8) MNIST
+which targets overconfidence as discussed in literature), to consists of grayscale images of handwritten digits (0-9) [22].
+have small IN and large CRR. We use Pytorch [37] to MNIST and CIFAR-10 are not naturally designed for anomaly
+measure RMSCE. For analysis of variances, the p-value and detection tasks. To make them anomaly detection data sets,
+effect size from hypothesis tests (are commonly used as an we consider one class (among provided classes) as inliers.
+indication of noteworthy differences between sets of values (9) MVTec is a data set for benchmarking anomaly detection
+[10]) are employed. The significance level for p-value is set methods with a focus on industrial inspection. It contains
+to 0.01 throughout. We use SciPy [51] to run the Wilcoxon high-resolution images divided into fifteen different object and
+signed-rank and the Friedman tests. We use Kendall’s W to texture categories. Each category comprises a set of defect-free
+measure the effect size v [50]. Based on Cohen’s interpretation training images and a test set of images with various kinds of
+guidelines [6], the values of v are interpreted as follows. For defects as well as images without defects [5]. (10) Visa is an
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2489
+
+ TABLE II
+ P ERFORMANCES : ACC, F 1 , IN AND RMSCE OF THE U NCALIBRATED AND
+ C ALIBRATED V ERSIONS OF D IFFERENT UQ M ETHODS
+
+Fig. 4. Differences between uncalibrated and calibrated UQ. Positive values
+indicate that calibrated UQ are better.
+
+Fig. 5. Average differences in CRR between calibrated and uncalibrated UQ
+methods. Positive values mean improvement.
+
+anomaly detection data set containing objects from 12 classes
+of images [59].
+ While a couple of the chosen data sets may be considered
+somewhat dated, they still serve as valuable benchmark data
+sets for anomaly detection methods.
+ For the notations in various tables and figures, if M denotes
+an uncalibrated UQ method, M+ will denote the calibrated
+version of the same UQ method. false alerts. Specifically, if uncertainty is misquantified, it may
+ To evaluate model performance, we use 70% of the benign lead to deprioritizing important events or even causing harm
+data for training (i.e., AEs are unsupervised models trained in high-stakes applications. This is particularly critical when
+solely on benign data), while the remaining 30% of the benign the standard deviation is high—we must ensure that it truly
+data together with all anomalous data are reserved for testing. indicates high uncertainty. One way to validate this is by
+From the test set, 30% is further allocated as a validation checking whether the data point is actually anomalous. In other
+set for threshold selection and early-stopping verification. The words, if a data point exhibits high standard deviation but is,
+model hyperparameters are: weight decay of 10−5 , batch size in fact, normal, this suggests a misestimation of uncertainty.
+of 32, 100 training epochs, patience of 5 for early stopping, To assess this issue, we analyze the number of misclassified
+learning rate of 10−5 , the Adam optimizer, quadratic loss as data points with uncertainty—based on traditional uncertainty
+objective function and the momentum to 0.9 for all AE models. quantification methods—that are not anomalous, and con-
+For baselines, we rely on the original published implementa- versely, the number of data points with low standard deviations
+tions. For models, we use an AE (with 8 layers) and its three that are anomalous. We expect our method to improve alert
+variants: MCD, which keeps dropout active at inference for prioritization performance under these challenging conditions,
+uncertainty; VAEs, which output distributions for stochastic while preserving comparable classification performance to
+reconstructions; and DAGMM, which augments the AE with traditional methods in typical scenarios.
+a Gaussian mixture network combining reconstruction error 1) Improved Uncertainty Quantification: Figure 5 illusand sample energy for anomaly detection. trates that, averaged across datasets and predictive methods,
+ there is a 9% improvement in the rejection of misclassified
+ data points. These correspond to samples that were mis-
+B. Results and Discussion classified but exhibit high uncertainty, primarily driven by
+ Our key finding is that predictions flagged as uncertain must skewed reconstruction error distributions. This underscores the
+genuinely reflect uncertainty; otherwise, we risk generating importance of uncertainty calibration for downstream tasks
+2490 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 6. A sample of uncertainty distributions on KDD (d = 0.3 and ϕ = 0.4) where EDL-AE (6a), DAGMM (6b), MCD (6c) and VAEs (6d). Blue and
+red distributions are for normality and abnormality respectively. The top subplot represents the 3 distributions to model the 3 zones. The x-axis denotes
+reconstruction errors. Green and red shades are levels of uncertainties on reconstruction errors obtained from normal and abnormal instances respectively.
+Vertical red lines denote the threshold.
+
+such as prioritizing system alerts. Notably, uncalibrated uncer- lower inversion numbers (IN), as expected. This suggests
+tainties can outperform calibrated ones when the ensemble’s that calibrated UQ methods prioritize alerts more effectively
+reconstruction errors do not exhibit skewness, in which case than their uncalibrated counterparts. This means that false
+calibration offers limited benefit. UQ methods demonstrate high uncertainty can disrupt alert prioritization by drawing
+varying effectiveness in identifying doubtful classification attention away from truly ambiguous or critical cases. Lower
+decisions. For example, MCD and EDL with calibration IN correspond to a stronger agreement between the predicted
+yield significantly improved correctly rejection rates (CRR) alert ranking and the expected ranking, indicating greater
+compared to their uncalibrated counterparts, whereas VAEs consistency. Such consistency serves as a robust measure of the
+show a favorable trade-off. In most cases, calibrated UQ sur- model’s effectiveness in alert prioritization, thereby increaspasses uncalibrated UQ, indicating that calibration enhances ing system analysts’ confidence that the prioritized alerts
+alert prioritization. This indicates that certain high uncertainty align with anticipated outcomes. Notably, despite elevated
+estimates—reflected by large standard deviations—can be mis- uncertainty stemming from skewed reconstruction errors in
+leading. Calibrated UQ methods helped mitigate these cases. certain misclassified samples (as illustrated in Figure 5), our
+While CRR highlights the importance of calibration, more calibration approach successfully mitigates the inconsistency
+robust validation requires reliable ground truth uncertainty between uncertainty estimates and classification outcomes.
+labels. For instance, security experts could provide manual 3) Sustained Classification Performance Reports: Each calassessments of uncertainty associated with specific alerts to ibrated UQ method has exactly the same ACC and F1 , and
+better evaluate UQ performance. almost the same RMSCE than its uncalibrated version across
+ 2) Improved Alert Prioritization: Table II and Figure 4 data sets as expected—system analysts can have confidence
+demonstrate that calibrated UQ methods consistently yield when utilizing the calibrated uncertainty for alert prioritization
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2491
+
+because the calibration process did not impact the overall There are a couple of avenues of interesting work to further
+reliability of classification decisions. Calibration error arises develop our understanding of the uncertainty quantification
+when the observed frequency of true positives deviates consis- methods on auto-encoder-based models for anomaly detection.
+tently from the predicted uncertainties. Although not addressed First, developing techniques to address the issue of overhere, reducing calibration error is crucial for enhancing the confidence that AEs suffer from could be interesting. Also,
+reliability of systems. it is reported that producing reliable uncertainties is still
+ 4) Statistically Validated Improvements of Our Calibrated an ongoing research challenge [54], investigating production
+Method: We observed a p-value of less than 0.01 on uncertain- of reliable uncertainties would be interesting. Furthermore,
+ties between versions of EDL-AE, DAGMM, MCD and VAEs, in real-time anomaly detection scenarios, intrusion detection
+and between UQ, UQ+ and all versions of UQ methods. This systems must operate on time-evolving data streams. Adapting
+means that there is a significant difference between every two the proposed approach under temporal settings would be
+versions of these approaches. This implies that, because every interesting.
+UQ method and its calibrated version give the same calibration
+error RMSCE, it appears to prefer the calibrated versions that R EFERENCES
+produce small IN. We also run the Wilcoxon signed-rank test [1] M. Abdar et al., “A review of uncertainty quantification in deep
+and the Friedman test between the uncalibrated and calibrated learning: Techniques, applications and challenges,” Inf. Fusion, vol. 76,
+versions of UQ methods on their IN. We obtained a p-value of pp. 243–297, Dec. 2021.
+ [2] K. Alsubhi, E. Al-Shaer, and R. Boutaba, “Alert prioritization in
+0.0093 and an effect size of 0.5333, which both indicate that intrusion detection systems,” in Proc. IEEE Netw. Oper. Manag. Symp.
+calibrated and uncalibrated UQ methods produce markedly (NOMS), Apr. 2008, pp. 33–40.
+different levels of sortedness of uncertainties. [3] M. E. Aminanto, T. Ban, R. Isawa, T. Takahashi, and D. Inoue,
+ “Threat alert prioritization using isolation forest and stacked auto
+ 5) Increased Complexity Calculation: Assuming that L is encoder with day-forward-chaining analysis,” IEEE Access, vol. 8,
+the size of the validation data set Xval and K the size of the pp. 217977–217986, 2020.
+ensemble, the time complexity of our solution is O(KL). The [4] F. Angiulli, F. Fassetti, and L. Ferragina, “Reconstruction errorbased anomaly detection with few outlying examples,” 2023,
+time complexity of the baseline UQ method is O(K). So, using arXiv:2305.10464.
+our solution adds a cost on the baseline UQ method, resulting [5] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “A comprea time complexity of O(KL). However, for typical L and K, hensive real-world dataset for unsupervised anomaly detection,” in
+ Proc. IEEE/CVF Conf. Comput. Vision Pattern Recognit., Jun. 2019,
+this additional complexity is hardly noticeable. pp. 9592–9600.
+ 6) Distributions of Calibrated Uncertainties: Figure 6 [6] D. F. Brossart, V. C. Laird, and T. W. Armstrong, “Interpreting Kendall’s
+shows (for illustrative purposes—only results on one data set Tau and Tau-U for single-case experimental designs,” Cogent Psychol.,
+ vol. 5, no. 1, Dec. 2018, Art. no. 1518687.
+are shown) reconstruction error and uncertainty distributions [7] F. Cuppens, “Managing alerts in a multi-intrusion detection
+using various UQ methods considered here, for d = 0.3 and environment,” in Proc. 17th Annu. Comput. Secur. Appl. Conf.,
+ϕ = 0.4. It was observed that different values of d and ϕ give 2001, pp. 22–31.
+ [8] X. Fan, X. Zhang, and X. B. Yu, “Uncertainty quantification of a deep
+almost the same results—i.e., the proposed calibration method learning model for failure rate prediction of water distribution networks,”
+is not sensitive to the choices of these 2 parameters, which is Rel. Eng. Syst. Saf., vol. 236, Aug. 2023, Art. no. 109088.
+desirable. In Figure 6d, VAEs have expected uncalibrated and [9] D. Foata, “On the netto inversion number of a sequence,” Proc. Amer.
+ Math. Soc., vol. 19, no. 1, pp. 236–240, Feb. 1968.
+better calibrated expressions of the uncertainty distribution. [10] G. M. Sullivan and R. Feinn, “Using effect size—Or why the P value is
+Compared to other UQ methods, this might mean that VAEs not enough,” J. Graduate Med. Educ., vol. 4, no. 3, pp. 279–282, Sep.
+have better ways of expressing uncertainty distributions. 2012.
+ [11] Y. Gal and Z. Ghahramani, “Dropout as a Bayesian approximation:
+ Representing model uncertainty in deep learning,” in Proc. Int. Conf.
+ Mach. Learn., 2016, pp. 1050–1059.
+ V. C ONCLUSION [12] I. Golan and R. El-Yaniv, “Deep anomaly detection using geometric transformations,” in Proc. Adv. Neural Inf. Process. Syst., 2018,
+ In this study, we presented a novel method for calibrat- pp. 1–12.
+ing standard deviation uncertainty distributions derived from [13] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, “On calibration
+ of modern neural networks,” in Proc. 34th Intl. Conf. Mach. Learn.,
+ensemble-based UQ methods applied to AEs in the domain of Sydney, NSW, Australia, 2017, pp. 1321–1330.
+anomaly detection. Our approach leverages calibration tech- [14] J. A. Hoeting, D. Madigan, A. E. Raftery, and C. T. Volinsky, “Bayesian
+niques to enhance the prioritization of alerts—a critical aspect model averaging: A tutorial (with comments by M. Clyde, David draper
+ and E. I. George, and a rejoinder by the authors,” Stat. Sci., vol. 14,
+of alert management. Particularly, we addressed scenarios no. 4, pp. 382–417, Nov. 1999.
+where the certainty levels of alerts are expressed through [15] R. T. Ionescu, F. S. Khan, M.-I. Georgescu, and L. Shao, “Object-centric
+standard deviation, emphasizing that alerts with small standard auto-encoders and dummy anomalies for abnormal event detection
+ in video,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+deviation uncertainties should be considered to be prioritized. (CVPR), Jun. 2019, pp. 7842–7851.
+Existing ensemble-based UQ methods on AEs, however, often [16] Alex Kendall and Yarin Gal, “What uncertainties do we need in Bayesian
+exhibit a counterintuitive assignment of large uncertainty to deep learning for computer vision,” in Proc. Adv. Neural Inf. Process.
+ Syst., 2017, pp. 1–11.
+large-variance reconstruction errors. Our observations led to [17] A. H. Khan, M. Hussain, and M. K. Malik, “ECG images dataset of
+the introduction of a calibration method designed to rectify this cardiac and COVID-19 patients,” Data Brief, vol. 34, Feb. 2021, Art.
+counterintuitive utilization of standard deviation. By aligning no. 106762.
+ [18] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013,
+uncertainty distribution with reconstruction errors, our method arXiv:1312.6114.
+promotes a more effective prioritization strategy for system [19] R. Koenker and K. F. Hallock, “Quantile regression,” J. Econ. Perspect.,
+alerts in anomaly detection scenarios. vol. 15, no. 4, pp. 143–156, 2001.
+2492 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+[20] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from [43] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidttiny images,” Univ. Toronto, Toronto, ON, Canada, Tech. Rep. TR-2009, Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with
+ 2009. generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44,
+[21] B. Lakshminarayanan, A. Pritzel, and C. Blundell, “Simple and scalable May 2019.
+ predictive uncertainty estimation using deep ensembles,” in Proc. Adv. [44] G. Shafer and V. Vovk, “A tutorial on conformal prediction,” J. Mach.
+ Neural Inf. Process. Syst., 2017, pp. 1–12. Learn. Res., vol. 9, no. 3, pp. 371–421, 2008.
+[22] Y. LeCun, C. Cortes, and C. Burges, “MNIST handwritten digit [45] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ database,” AT&T Labs, Florham Park, NJ, USA, Tech. Rep., 2010. a new intrusion detection dataset and intrusion traffic characterization,”
+[23] T. Li, Z. Wang, S. Liu, and W.-Y. Lin, “Deep unsupervised anomaly in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018, pp. 108–116.
+ detection,” in Proc. IEEE Winter Conf. Appl. Comput. Vis. (WACV), [46] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning
+ Jan. 2021, pp. 3635–3644. with neural networks,” in Proc. Adv. Neural Inf. Process. Syst., 2014,
+[24] B. Lindemann, B. Maschler, N. Sahlab, and M. Weyrich, “A survey pp. 1–9.
+ on anomaly detection for technical systems using LSTM networks,” [47] M. Tavallaee, E. Bagheri, W. Lu, and A. A. Ghorbani, “A detailed
+ Comput. Ind., vol. 131, Oct. 2021, Art. no. 103498. analysis of the KDD CUP 99 data set,” in Proc. IEEE Symp. Comput.
+[25] Y. Liu, X. Shu, Y. Sun, J. Jang, and P. Mittal, “RAPID: Real-time Intell. Secur. Defense Appl., Jul. 2009, pp. 1–6.
+ alert investigation with context-aware prioritization for efficient threat [48] H. Torabi, S. L. Mirtaheri, and S. Greco, “Practical autoencoder based
+ discovery,” in Proc. 38th Annu. Comput. Secur. Appl. Conf., Dec. 2022, anomaly detection by using vector reconstruction error,” Cybersecurity,
+ pp. 827–840. vol. 6, no. 1, p. 1, 2023.
+ [49] R. T. Ionescu, S. Smeureanu, B. Alexe, and M. Popescu, “Unmasking
+[26] J. F. Masakuna, K. N. D’Jeff, A. Soltani, M. Frappier, P.-M. Tardif, and
+ the abnormal events in video,” in Proc. IEEE Int. Conf. Comput. Vis.
+ F. Kabanza, “Streamlined and resource-efficient estimation of epistemic
+ (ICCV), Oct. 2017, pp. 2895–2903.
+ uncertainty in deep ensemble classification decision via regression,”
+ [50] R. Vallat, “Pingouin: Statistics in Python,” J. Open Source Softw., vol. 3,
+ IEEE Trans. Emerg. Topics in Comput. Intell., vol. 9, no. 4, p. 12, Aug.
+ no. 31, p. 1026, Nov. 2018.
+ 2025.
+ [51] P. Virtanen et al., “SciPy 1.0: Fundamental algorithms for scientific
+[27] J. F. Masakuna, S. W. Utete, and S. Kroon, “A coordinated search computing in Python,” Nature Methods, vol. 17, no. 3, pp. 261–272,
+ strategy for solitary robots,” in Proc. 3rd IEEE Int. Conf. Robotic 2020.
+ Comput. (IRC), Feb. 2019, pp. 433–434. [52] S. Warghade, S. Desai, and V. Patil, “Credit card fraud detection from
+[28] J. F. Masakuna, S. W. Utete, and S. Kroon, “Performance-agnostic fusion imbalanced dataset using machine learning algorithm,” Int. J. Comput.
+ of probabilistic classifier outputs,” in Proc. IEEE 23rd Int. Conf. Inf. Trends Technol., vol. 68, no. 3, pp. 22–28, Mar. 2020.
+ Fusion (FUSION), Jul. 2020, pp. 1–8. [53] A. Yazdinejad, M. Kazemi, R. M. Parizi, A. Dehghantanha, and
+[29] J. F. Masakuna and P. K. Kafunda, “Do prior information on performance H. Karimipour, “An ensemble deep learning model for cyber threat
+ of individual classifiers for fusion of probabilistic classifier outputs hunting in industrial Internet of Things,” Digit. Commun. Netw., vol. 9,
+ matter,” J. Classification, vol. 40, no. 3, pp. 468–487, 2023. no. 1, pp. 101–110, Feb. 2023.
+[30] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An [54] B. X. Yong and A. Brintrup, “Bayesian autoencoders with uncertainty
+ ensemble of autoencoders for online network intrusion detection,” in quantification: Towards trustworthy anomaly detection,” Expert Syst.
+ Proc. Netw. Distrib. Syst. Secur. Symp., 2018, pp. 1–15. Appl., vol. 209, Dec. 2022, Art. no. 118196.
+[31] S. M. Mohammad and L. Surya, “Security automation in infor- [55] Z. Zeng, Z. Yang, D. Huang, and C.-J. Chung, “LICALITY—Likelihood
+ mation technology,” Int. J. Creative Res. Thoughts (IJCRT), vol. 6, and criticality: Vulnerability risk prioritization through logical reasoning
+ pp. 901–905, Jun. 2018. and deep learning,” IEEE Trans. Netw. Service Manage., vol. 19, no. 2,
+[32] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and pp. 1746–1760, Jun. 2022.
+ A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark [56] J. Zhai, S. Zhang, J. Chen, and Q. He, “Autoencoder and its various
+ for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13, variants,” in Proc. IEEE Int. Conf. Syst., Man, Cybern. (SMC), Oct.
+ p. 5941, Jun. 2023. 2018, pp. 415–419.
+[33] J. Nixon, M. W. Dusenberry, L. Zhang, G. Jerfel, and D. Tran, [57] C. Zhong, J. Yen, P. Liu, and R. F. Erbacher, “Learning from experts’
+ “Measuring calibration in deep learning,” in Proc. CVPR Workshops, experience: Toward automated cyber security data triage,” IEEE Syst.
+ vol. 2, 2019, pp. 38–41. J., vol. 13, no. 1, pp. 603–614, Mar. 2019.
+[34] Y. Ovadia et al., “Can you trust your model’s uncertainty? Evaluating [58] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupredictive uncertainty under dataset shift,” in Proc. Adv. Neural Inf. pervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+ Process. Syst., 2019, pp. 1–12. pp. 1–19.
+[35] P. S. Palar, K. Zakaria, L. R. Zuhal, K. Shimoyama, and R. P. Liem, [59] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spot-
+ “Gaussian processes and support vector regression for uncertainty quan- the-difference self-supervised pre-training for anomaly detection and
+ tification in aerodynamics,” in Proc. AIAA Scitech Forum, Jan. 2021, segmentation,” in Proc. Eur. Conf. Comput. Vis.Cham, Switzerland:
+ p. 181. Springer, 2022, pp. 392–408.
+[36] G. Pang, C. Shen, L. Cao, and A. Van Den Hengel, “Deep learning
+ for anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2,
+ pp. 1–38, 2021.
+[37] A. Paszke et al., “Pytorch: An imperative style, high-performance
+ deep learning library,” in Proc. Adv. Neural Inf. Process. Syst., 2019,
+ pp. 1–12.
+[38] J. Platt, “Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods,” Adv. Large Margin Classifiers,
+ vol. 10, no. 3, pp. 61–74, 1999.
+[39] A. A. Pol, V. Berger, C. Germain, G. Cerminara, and M. Pierini,
+ “Anomaly detection with conditional variational autoencoders,” in Jordan F. Masakuna received the bachelor’s
+ Proc. 18th IEEE Int. Conf. Mach. Learn. Appl. (ICMLA), Dec. 2019, and Honours degrees in computer science from
+ pp. 1651–1657. the University of Kinshasa, Democratic Republic
+[40] C. Rasmussen, “The infinite Gaussian mixture model,” in Proc. Adv. of the Congo, in 2010 and 2012, respectively,
+ Neural Inf. Process. Syst., 1999, pp. 1–7. and the master’s degree in mathematical sciences
+ and the Ph.D. degree in computer science from
+[41] S. Sakazi, Y. Elovici, and A. Shabtai, “Prioritizing antivirus alerts on
+ Stellenbosch University, South Africa, in 2015 and
+ internal enterprise machines,” in Proc. Int. Conf. Detection Intrusions
+ 2020, respectively. He is currently a Post-Doctoral
+ Malware, Vulnerability Assessment. Cham, Switzerland: Springer, 2022,
+ Fellow with the Department of Computer Science,
+ pp. 75–95.
+ University of Sherbrooke. He is an Associate Pro-
+[42] H. Sarvari, C. Domeniconi, B. Prenkaj, and G. Stilo, “Unsupervised fessor with the University of Kinshasa. His research
+ boosting-based autoencoder ensembles for outlier detection,” in Proc. interests lie in artificial intelligence, cybersecurity, network analysis, dis-
+ 25th Pacific-Asia Conf. Adv. Knowl. Discovery Data Mining. Cham, tributed robotics systems, data fusion and human activity recognition, and
+ Switzerland: Springer, 2021, pp. 91–103. ambient computing.
+MASAKUNA et al.: ENHANCING ANOMALY ALERT PRIORITIZATION THROUGH CALIBRATED STANDARD DEVIATION 2493
+
+ D’Jeff K. Nkashama received the Ph.D. degree Pierre-Martin Tardif received the Ph.D. degree
+ in computer science from the University of in electrical engineering from Université Laval,
+ Sherbrooke. He is a Post-Doctoral Fellow with the Québec, QC, Canada. He is currently an Associate
+ University of Sherbrooke. His research interests Professor with the SIMQG Department, School of
+ include the intersection of artificial intelligence and Management, Université de Sherbrooke, Sherbrooke,
+ cybersecurity, with a focus on anomaly and intrusion QC, Canada. His research interests include cybersedetection, adaptive learning systems, and adversarial curity for critical infrastructure, large-scale events,
+ environments. His current work explores the use of crypto-agility, operational technology, and anomaly
+ generative and agentic AI, including large language detection.
+ models, for security monitoring, threat intelligence,
+ and incident response.
+
+ Arian Soltani received the bachelor’s degree in
+ electronics engineering from Iran University of Science and Technology (IUST) and the master’s degree
+ in software engineering from Tarbiat Modares University (TMU). He is currently pursuing the Ph.D.
+ degree with the University of Sherbrooke (UdS). His
+ current research in the intersection of artificial intelligence and cybersecurity, specifically AI-enabled
+ cybersecurity operations, with UdS Cybersecurity
+ Expertise Center.
+
+ Marc Frappier received the Ph.D. degree from the Froduald Kabanza is currently a Full Profes-
+ University of Ottawa. He is currently a Full Pro- sor of Computer Science with the University of
+ fessor of software engineering with the Department Sherbrooke, with a career spanning research, innoof Computer Science, University of Sherbrooke. vation, and leadership in artificial intelligence. His
+ His research interests focus on formal methods work has advanced AI algorithms and led to impactfor software development (specification, refinement, ful applications, including the development of a
+ code generation, proof) and cybersecurity (intrusion hospital AI system commercialized by Lumed Inc.,
+ detection, anomaly detection, access control, vul- Company of bioMérieux. He also founded Menya,
+ nerability testing, post-quantum cybersecurity, and an AI company acquired by Levio, where he was
+ applications of AI to cybersecurity). the Chief AI Advisor until 2024.

@@ -1,0 +1,1860 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [234] Global-to-Local Spatial–Spectral Awareness Transformer Network for Hyperspectral Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：234
+题名：Global-to-Local Spatial–Spectral Awareness Transformer Network for Hyperspectral Anomaly Detection
+年份：2024
+DOI：10.1109/tgrs.2024.3456799
+来源：IEEE Transactions on Geoscience and Remote Sensing
+PDF：paper/10.1109_TGRS.2024.3456799.pdf
+已有粗分类：多媒体、医学、遥感与视频异常检测
+二级关联：其他AI安全与跨域异常检测、入侵检测与网络异常检测
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\234.txt
+- 原始字符数：98121
+- 本次发送字符数：98121
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+5530422
+
+Global-to-Local Spatial–Spectral Awareness
+Transformer Network for Hyperspectral
+Anomaly Detection
+Xu He , Shilin Zhou, Qiang Ling , Miao Li , Zhaoxu Li , Yuyuan Zhang , and Zaiping Lin
+
+Abstract— Hyperspectral anomaly detection (HAD) is one of
+the momentous technologies in the field of Earth observation
+and remote sensing monitoring. Profiting from puissant deep
+feature extraction abilities, deep convolutional networks (DCN)
+perform excellently in the HAD domain. Nevertheless, limited
+by the restriction of unique local receptive fields, DCN-based
+detection methods struggle to catch the long-range dependence
+from a global perspective. In contrast, vision transformers (ViTs)
+perform better in global feature extraction but still disregard the
+local dependence properties. To this end, we proposed a novel
+method entitled the global-to-local spatial–spectral awareness
+transformer (G2LSSAT) network, in which the global transformer block (GTB) and local transformer block (LTB) are
+deployed in sequence to capture deep reconstruction characteristics from the global view to the local view in a spatial–spectral
+domain. In particular, the GTB is designed to explore the global
+spatial–spectral characteristics that are dependent on a crossbarbased global sparse attention module. Furthermore, the global
+glanced image is divided into multiple local patches and the LTB
+is devised to learn the local spatial–spectral features supported by
+a patch-based local self-invisible attention module. In addition,
+considering that the abnormal pixels always be unexpectedly
+reconstructed with the conventional self-attention module in
+ViTs, we introduce a invisible diagonal mask (IDM), which is
+embedded into the LTB module, to overshadow each pixel itself
+in the receptive field and reconstruct itself based on global and
+local dependent spatial–spectral features. Extensive experimental
+results on six datasets illustrate the superiority of the proposed
+G2LSSAT compared with other state-of-the-art detectors.
+Index Terms— Invisible diagonal mask (IDM), global-to-local,
+hyperspectral anomaly detection (HAD), self-attention, vision
+transformer (ViT).
+
+I. I NTRODUCTION
+YPERSPECTRAL remote sensing imaging technology
+is one of the cutting-edge technologies in the field of
+remote sensing for Earth observation. Compared to detection
+
+H
+
+Manuscript received 2 July 2024; revised 6 August 2024;
+accepted 4 September 2024. Date of publication 10 September 2024;
+date of current version 24 September 2024. This work was supported in part
+by the National University of Defense Technology Independent Innovation
+Science Foundation under Grant 22ZZCX-042 and in part by the Foundation
+for Innovative Research Groups of the National Natural Science Foundation
+of China under Grant 61921001 and Grant 62401591. (Corresponding
+author: Qiang Ling.)
+The authors are with the College of Electronic Science and Technology, National University of Defense Technology, Changsha 410073, China
+(e-mail: hexu_710@nudt.edu.cn; slzhou@nudt.edu.cn; lq910131@163.com;
+lm8866@nudt.edu.cn; lizhaoxu@nudt.edu.cn; zhangyuyuan22@nudt.edu.cn;
+linzaiping@nudt.edu.cn).
+Digital Object Identifier 10.1109/TGRS.2024.3456799
+
+systems that use optical single channels such as visible light,
+infrared, and ultraviolet, hyperspectral imagers can obtain
+spectral curves that reflect the “fingerprint” characteristics of
+targets to effectively identify target types without geometric
+or textural features [1], [2], [3]. Hyperspectral images (HSIs)
+have higher spectral resolution and can reach the nanoscale,
+allowing for the detection and recognition of targets that could
+not have been effectively detected in multispectral remote
+sensing images [4], [5], [6]. Among the numerous remote
+sensing image interpretation tasks based on hyperspectral
+imaging systems, the hyperspectral object detection task has
+attracted increasing attention from scholars and researchers
+owing to its great application value in civil and military
+fields, such as environmental monitoring [7], [8], resource
+exploration [9], [10], smart agriculture [11], [12], [13], and
+military reconnaissance and surveillance [14], [15], [16].
+In practical research, the object detection technology for HSIs
+can be divided into two categories: target detection pattern and
+anomaly detection (AD) pattern. To be precise, hyperspectral
+target detection (HTD) mainly compares the spatial–spectral
+features of each test pixel with the spectral clusters of the
+background pixels and the prior target spectral clusters. Then,
+these differences will be mapped into a certain kind of
+characteristic parameter to reflect the abnormality degree of
+each test pixel. In contrast, hyperspectral AD (HAD) intends
+to develop the spectral and spatial distribution differences
+between the target and the surrounding background to locate
+the target whose prior spectrum is in an unknown state. HAD
+task is more in line with practical needs and has greater
+application prospects because it has freed itself from dependence on the target prior information. Nevertheless, affected by
+the limitations in imaging conditions such as noise-jamming
+environments, long-distance imaging, low spatial resolution,
+and so on, the distinguishability between abnormal targets and
+heterogeneous backgrounds significantly diminished, which
+gradually increased the difficulty of background modeling
+and anomaly abstraction. Thereupon, differentiating anomalies
+from sophisticated backgrounds is still a hard nut to crack
+in HSI detection systems. In recent years, more and more
+scholars have been involved in the research work of HAD,
+and numerous outstanding algorithms have sprung up like
+mushrooms. To the best of our knowledge, existing mainstream HAD methods can be divided into four categories,
+
+1558-0644 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+5530422
+
+i.e., data statistics-based methods, data representation-based
+methods, data factorization-based methods, and deep learningbased methods.
+A. Data Statistics-Based Model
+The data statistics-based model was the most classic and
+time-honored HAD fashion. This kind of method always
+assumes that the background of HSIs follows an inherent statistical distribution pattern, while the distribution of anomalies
+significantly deviates from the background distribution, thus
+screening out anomalies based on this basic principle [17].
+Specifically, it will first initialize the statistical model of
+the assumed background, and then select a certain number
+of pixels to estimate the parameters of the model. Finally,
+this model will determine whether the tested pixel is abnormal based on the distance measurement results between the
+tested pixel and the background distribution. For instance, the
+most representative method of the data statistics-based model
+belongs to the Reed–Xiaoli (RX) [18] algorithm, which utilizes
+the Mahalanobis distance as distance measurement criteria and
+postulates that the background distribution complies with the
+multivariate Gaussian distribution. Based on this simple and
+efficient RX baseline model, many researchers [19], [20], [21],
+[22] proposed numerous improved and extended algorithms for
+complicated scenes. Specifically, Kown and Nasrabadi [23]
+introduced the kernel function and maps the original HSI
+data into a high-dimensional feature space to enhance the
+separability of anomalous targets and backgrounds in highdimensional space. Then, Zhou et al. [24] proposed the cluster
+kernel RX detector (CKRXD), which effectively reduced the
+computational complexity of the kernel RX method by replacing each pixel with the cluster centers of the background
+pixels. Matteoli et al. [25] devised a local adaptive kernel
+density estimation to model the background distribution and
+reduce the interference of clusters. Guo et al. [26] proposed the
+linear filter-RX detector (LFRXD) to filter the abnormal targets
+and noise for better background covariance matrix estimation
+and higher detection accuracy. Tu et al. [27], [28] developed
+the density peak clustering method to eliminate the contamination of anomalies in the process of background modeling.
+Chang [29], [30], [31] implemented a novel dummy variable
+trick to transform hyperspectral target detectors into anomaly
+detectors. Furthermore, Chang et al. [32], [33], [34] developed
+the versatile effective anomaly space (EAS) scheme to boost
+the anomaly detectability of anomaly detectors. However, the
+bulk of data statistics-based models depend heavily on the
+prior assumptions of data distribution, which restricts their
+applicability in sophisticated imaging scenarios.
+B. Data Representation-Based Model
+The data representation-based model will construct the
+background dictionary and corresponding sparse coefficient
+matrix of HSIs to determine whether the tested pixel belongs to
+an abnormal target according to the reconstruction error of the
+tested pixel without resorting to Gaussian assumptions about
+the background distribution. Its core mechanism originates
+from a fundamental theory, that is, each background pixel can
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+be represented by the spatial neighborhood pixels or background dictionaries, but abnormal pixels cannot. In the light of
+different constraint modes of the representation coefficient, the
+data representation-based models can be classified as sparse
+representation (SR)-based models [35], [36] and collaborative
+representation (CR)-based models [37], [38]. The SR-based
+model structures the overcomplete dictionary based on the
+background pixels and estimates the sparse coefficient, which
+is constrained by the l1 norm. Then, the abnormal pixels will
+be screened out due to significant errors in the reconstruction
+process. Based on the basic SR-based model proposed by
+Chen et al. [39], many improved HAD algorithms have been
+designed to boost detection performance. For example, Zhu
+and Wen [40] improved the performance of the SR-based
+model by incorporating accurate background estimation and
+adaptive weighting strategy into the fundamental SR-based
+HAD framework. Ling et al. [36] applied the nonnegativity
+and sum-to-one constraints on the sparse coefficient matrix to
+endow with the practical physical significance of the SR-based
+method. Moreover, Zhao et al. [41] designed a sparsity score
+estimation detector to strengthen the discrepancy between the
+learned anomaly dictionary and the background dictionary.
+Similar to the SR-based model, the CR-based model considers
+the spatial–spectral information between pixels and imposes
+the l2 norm on the representation coefficient. Based on this
+fundamental principle, Vafadar and Ghassemian [42] further
+considered the statistical distribution of background to remove
+the outliers before the CR operation for pollution-free background dictionary construction. In addition, Hou et al. [43]
+applied the least squares method to avoid interference from
+anomalies in the background dictionary construction, and
+then the spatial saliency analysis was subsequently performed to improve the detection performance. Tan et al. [44]
+combined the sliding dual-window scheme and CR strategy
+mechanism to improve the detection accuracy and boost
+the speed of operation. Chang and Ghamisi [45] devised
+a novel CR-based model variant, in which the background
+and anomaly union dictionary are introduced to extract reliable representation samples and remove anomalies or noise
+contamination. Similarly, Wu et al. [46] presented a relaxed
+CR-based model that combined the k-nearest neighbor method
+to construct more a practical nonglobal dictionary for more
+reliable background representation solutions. Nevertheless,
+data representation-based methods still easily lose effectiveness in real scenarios due to predetermined parameter selection
+and tweaking, which reduces the generality of the methods.
+C. Data Factorization-Based Model
+The data factorization-based model will implement AD by
+decomposing the hyperspectral cube in different dimensions,
+which are mainly classified as matrix factorization-based
+models and tensor factorization-based models. The matrix
+factorization-based model leverages the theoretical basis that
+the anomalies in HSIs often present low target-to-image pixel
+ratios and spatial sparsity, while the background in HSIs is
+always monotonous and manifested as low-rank attributes.
+With that in mind, the low-rank and sparse matrix factorization can be exploited in the HAD field. For example,
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+Xu et al. [47] represented the background pixels by the
+low-rank matrix of the background dictionary and excavated
+the local difference characteristics of anomaly targets by
+the sparsity constraint. Huyan et al. [48] proposed a potential anomaly and background double dictionary construction
+method to better discriminate anomalies from background
+and noise interference. Considering that anomalies and noise
+have analogous sparse characteristics, the detection results are
+always mixed with false alarms (FAs) of noise. To this end,
+Li et al. [49] incorporated the mixture of Gaussian (MoG)
+method into the matrix factorization-based model, which effectively distinguished between anomalies and noise in a sparse
+matrix and improved the detection accuracy. Chen et al. [50]
+presented a simple and effective data decomposition method,
+called component decomposition analysis (CDA) which better
+separated anomalies from HSI data. In addition, Chang and
+Chen [51] also proposed a novel sparsity density peak (SDP)
+trick to represent the HSI data and extract anomalies in the
+sparse space. The tensor factorization-based models [52], [53],
+[54], [55], [56], [57], [58], [59], [60], [61], [62] take advantage
+of the 3-D structure of the HSI data cube and achieve high
+performance in consideration of the 2-D spatial features and
+1-D spectral features. Inspired by the mechanism of high-order
+tensor decomposition, Wang et al. [52] exploited the classical
+CANDECOMP/PARAFAC (CP) factorization to reconstruct
+the background based on the principle that the background
+tensor can be decomposed into the sum of numerous rank-1
+tensors. In addition, Zhang and Wen [53] implemented Tucker
+factorization to achieve the core tensor and corresponding
+factor tensor, whose principal component can serve as a basis
+for judging anomalies and backgrounds. Furthermore, Xu et al.
+[54] introduced tensor singular value decomposition (t-SVD)
+to resolve the matricization problem of Tucker factorization.
+However, the tensor nuclear norm (TNN) used in [54] will
+result in an over-shrinkage problem and deteriorate the detection performance. To solve this issue, He et al. [55] introduced
+a novel ϵ-shrinkage TNN to obtain a more compact convex
+closure of the tensor tubal rank. Xiao et al. [63] introduced the
+optimal clustering framework-based enhanced tensor low-rank
+(OCF-ETLR) factorization model to select effective bands and
+reduce the interference from redundant bands. Besides that,
+Feng et al. [56] employed the tensor ring factorization and
+total variation constraint to extract the low-rank and piecewise
+smoothness attributes of the background in the spatial and
+spectral domains. Xiao et al. [64] also applied the total
+variation constraint and explored a multiscale entanglement
+renormalization ansatz (MERA) based tensor factorization
+algorithm to decompose the HSI tensor into anomalies and
+background parts. Notwithstanding, these methods only exploit
+handcrafted shallow features and image attributes such as
+low-rank and sparsity characteristics, lacking significant deep
+context features devoted to discriminate anomalies from the
+background.
+
+5530422
+
+mostly adopt the reconstruction-based self-supervised data
+fitting pattern to precisely reconstruct the background and
+suppress anomalies with large reconstruction errors [65], [66].
+To the best of our knowledge, the mainstream DL-based
+HAD solutions include convolution neural network (CNN)based models and generative adversarial network (GAN)-based
+models. The CNN-based model exploits the formidable feature
+extraction capability of CNNs to extract the spatial–spectral
+features and reach effective reconstruction. As the inventors
+of CNN-based models, Li et al. [67] trained the network with
+differential pixel pairs and similar pixel pairs samples to determine whether the test sample is abnormal. Moreover, Fu et al.
+[68] solved the HAD problem with a plug-and-play denoising
+network model and employed CNN regularization to eliminate
+background noise. Wang et al. [69] applied transfer learning to
+obtain more training samples and effectively address the prior
+knowledge agnostic problem. In addition, the autonomous AD
+(Auto-AD) [70] implemented a fully convolutional autoencoder network with a skip connection structure to obtain a
+reconstruction error map with high contrast between anomalies
+and the background. Based on the autoencoder network framework, Liu et al. [71] designed a dual-frequency autoencoder
+model which converted the hyperspectral data into low- and
+high-frequency constituents and parallelly extracted anomalies
+from these two constituents. Meanwhile, Jiang et al. [72]
+developed an autoencoding density estimation network which
+estimated the energy density of anomalies with an end-toend unsupervised learning manner. Li et al. [73] employed
+an interpretable model-driven deep mixture network which
+combined the autoencoder-based low-dimensional manifold
+background learner and convex relaxation optimization with
+anomaly sparse constraints. The GAN-based methods effectively model the background distribution and reconstruct the
+background by means of the powerful data distribution learning ability of GAN. For example, Jiang et al. [74] proposed an
+unsupervised discriminative reconstruction constrained GAN
+(DRCGAN), which employed an autoencoder to realize the
+discriminative reconstruction constraint for GAN and accurate background pixel distribution learning. Based on the
+variational background inference strategy, Wang et al. [75]
+achieved excellent background modeling and spectrum reconstruction effect in light of the GAN-based network framework.
+Furthermore, Jiang et al. [76] devised a spectral-constrained
+GAN, called WeaklyAD, for the reconstruction task of HSIs,
+where the anomaly and the background can be better discriminated with a higher reconstruction error of the anomaly
+target. Similarly, Li et al. [77] presented a novel sparse HAD
+network that integrated the sparse coding strategy into the
+GAN-based reconstruction network and improved the robustness of this weakly supervised HAD network. Jiang et al. [78]
+implemented an unsupervised, low-rank embedded network
+(LREN), where the latent layer cooperated with the Gaussian
+mixture model.
+
+D. Deep Learning (DL)-Based Model
+Unlike the above three methods, DL-based models are prior
+knowledge agnostic and do not depend upon data distribution assumptions. Actually, off-the-shelf DL-based methods
+
+E. Motivation and Contributions
+Through an in-depth analysis of the above DL-based methods, it can be perceived that the pivotal proposition of
+
+5530422
+
+the DL-based models rests on the construction of differential characteristics representation between backgrounds and
+anomalies. Therefore, the employment of reconstruction error,
+minimization can go along with this central foothold and
+achieve exceptional detection performance in certain scenarios based on the basic assumption, where the background
+part can be correctly reconstructed by the network while
+anomaly targets cannot [79]. However, due to inevitable
+abnormal sample contamination during network training, offthe-shelf detection network mostly has the flaw of inevitable
+memory storage for anomalies [80]. Therefore, it is not
+always pledged that anomalies cause emphatically higher
+reconstruction errors than the background in the existing
+DL-based methods [81], [82]. To this end, specific feature
+guiding constraints should be applied for the background and
+anomalies to enhance the background reconstruction while
+weakening the anomalies reconstruction. In recent, several relevant DL-based literature about imposing specific constraints
+on HSIs guiding reconstruction have emerged. For example,
+Auto-AD [70] exploited a novel adaptive weighting loss that
+dynamically utilized the reconstruction errors of anomalies to
+determine the adaptive weighting loss for better anomalies
+suppression during network training. Moreover, inspired by
+representation-based methods, the deformable convolutional
+autoencoder (DCAE) [83] designed a background guidance
+module, which restrained the anomalies reconstruction by
+guiding the parameter updating of the decoder in light of the
+elaborate background dictionary representation. However, the
+deployment of the above constraints only a trifle retards the
+issue of anomalies reconstruction problem due to the neglect of
+self-supervised memory learning for anomalies during network
+training. In contrast, exploring the anomalies overshadowing
+strategy can resolve the anomalies reconstruction issue during self-supervised learning. Specifically, Wang et al. [84],
+[85], [86] proposed the invisible-spot self-supervised learning
+network (BS3 LNet), which generated a high-quality reconstruction error map owing to the employment of anomalies
+overshadowing-based invisible-spot architecture. Nevertheless,
+restricted by the intrinsic local receptive fields of CNN framework, almost all existing DL-based AD methods, including
+BS3 LNet, were flawed in capturing the long-range dependence and nonlocal content features from a global perspective.
+In conclusion, the limitations of existing DL-based AD
+methods can be summarized as the inevitable anomalies
+reconstruction issue and intrinsic CNN local receptive fields
+restriction. To this end, the research in this article offers
+a new perspective on leading transformers into HAD tasks.
+Specifically, as shown in Fig. 1, the target discovery process in the human vision system (HVS) actually adheres to
+the global-to-local attention pattern which combines global
+glance attention with local refining attention. Meanwhile,
+as expressed in Fig. 2, both local spatial–spectral differences
+and nonlocal similarity features are momentous clues for
+reconstruction learning in the HAD task. Therefore, inspired
+by this HVS attention mechanism, we propose a globalto-local spatial–spectral awareness transformer (G2LSSAT)
+network paradigm for the HAD task. First, by means of
+the exceptional long-range feature extraction capability of the
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Fig. 1. Schematic of the visual attention mechanism of the HVS. This visual
+attention mechanism mainly adopts a global-to-local pattern. After observing
+an image, HVS will first scan the entire image through a global attention
+mechanism to obtain the global glanced image and key local regions of
+interest. Then, HVS will further refine the feature extraction and attention
+of the key local regions in a local focused image.
+
+Fig. 2. Examples of the local and nonlocal spatial–spectral relationships
+among pixels in HSIs. T1 and T2 represent the nonlocal relevant pixels with
+spatial–spectral similarity. B1, B2, B3, and B4 are the pixels surrounding
+the local neighborhood of T1. (a) and (b) Illustrate the spatial positional
+relationships and their respective spectral curves of corresponding pixels.
+The spectral curve of T1 is easily discriminated from its adjacent pixels
+and determined as abnormal. Meanwhile, since T1 and T2 present extremely
+similar spectral radiation and spatial morphological characteristics, long-range
+pixel T2 can also be judged as an outlier if T1 belongs to the anomaly part.
+
+transformer, we first implement a global transformer block
+(GTB) that extracts the global glanced spatial–spectral features based on a crossbar-based global sparse self-attention
+module. Then, similar to the global-to-local object detection
+mode of HVS, the global glanced image is divided into
+multiple local patches, followed by the employment of a local
+transformer block (LTB) to abstract the local spatial–spectral
+features supported by a patch-based local self-invisible attention module. Moreover, a novel anomalies overshadowing
+self-supervised learning strategy is devised to alleviate the
+anomalies reconstruction problem. Specifically, we incorporate
+an elaborate invisible diagonal mask (IDM) into the selfattention module, which overshadows each abnormal pixel
+or background pixel and implements reconstruction learning
+based on the dependent spatial–spectral features from the
+global and local receptive fields. In our experiments, we conduct extensive contrastive experiments and ablation studies on
+multiple datasets to verify the effectiveness of the proposed
+G2LSSAT. To summarize, the major contributions of our
+article are concluded as follows.
+1) We develop a brand-new global-to-local HAD framework based on the choreographed GTB-to-LTB transformer network structure, which effectively extracts deep
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+Fig. 3. Overall network framework of G2LSSAT. The proposed method is devised based on a global-to-local transformer architecture. Conv and Trans are
+abbreviations for convolution and transformer. Linear, LN, and MLP represent the LPL, LayerNorm layer, and multilayer perceptron, respectively.
+
+spatial–spectral reconstruction features from a global
+perspective to a local perspective.
+2) We introduce the crossbar-based global sparse attention
+module and patch-based local self-invisible attention
+module and embed them into the GTB and LTB
+for nonlocal and local spatial–spectral characteristics
+learning.
+3) We develop novel anomalies overshadowing-based selfsupervised network learning strategy to address the
+anomalies reconstruction issue based on a IDM.
+4) We conduct copious comprehensive experiments on six
+hyperspectral datasets to test and verify the superiority
+of the proposed G2LSSAT for HAD.
+The reminder of our article is organized as follows. First,
+we introduce the related work and motivation of our work in
+Section I. In Section II, we present the details of the proposed
+G2LSSAT. In Section III, the experimental results and analysis
+are provided. Finally, the conclusion is drawn in Section IV.
+II. P ROPOSED M ETHODOLOGY
+Taking inspiration from the global-to-local vision attention
+mechanism of HVS and the transcendent capability of the
+transformer in extracting global dependent features, we present
+a novel G2LSSAT. In this section, we illustrate the proposed
+G2LSSAT and explain the implementation details.
+
+A. Overall Network Architecture
+The overall network structure diagram of the proposed
+G2LSSAT is shown in Fig 3. Let the input HSI data cube
+be represented as H ∈ Rb×h×w , where h and w represent
+the height and width of the input HSI, and b is the number of spectral bands. For the input HSI, we first employ
+a spatial–spectral features enhancement (SSFE) convolution
+block to enhance the spatial and spectral features representation. Specifically, the SSFE convolution block consists
+of 1 × 1 convolution layers, Gaussian error linear units
+(GELUs) layers, and depth-wise separable (DWS) convolution
+layers [87]. In addition, the DWS convolution layer includes
+a 3 × 3 convolution layer (depth-wise convolution) and a
+1 × 1 convolution layer (point-wise convolution). Actually,
+the DWS convolution layers can effectively strengthen spatial–
+spectral features from spatial–spectral dimensions and increase
+the generalization and trainability of the model. Therefore,
+after the input HSI H is fed into the SSFE convolution block,
+we can obtain the compact feature map F ∈ Rb×h×w as
+follows:
+F = C1×1 (G(DWS(G(C1×1 (H )))))
+
+(1)
+
+where C1×1 , G, and DWS represent the 1 × 1 convolution
+layer, GELU layer, and DWS convolution layer, respectively.
+Subsequently, the compact feature map F is fed into the
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Algorithm 1 Training Procedure of the G2LSSAT
+Input: (1) the input HSI data H ∈ Rb×h×w ;
+(2) maximum iteration Tmax ;
+(3) batch size n;
+(4) sliding windows stride k.
+Procedure:
+Initialize the network with random weights.
+for epoch in [1,2,. . . .,Tmax ] do
+Strengthen spatial-spectral features according to 1.
+Update non-local spatial-spectral features based on
+global transformer block.
+Construct the local blocks according to the sliding
+windows-based patch partition in 2.
+Shuffle the local blocks and select the batch of
+shuffled blocks as training samples.
+for each sample batch n do
+Update local spatial-spectral characteristics
+based on local transformer block.
+Strengthen spatial-spectral features based on 1.
+Train the network by minimizing loss in 3.
+Update network parameters with ADAM
+optimizer.
+end
+Merge patches according to the position calibration
+matrix of the shuffled blocks.
+end
+Output: Network parameters.
+
+GTB to extract the global features and obtain the glanced
+feature map G based on a pivotal crossbar-based global sparse
+attention module. Subsequently, we implement a k 2 ×k 2 sliding
+window to partition G into multiple sliding HSI local blocks
+N
+P = { pi }i=1
+, with the sliding stride being k. In particular, the
+spatial size of each local block is k 2 × k 2 and the total number
+of local blocks n b is formulated as
+
+Y  si + 2 pb − db (k 2 − 1) − 1
+nb = nw × nh =
++1
+k
+i∈(0,1)
+(2)
+where si (i = 1, 2) represents the spatial size of the given
+HSI, i.e., the width and height of the HSI. Notably, pb and
+db denote the padding and dilation parameters which are set
+to 0 and 1 in the unfold operation. Therefore, we can obtain
+2
+2
+the local block feature map with a size of P ∈ Rn×k ×k ×b ,
+where n denotes the number of batch size. Then, the block
+feature map P will be shuffled along the first dimension
+to enhance robustness during network training. In addition,
+the block feature map will be divided into multiple local
+patches and reshaped as an embedded token with the size of
+2
+2
+E ∈ Rn×(k ×k )×b . The position calibration matrix C ∈ Rn w ×n h
+will storages the position information of the shuffled block
+feature map for the following patch merge process. Then,
+the embedded token will be normalized by the LayerNorm
+operation and fed into the local transformer block to capture
+the local spatial–spectral reconstruction features supported by
+a patch-based local self-invisible attention module. Finally,
+
+Fig. 4.
+Diagrammatic sketch of the global-to-local mechanism in our
+G2LSSAT. (a) Global and local information dependent relationship. The
+local neighborhood pixels surrounding the central pixel and nonlocal related
+pixels can be utilized for reconstruction. (b) Local neighborhood pixels
+reconstruction mechanism. The blue pixels denote the neighborhood pixels
+which can be used to reconstruct the central pixel. (c) and (d) Represent the
+relating pattern between spectral vector located in spatial coordinate (i, j) and
+spatial coordinate (m, k). It can be seen that the related spectral vector located
+in spatial coordinate (i, k) and spatial coordinate (m, j) can be captured by
+the proposed crossbar-based global sparse attention. The pertinence relation
+between (i, j) and (m, k) can be indirectly represented by the aid of (i, k)
+and (m, j). Meanwhile, it can be easily deduced that the nonlocal information
+cannot be obtained by single row or column self-attention.
+
+the updated block feature map will be further enhanced by
+employing SSFE operation. For the loss optimization of the
+network, our G2LSSAT network is trained using the mean
+squared error (mse) loss function according to the practical
+experimental results in Section III-G
+ψ̂ = arg min L (ψ)
+ψ
+
+= arg min ∥F (H ; ψ) − H ∥22
+
+(3)
+
+ψ
+
+where F (H ; ψ) represents the overall network optimization
+function and ψ refers to the learnable parameters in our
+G2LSSAT. In the testing phase, the HAD result will be given
+according to the reconstruction residual R between the input
+HSI H and reconstructed HSI Ĥ as follows:
+Ri, j = hi, j − ĥi, j 2
+
+(4)
+
+where hi, j ∈ Rb×1 and ĥi, j ∈ Rb×1 represent the pixels at
+location (i, j) of H and Ĥ , respectively. Specifically, Ri, j
+denotes the anomaly scores of the corresponding pixel located
+at (i, j) of the final AD map R ∈ Rh×w . Note that all patches
+can be exploited to calculate the reconstruction error loss and
+generate the final AD map in the training and testing stage.
+The critical processes of the proposed G2LSSAT are described
+in Algorithm 1. Meanwhile, we record the feature dimensions
+of the input and output of each module in Table I.
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+Fig. 5. Detailed network architecture of the crossbar-based global sparse self-attention and patch-based local self-invisible attention module. (a) Row sparse
+self-attention module. (b) Column sparse self-attention module. (c) Patch-based local self-invisible attention module.
+
+self-attention mechanism:
+
+B. Global Transformer Block
+As shown in Fig. 4(a), we can utilize the nonlocal content
+similarity features, i.e., two planes with similar features at
+a long distance, to improve the ability of the network over
+anomalies judgment. Therefore, as presented in Fig 3, for
+the enhanced compact feature map F, we first fed it into
+a GTB to explore the nonlocal dependent spatial–spectral
+features. Specifically, the core composition of the GTB
+focuses on a crossbar-based global sparse attention module.
+In a conventional transformer, the multihead self-attention
+layers serve as the prominent network architectural components that can extract long-range context information.
+Nevertheless, multihead self-attention is of quadratic complexity O(N 2 ) [88], which increases computational burden and
+training difficulty. To tackle this issue, we develop a novel
+crossbar-based global sparse attention, which is composed of
+horizontal row self-attention and vertical column self-attention
+module. The detailed network diagrammatic sketch of the
+proposed crossbar-based global sparse attention is depicted
+in Fig. 5(a) and (b). Specifically, for the horizontal row selfattention, the given HSI data cube F ∈ Rh×w×b will be
+projected into query Q r ∈ Rh×w×c , key K r ∈ Rh×w×c , and
+value Vr ∈ Rh×w×c by linear projection layers (LPLs)
+Q r = F W Qr ,
+
+K r = F W Kr , Vr = F WVr
+
+(5)
+
+where c = b/2 in our method. W Qr ∈ Rb×c , W Kr ∈ Rb×c ,
+and WVr ∈ Rb×c represent the learnable weight matrix. Subsequently, the projected query Q r and key K r are rearranged
+to produce the following row attention map Arow by the row
+
+
+
+Q r K rT
+√
+Arow = Softmax
+∈ Rh×w×w
+c
+
+(6)
+
+where Softmax(·) denotes √
+the softmax function along the
+last axis of the data cube, c represents the scale factor.
+Intuitively, as depicted in Fig. 6, we present the sparse row
+spatial–spectral self-attention mechanism in detail. Specifically, for the spectral vectors located at spatial coordinates
+(i, j) in projected query Q r , all spectral vectors located on
+the same row, i.e., the same row matrix Q i ∈ Rw×c , will
+be included in the self-attention calculation. The same row
+Q i matrix will be multiplied by the transpose matrix K iT of
+the same row matrix K i in the projected key K r to generate
+the ith row self-attention map Ai ∈ Rw×w . By traversing
+all rows, the final row self-attention map is given in (6).
+Meanwhile, the projected value Vr will be weighted by multiplying Vr and the row self-attention map, which models
+the spatial–spectral correlation between the spectral vector
+in spatial coordinates (i, j) and all spectral vectors in the
+same row. It can be noticed from Fig. 5(a) and (b) that the
+row self-attention map is updated by the dropout operation
+as Ârow = D(Arow ), where D denotes the dropout operation.
+Then, the final output of the row self-attention module can
+be expressed as Ârow V . Except for the row self-attention,
+the column self-attention can be obtained by traversing all
+columns according to a similar principle. Note that the row
+and column self-attention must be iteratively spliced in series
+for nonlocal spatial–spectral feature extraction and generating
+global glanced features map G as indicated in Fig. 4(c)
+and (d). In other words, a single row or column self-attention
+cannot capture long-range features. In light of the proposed
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+TABLE I
+F EATURE D IMENSIONS OF THE I NPUT AND O UTPUT OF E ACH M ODULE
+
+C. Local Transformer Block
+As described in Section II-A, we employ a sliding window
+to divide the global glanced feature map G into multiple local
+patches and introduce an LTB to extract local spatial–spectral
+deep features. In our method, the sliding stride p and window
+size w are set to k and k 2 , where k is a hyperparameter.
+According to the sliding stride and window size of the sliding
+window, we can obtain the number of patches r = w/ p in each
+local block. Subsequently, as shown in Fig. 3, the embedded
+tokens E ∈ Rn×(w×w)×b will be fed into the LayerNorm
+and reshaped as Ê ∈ Rn×(r ×r )×( p× p×b) , where each patch
+is straightened into a 1-D spectral vector with the size of
+( p× p×b). Then, as shown in Fig. 5(c), the updated embedded
+tokens Ê will be imputed into the LPL to obtain the local patch
+query Q l ∈ Rn×(r ×r )×( p× p×e) , key K l ∈ Rn×(r ×r )×( p× p×e) , and
+value Vl ∈ Rn×(r ×r )×( p× p×b)
+Q l = Ê W Ql ,
+
+Fig. 6. Sketch map of the calculation process of the row self-attention. The
+yellow area represents the row matrix Oi where the spectral vector at spatial
+coordinate (i, j) is located. The green arrow represents the traversal direction
+of each column of Oi in the process of multiplying matrix Oi by the transpose
+of K i .
+
+crossbar-based global sparse self-attention, the computational
+complexity of global self-attention has been reduced from
+O(N 2 ) to O(N ) due to the serial iterative alternating implementation of row and column self-attention with complexity
+O(N ) [88].
+
+K l = Ê W Kl , Vl = Ê WVl
+
+(7)
+
+where e = b/2 in our method. W Ql ∈ Rb×e , W Kl ∈ Rb×e , and
+WVl ∈ Rb×b represent the learnable weight matrix in LPLs.
+Correspondingly, the local patch-based attention map A can
+be obtained by multiplying the projected local patch query Q l
+by the transpose of key K l
+
+
+Q l K lT
+∈ Rn×(r ×r )×(r ×r )
+Aloc = Softmax √
+p× p×e
+
+(8)
+
+where ( p × p × e)1/2 represents the corresponding scale
+factor. Similar to the updating fashion of row and column
+self-attention module, we incorporate dropout and invisible
+diagonal masking operations to generate the final patch-based
+local self-invisible attention map Âloc . The detailed mechanism
+of the IDM can be found in Section II-D. Finally, we can
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+Fig. 7.
+Diagrammatic sketch of self-attention and the proposed invisible diagonal masked self-attention in our G2LSSAT. The white regions
+in attention weights represent zero-value regions. (a) Self-attention mechanism. (b) Receptive fields of self-attention. (c) Invisible diagonal masked
+self-attention mechanism. (d) Receptive fields of invisible diagonal masked
+self-attention.
+
+obtain the local-focused HSI data cube Hloc as follows:
+Hloc = T + MLP(LN(T ))
+T = Reshape( Âloc Vl ) + Ê
+
+to reconstruct the background and suppress the anomalies to
+the maximum extent. Therefore, we hope that the network
+will overshadow each pixel itself in the receptive field and
+reconstruct itself by means of its relationship information with
+other pixels. In that case, the anomaly pixel that distinctly
+differs from the adjacent pixels cannot be dependably restored
+and generates a larger reconstruction error during network
+training. From this point of view, it is considered that the
+diagonal element which describes the data autocorrelation
+property in the attention weight matrix illustrates the receptive
+field of each pixel for itself during the network training stage.
+Therefore, as shown in Fig. 7(c) and (d), the diagonal element
+in the attention weight matrix A, which measures the degree of
+self-correlation must be set to 0. To this end, for the attention
+weight matrix A, we design a novel IDM, which √
+is embedded
+before the Softmax operation. Let S = (Q K T )/ d ∈ Rm×m
+be represented as follows:
+
+
+s11 s12 · · · s1m
+ s21 s22 · · · s2m 
+
+
+S= . .
+(10)
+.. .
+ .. ..
+. 
+sm1 sm2 · · · smm
+Let m i denote the maximum value of ith row, the IDM can
+be represented as follows:
+
+
+m0 + ∞ m0
+···
+m0
+ m1
+m1 + ∞ · · ·
+m1 
+
+
+(11)
+M =
+
+..
+..
+..
+..
+
+
+.
+.
+.
+.
+
+(9)
+
+where MLP and LN represent the multilayer perceptron layer
+and LayerNorm layer, respectively. Moreover, reshape denotes
+the operation of adjusting Âloc Vl ∈ Rn×(r ×r )×( p× p×b) as the
+size of Reshape( Âloc Vl ) ∈ Rn×(r × p)×(r × p)×b . Then, the SSFE
+module will be embedded after the local focused feature map
+to strengthen the spatial–spectral reconstruction representation.
+Finally, the local focused HSI data cube will be merged to form
+the output reconstructed HSI with the size of Ĥ ∈ Rw×h×b
+according to the position calibration matrix.
+D. Invisible Diagonal Mask
+In the architecture of the patch-based local self-invisible
+attention module, we incorporate a IDM to suppress excessive anomalies reconstruction. This section explains the
+detailed mechanism of the IDM. Specifically, as illustrated in
+Fig. 7(a) and (b), for conventional self-attention,
+√ the attention
+weight A can be denoted as Softmax(Q K T / d) ∈ Rm×m
+based on the linear projected query Q ∈ Rm×d and the linear
+projected value K ∈ Rm×d . In a nutshell, this type of selfattention mechanism will learn the dependency relationship of
+each query on all other keys and build the global receptive
+field. In other words, each feature information is a combination of all other features within the group. In the field of
+imaging, the self-attention mechanism can enable each patch
+to contain not only its own subject information but also its
+relationship information with other patches. Nevertheless, the
+overall optimization purpose of the reconstruction network is
+
+5530422
+
+mm
+
+mm
+
+· · · mm + ∞
+
+where ∞ represents a large positive value which is set to
+300 in our method.
+Based on the IDM, the final attention weight matrix can
+be described as Â = Softmax(S − M). On the one hand,
+we subtract the maximum value of each row from each element
+in the attention weight matrix to prevent a data overflow
+issue [89]. On the other hand, we subtract a large value from
+each value on the diagonal and utilize the Softmax operation,
+i.e., limx→−∞ exp−x = 0, to zero the diagonal elements.
+III. E XPERIMENTAL R ESULTS AND A NALYSES
+In this section, numerous experiments are implemented to
+test and verify the effectiveness of our G2LSSAT for the HAD
+task on six real HSI datasets. Note that all the comparison
+experiments were conducted on a workstation with Windows
+10, Intel1 Core2 i9-10980XE CPU@3.00 GHz, 16-GB RAM,
+and an NVIDIA 3090 GPU with 24-GB memory.
+A. Datasets Introduction
+In the experiments, we compare our method with nine
+well-developed detectors on six hyperspectral datasets. The
+detailed introduction of the six datasets is presented in Table II.
+1 Registered trademark.
+2 Trademarked.
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Fig. 8. HSI datasets used in our experiments. The first row and second row represent the pseudo-color image and ground truth of the corresponding dataset.
+(a) Pavia. (b) Okavango Delta. (c) Indiana. (d) Gainesville. (e) Cat Island. (f) Salians.
+TABLE II
+I NTRODUCTION OF S IX HSI DATASETS . R ES . R EPRESENTS THE A BBREVIATION OF R ESOLUTION
+
+1) Pavia Dataset: The first dataset was captured by the
+Reflective Optics System Imaging Spectrometer-03 (ROSIS03) sensor over the Pavia city of Italy [90]. The spectral
+wavelength range of the Pavia dataset involves 188 bands
+in the range from 430 to 680 nm. Meanwhile, the spatial
+resolution and spatial size of this dataset come to 1.3 m/pixel
+and 150 × 150 pixels. As presented in Fig. 8(a), this dataset
+is composed of the beach background and anomalous vehicle
+targets with 68 pixels. The total abnormal target pixels account
+for 0.3% of the entire hyperspectral image.
+2) Okavango Delta Dataset: The second dataset is an HSI
+with a land scene collected by the Hyperion sensor [91] carried
+by EO-1. It was captured over the area of the Okavango
+Delta. The wavelengths of the bands in the Okavango Delta
+dataset range from 400 to 2500 nm. The background area
+in this dataset consists of observations from 14 different
+types of land cover. In addition, this dataset is composed of
+100 × 100 pixels with 30 m/pixel spatial resolution and 145
+spectral bands are preserved to hold discriminative information
+for each pixel. As shown in Fig. 8(b), 32 anomalous pixels are
+to be detected in the land background, making up 0.32% of
+the total amount of pixels in the dataset.
+3) Indiana Dataset: The third dataset was collected by
+the Hyperion hyperspectral sensor over the zone of the State
+of Indiana, USA [92]. It contains 149 spectral bands in the
+wavelength range of 357∼2576 nm. Under a 10 m/pixel spatial
+resolution, this dataset has a spatial size of 150 × 150 pixels.
+As presented in Fig. 8(c), the 17 abnormal pixels mainly
+consist of the storage silos and the roofs embedded in the
+agricultural background region.
+
+4) Gainesville Dataset: The fourth dataset was acquired by
+the Airborne Visible/Infrared Imaging Spectrometer (AVIRIS)
+sensor over the region of Gainesville, Florida, USA [90].
+It has 191 spectral bands used for the experiments after
+erasing the low signal-to-cluster ratio (SCR) and water
+absorption bands from the incipient dataset. Moreover, the
+Gainesville dataset is comprised of 100 × 100 pixels,
+with a spatial resolution of 3.5 m/pixel. As presented in
+Fig. 8(d), this dataset includes 52 anomaly pixels with the ship
+attribute to be detected, which accounts for 0.52% of all the
+pixels.
+5) Cat Island Dataset: The fifth dataset with a beach background was collected by the AVIRIS sensor [90]. As described
+in Table II, the spatial size and number of spectral bands are
+150 × 150 pixels and 188, respectively. The spatial resolution
+of this dataset reaches 17.2 m/pixel. As shown in Fig. 8(e),
+there exists a ship target with 19 pixels that need to be
+detected, making up 0.08% of the total amount of pixels in
+the dataset.
+6) Salians Dataset: The sixth dataset was shot by the
+AVIRIS airborne sensor from Salinas Valley, CA, USA [44].
+At a spatial resolution of 3.7 m/pixel, a subimage with a size
+of 120 × 120 pixels was cropped from the 512 × 217 pixels
+original image in the experiments. The 25 randomly selected
+anomalous pixels are synthetic data according to the identified
+building spectral. After removing 20 atmospheric and water
+vapor absorption bands (108–112, 154–167, and 224), there
+are 204 reserved spectral bands ranging from 400 to 2500 nm
+in the dataset. The pseudo-color image of the Salians dataset
+is presented in Fig. 8(f).
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+TABLE III
+
+B. Experimental Settings
+1) Evaluation Indicators: To verify the performance of each
+algorithm, we implement multiple evaluation indicators to test
+the detection effectiveness and efficiency of the compared
+HAD algorithms. First, the running time of each model
+on six HSI datasets is selected as the evaluation indicator
+for detection efficiency. In terms of detection effectiveness,
+we employ multiple evaluation indicators to validate the detection performance from the
+perspective of qualitative and quantitative. With respect
+to the qualitative indicators, we introduce the AD map,
+background-anomaly separation map [93], and 3-D receiver
+operating characteristic (ROC) curve [94] to compare multiple
+state-of-the-art algorithms in our experiments. Specifically,
+the AD map can directly display the impression of AD and
+background suppression (BS) from the shade of the color map.
+By outlining the box plot of the background and anomalies, the
+background-anomaly separation map can intuitively illustrate
+the distribution relationship between the background part
+and the anomaly part. The gap between the anomaly box and
+the background box reflect the separation degree between the
+background and the anomaly component in the detection map.
+In addition, the 3-D ROC curve represents the variation curve
+of detection probability rate Pd and FA Fa with the variation
+of segmentation threshold τ ∈ (0, 1). Given a segmentation
+threshold, Pd and P f are denoted as follows:
+DF
+DT
+, Fa =
+(12)
+AT
+AP
+where AT and DT denote the total number of true anomaly
+pixels in the HSI and the true anomaly pixels detected by
+the corresponding algorithm, respectively. AP and DF denote
+the number of all pixels in the HSI and the number of falsely
+detected pixels under a certain threshold τ . Moreover, the comprehensive 3-D ROC curve evaluation indicator can describe
+the capability of each method regarding AD and BS. Deriving
+from the 3-D ROC curve, we can obtain a more quantitative
+evaluation indicators for algorithm testing experiments. For
+example, by pinning one of the three indicators PD , PD , or τ
+in 3-D ROC curve, we can derive the 2-D ROC curves for
+(Pd , Fa ), (Pd , τ ), and (Fa , τ ), respectively. Therefore, by the
+integral calculation of the corresponding area under the curve
+(AUC), the quantitative evaluation indicators AUC(Pd ,Fa ) ∈
+(0, 1), AUC(Pd ,τ ) ∈ (0, 1), and AUC(Fa ,τ ) ∈ (0, 1), can be
+naturally obtained.
+Combining these three evaluation indicators, we can further
+obtain the following indicators, which reflect the capability
+of AD, BS, joint AD and BS (ADBS), overall detection
+(OD), and the signal-to-noise probability ratio (SNPR). The
+mathematical formula of these indicators are expressed as
+follows:
+Pd =
+
+AUCad = AUC(Pd ,Fa ) + AUC(Pd ,τ )
+AUCbs = AUC(Pd ,Fa ) − AUC(Fa ,τ )
+AUCadbs = AUC(Pd ,τ ) − AUC(Fa ,τ )
+AUCod = AUC(Pd ,Fa ) + AUC(Pd ,τ ) − AUC(Fa ,τ )
+AUC(Pd ,Fa )
+AUCsnpr =
+AUC(Pd ,τ )
+
+5530422
+
+(13)
+(14)
+(15)
+(16)
+(17)
+
+PARAMETER S ETTINGS OF THE T EN C OMPARISON HAD A LGORITHMS
+ON THE C AT I SLAND DATASET
+
+where higher AUCad ∈ [0, 2], AUCbs ∈ [−1, 1], AUCadbs ∈
+[−1, 1], AUCod ∈ [−1, 2], and AUCsnpr ∈ [0, +∞] values
+represent better detection performance for AD and BS.
+2) Comparison Methods: To investigate the effectiveness
+and superiority of G2LSSAT, we select four excellent traditional algorithms, including OCF-ETLR [63], 2S-GLRT [17],
+CRDBPSW [43], EAS-RX [33], and five DNN-based HAD
+methods, including LREN [78], GAED [65], WeaklyAD [76],
+DCAE [83], and BockNet [86], to serve as comparison methods in the experiments. As expressed in Table III, we present
+the key parameters and corresponding settings of these ten
+comparison methods on the Cat Island dataset. First, for
+the statistical theory-based method EAS-RX, the parameters
+of p and j are estimated in accordance with the NWHFC
+and MXSVD algorithms in [37]. Meanwhile, the parameters
+of the outer window size wout and inner window size win
+in 2S-GLRT are set in the range {5, 7, 9, 11, 13, 15, 17, 19}
+and the range {3, 5, 7, 9, 11, 13, 15, 17} to investigate the
+best performance on different datasets. Then, for the data
+representation-based algorithm CRDBPSW, the outer window size wout and inner window size win are selected from
+the same range as 2S-GLRT. Moreover, the parameter settings of the weighting factor λ is fixed at 10−6 . Moreover,
+OCF-ETLR is an excellent data factorization-based method
+which relies on low-rank and sparse tensor factorization.
+In OCF-ETLR, the parameters λ, α, and β are tuned in
+the range {1e−5 , 1e−4 , 1e−3 , 1e−2 , 1e−1 , 1}. The number of
+bands m is investigated from 5 to 65. For GAED, the
+window size is varied from 3 to 13 for each dataset. Meanwhile, the penalty coefficient β is selected from the range
+{1e−6 , 1e−5 , 1e−4 , 1e−3 , 1e−2 , 1e−1 , 1, 10}. For Auto-AD and
+DCAE detectors, the tradeoff factor λ is elaborately selected
+from the range {1e−5 , 1e−4 , 1e−3 , 1e−2 , 1e−1 }. For WeaklyAD,
+the radius value Eps varies from 0.01 to 0.25 for optimal
+performance, and the value MinPts is tuned from 1 to 25.
+For BockNet, the number of spots Bs is varied from 1 to 9 for
+the optimum performance in light of the algorithm literature.
+For the proposed G2LSSAT, based on python 3.7.0 and the
+DL framework of PyTorch 1.12.1, we train the network model
+with the adaptive moment estimation (ADAM) optimizer. The
+overall training procedure and basic parameter settings of the
+proposed G2LSSAT are presented in Algorithm 1. The training
+epoch and batch size are set to 150 and 256, respectively.
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Fig. 9. Analysis of the parameters on the six datasets. (a) Sliding window size k. (b) Number of stacking times n g of crossbar-based global sparse attention
+in the GTB. (c) Number of multihead n h . (d) Learning rate lr .
+
+In addition, the detailed parameter settings of k, n g , n h , and
+lr of G2LSSAT on six datasets will be further discussed in
+Section III-C. Except for LREN, which was implemented
+based on TensorFlow 2.3.0, the remaining DNN-based models
+were implemented using PyTorch 1.12.1.
+C. Model Parameter Tuning
+In this section, we investigate four momentous parameters
+tuning in the G2LSSAT model, namely, k, n g , n h , and lr .
+k represents the window size used in the patch partition.
+lr denotes the learning rate during the network training.
+n g and n h represents the stacking times and the number
+of multihead in the crossbar-based global sparse attention
+module.
+1) Impact of k: k is a prominent parameter in the proposed
+G2LSSAT model, which controls the size of the patch that
+relates to local feature extraction and background reconstruction. In the experiments, to investigate the effect of sliding
+size k on the AD performance, we preset k in the range of
+{2, 3, 4, 5, 6} and record the AUC(Pd ,Fa ) values on six datasets.
+It can be seen from Fig. 9(a) that the highest AUC(Pd ,Fa ) values
+are obtained when k = 4 on the Pavia and Cat Island datasets.
+Meanwhile, the highest AUC(Pd ,Fa ) values are obtained when
+k = 2 on the Indiana and Salians datasets. Meanwhile,
+for the Okavango Delta and Gainesville, the optimal values
+of AUC(Pd ,Fa ) are generated when k = 3 and k = 5,
+
+respectively. Therefore, the parameter settings of the sliding
+size are determined according to the corresponding optimal
+results. For the multiscale anomalies in these six datasets, the
+proposed G2LSSAT needs elaborate parameter tuning for the
+respective sliding windows size k which determines the size
+of the local receptive field.
+2) Impact of n g : The parameter n g represents the stacking
+times of the crossbar-based global sparse attention module
+in the GTB. We conduct a parameter tuning experiment
+to investigate whether more attention module stacking can
+implicitly improve the detection performance of the G2LSSAT.
+As described in Fig. 9(b), we select the parameter n g from
+the range {1, 2, 3, 4}. It can be seen that the AUC(Pd ,Fa ) values
+gradually decrease when n g varies from 1 to 4 on all datasets.
+This funding illustrates that larger n g cannot bring more vital
+information but instead the reduces the detection ability. Based
+on this phenomenon, the parameter n g is fixed at 1 for the
+proposed G2LSSAT.
+3) Impact of n h : The design of the multihead is aimed
+at increasing the flexibility and capability of the transformer
+model, enabling it to capture more complex feature relationships. Therefore, we also attempt to incorporate multihead
+self-attention into our method. The AUC(Pd ,Fa ) metrics for
+different n h are reported in Fig. 9(c). We select the optimal
+parameter n g from the range {1, 2, 4, 8}. From Fig. 9(c), when
+n h = 1, AUC(Pd ,Fa ) is the highest. It indicates that this
+multihead design cannot be adequately coupled with the GTB
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+Fig. 10. Color anomaly response maps obtained by ten detectors on six datasets. (a) Pseudo-color image. (b) Ground truth. (c) OCF-ETLR. (d) 2S-GLRT.
+(e) CRDBPSW. (f) EAS-RX. (g) LREN. (h) GAED. (i) WeaklyAD. (j) DCAE. (k) BockNet. (l) G2LSSAT.
+
+structure. Therefore, in our article, we utilize only the singlehead self-attention structure and the parameter of n h is fixed
+at 1 during network training and testing.
+4) Impact of lr : The learning rate lr is an important hyperparameter that determines whether the objective loss function
+can converge to a local minimum and when it will converge
+to the minimum. An appropriate learning rate can enable the
+objective function to converge around a local minimum within
+an appropriate training time and then improve the detection
+performance of the network. The parameters of learning rate lr
+are tuned in the range {1e−5 , 1e−4 , 1e−3 , 1e−2 , 1e−1 }. Fig. 9(d)
+lists the AUC(Pd ,Fa ) indicators for different learning rates on
+all datasets. From Fig. 9(d), we can observe that when lr =
+1e−3 , our G2LSSAT yields the highest AUC(Pd ,Fa ) on the all
+datasets. Consequently, in our experiment, we set lr as 1e−3
+to accurately detect anomalies.
+D. Model Detection Accuracy Comparison
+1) Qualitative Comparison Results: As presented in
+Fig. 10, we show the visual color anomaly response maps of
+the ten comparison methods on six HSI datasets. The anomaly
+response map can clearly describe the response intensity of
+anomalies among the HAD methods. It is noticed that the
+response map in Fig. 10 varies from deep blue to deep
+red, which corresponds to the color bar and demonstrates
+that the anomaly response intensity is growing. First, the
+anomaly response maps of these ten detection algorithms on
+the Pavia, Okavango Delta, Indiana, and Gainesville datasets
+are presented from the first row to the fourth row in Fig. 10.
+It can be observed that the CRDBPSW, GAED, WeaklyAD,
+LREN, and BockNet models demonstrate low responses to
+anomalies, resulting in a certain of missed detections (MDs)
+and incomplete target shape reconstruction. The anomaly
+
+targets can be highlighted from the response maps by the OCFETLR, EAS-RX, 2S-GLRT, and DCAE algorithms.
+However, some pronounced FAs are produced due to defects
+in the BS ability. In contrast, our G2LSSAT has the superiority in both detecting anomalies and suppressing background
+elements. In addition, the small anomalies in the Cat Island
+and Salians datasets, the anomaly response maps of these ten
+algorithms are illustrated in the last two rows of Fig. 10.
+It can be observed that the OCF-ETLR, EAS-RX, LREN,
+GAED, and WeaklyAD algorithms generate a series of FAs
+pixels in these two scenes, which obviously contaminates the
+detection results. Moreover, the 2S-GLRT, DCAE, BockNet,
+and CRDBPSW struggle to accurately detect all anomalies in
+the Salians dataset. Overall, the proposed G2LSSAT achieves
+a more discriminative response to anomaly targets compared
+to the comparison algorithms.
+In addition, the ROC curve for (Pd , Fa ), (Pd , τ ), (Fa , τ ),
+and (Pd , Fa , τ ) of the nine HAD algorithms on six datasets
+are illustrated in Fig. 11. First, it can be observed from the
+ROC curve for (Pd , Fa ) on the six datasets that the proposed
+the G2LSSAT model is closest to the upper left corner of the
+curve, which indicates the superiority of its comprehensive
+detection performance compared to that of the other methods. Then, as depicted in Fig. 11, the 2-D ROC curve of
+(Pd , τ ) obtained by the proposed method is proximate to the
+upper-right corner of the Pavia, Gainesville, and Cat Island
+datasets. The proximity of the 2-D (Pd , τ ) ROC curve to the
+upper-right corner is the directive of the proposed G2LSSAT
+obtaining superior anomaly discovery performance. Similarly,
+the 2-D ROC curve for (Fa , τ ) of the proposed G2LSSAT can
+quickly reach the lower-left corner of the coordinate axis on
+the Okavango Delta and Indiana datasets. This phenomenon
+demonstrates that the background suppressing performance of
+G2LSSAT is satisfactory on these two datasets.
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Fig. 11. Three-dimensional (Pd , Fa , τ ) ROC curves, 2-D (Pd , τ ) ROC curves, 2-D (Fa , τ ) ROC curves, and 2-D (Pd , Fa , τ ) ROC curves of ten HAD
+methods on six datasets. (I-a)–(I-d) Pavia. (II-a)–(II-d) Okavango Delta. (III-a)–(III-d) Indiana. (IV-a)–(IV-d) Gainesville. (V-a)–(V-d) Cat Island. (VI-a)–(VI-d)
+Salians.
+
+Moreover, as depicted in Fig. 12, we utilize box-whisker
+plots to represent anomaly-background separation maps for
+
+intuitively reporting the distribution discrimination between
+the anomalies and the background in the detection maps.
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+Fig. 12. Anomaly-background separation maps of the ten detectors on the six datasets. (a) Pavia. (b) Okavango Delta. (c) Indiana. (d) Gainesville. (e) Cat
+Island. (f) Salians.
+
+In Fig. 12, the red box and blue box denote the abnormal pixel
+distribution and background pixel distribution, respectively.
+Specifically, the larger gap between these two boxes represents
+better anomalies and background separability of the algorithm.
+It can be observed from Fig. 12 that the proposed G2LSSAT
+gains pretty well performance in separation between the background and anomalies on the six HSI datasets especially on the
+Pavia and Gainesville datasets, which demonstrate the excellent capability of G2LSSAT for anomalies and background
+separation compared to other detectors.
+2) Quantitative Comparison Results: Except for the qualitative comparison results, we report the quantitative comparison
+results of each algorithm to quantitatively evaluate the detection effect. As recorded in Table IV, we present the eight
+evaluation indicators of the AUC according to the 3-D ROC
+curve, with the optimal results highlighted in bold and the
+second-best results are underlined. It can be observed from
+Table IV that our G2LSSAT yields the highest values of
+AUC(Pd ,Fa ) , AUCadbs , and AUCod , on multiple datasets such
+as the Pavia and Gainesville datasets, which demonstrates the
+superiority of G2LSSSAT in terms of OD performance. Except
+for the Gainesville dataset, the proposed G2LSSAT model
+gains optimal AUC(Pd ,Fa ) on other datasets. Specifically, for
+the values of AUC(Pd ,Fa ) , the proposed G2LSSAT yields an
+essential improvement of 0.78%, 0.51%, 0.08%, 0.31%, and
+0.23% on the other five datasets compared to the secondbest detector. Meanwhile, the proposed method also obtains
+the exceptional AUCsnpr on the Cat Island, Okavango Delta,
+Indiana, and Pavia datasets, which directly proves the reasonable background suppressing performance of our G2LSSAT.
+Consequently, considering these qualitative and quantitative
+
+comparison results comprehensively, it can be concluded that
+our G2LSSAT achieves the most robust and second-to-none
+HAD accuracy performance among the comparison detectors.
+The proposed G2LSSAT model showcases clear superiority
+in detecting multiple types of anomalies spanning different scenarios, as revealed by numerous evaluation indicators
+results derived from the above qualitative and quantitative
+comparison experiments. In comparison to the compared
+DNN-based models (LREN, GAED, WeaklyAD, DCAE, and
+BockNet), the proposed G2LSSAT almost obtains optimal
+detection accuracy performance about evaluation indicators on
+all datasets. To our knowledge, this is mainly attributed to the
+fact that the proposed G2LSSAT incorporates a global-to-local
+attention mechanism and invisible diagonal masking scheme,
+which fully explores the global and local spatial–spectral
+correlation features and overshadows the reconstruction of
+anomalies, making the reconstructed image further away from
+anomalies while closer to the real background.
+E. Model Running Time Comparison
+As illustrated in Table V, we report the running time of
+ten detectors on all datasets to investigate the computational
+burden of each algorithm. The WeaklyAD, DCAE, BockNet,
+and G2LSSAT are implemented based on the PyTorch and
+trained by the accelerated computing of GPU. The LREN
+is implemented based on the TensorFlow by means of the
+accelerated computing of GPU. The GAED model and four
+traditional models are also implemented with the Python
+environment. Among the four traditional detectors, EAS-RX
+expends the shortest running time in comparison to other
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+TABLE IV
+AUC VALUES OF T EN D ETECTORS THE S IX DATASETS
+
+TABLE V
+RUNNING T IME (I N S ECONDS ) OF T EN A LGORITHMS ON THE S IX DATASETS . T R AND T E R EPRESENT THE RUNNING T IME FOR T RAINING AND T ESTING
+
+methods, and it performs comparatively well in detection
+accuracy on the Okavango Delta and Indiana datasets. It can be
+
+seen from Table V that the six DNN-based detectors require a
+certain amount of training time, among which DCAE expends
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+TABLE VI
+A BLATION S TUDY OF THE P ROPOSED M ETHOD ON THE S IX DATASETS
+
+the shortest training time on multiple datasets due to its
+simpler network architecture and fewer network parameters.
+In addition, apart from LREN requiring more running time
+on dictionary construction and matrix factorization, the other
+five DNN-based models all present extremely few network
+inference times on six HSI datasets, while our G2LSSAT
+takes relatively less inference time on different datasets.
+In summary, our G2LSSAT obtains a relatively reasonable
+tradeoff between detection accuracy and efficiency. Note that,
+since the proposed G2LSSAT adopts joint local patches-based
+and global crossbar-based sampling methods in the training
+stage, it undeniably consumes extra training and inference
+time compared to other reconstruction-based detectors such
+as DCAE and GAED.
+F. Ablation Study
+To evaluate the influences of three central modules, i.e.,
+GTB, LTB, and IDM, on the proposed G2LSSAT, we implement some ablation studies on six datasets. The detailed
+experimental results are delineated in Table VI.
+1) Effectiveness of GTB: As shown in Table VI, we implement six experimental control groups to investigate the
+effectiveness of GTB, LTB, and IDM. Note that the baseline
+in Table VI represents the basic model without the utilization
+of these three components. First, to evaluate the effect of the
+GTB on the proposed G2LSSAT, we compare the baseline
+model with the baseline+GTB model and record the values
+of AUC(Pd ,Fa ) on the six datasets. It can be observed from
+Table VI that the improved model, which embeds the GTB
+into the baseline model, results in increments of 0.15%, 0.52%,
+0.69%, 6.36%, 0.9%, and 1.18%, relative to the baseline model
+for each respective dataset. This is mainly because the GTB
+module leverages a crossbar-based global sparse attention
+mechanism to capture and integrate global information, which
+augments the learning of nonlocal representations. In addition,
+as presented in Table VII, we conduct an experimental comparison between the performances of basic multihead global
+self-attention (MHGA) [95] and the proposed GTB. Specifically, the MHGA will independently represent each pixel by
+the joint subspace of global spatial correlation information.
+It can be concluded from Table VII that upon utilization
+of GTB, the G2LSSAT results in a significant increase in
+computational efficiency (31.32 s average reduction of running
+time) and approximate detection accuracy [0.07% average
+
+TABLE VII
+C OMPARATIVE P ERFORMANCE OF GTB AND MHGA OVER AUC(Pd ,Fa )
+AND RUNNING T IME ON THE S IX DATASETS . MHGA AND GTB R EP RESENT THE MHGA M ODULE AND THE GTB M ODULE
+IN O UR M ETHOD
+
+increment of AUC(Pd ,Fa ) ] compared to the G2LSSAT model
+with MHGA, which further proves that the proposed GTB
+has the ability of global correlation representation learning
+similar to the MHGA while improving computing efficiency
+by relying on the elaborate scheme of crossbar-based global
+sparse attention.
+2) Effectiveness of LTB: In the experiments, we follow the global-to-local reconstruction network framework
+and incorporate the local transformer which extracts the
+local reconstruction features based on the local patch-based
+self-attention module. To verify the effectiveness of LTB,
+we conduct an ablation study of LTB and present the experimental results in Table VI. It can be seen that the AUC(Pd ,Fa )
+values derived from the improved baseline+LTB model yield
+considerable increases of 0.29%, 0.76%, 1%, 6.07%, 1.3%,
+and 2.27% compared to the baseline model, which fully
+indicates that the detection accuracy can be boosted by
+exploiting the spectral–spatial correlation features of the local
+background. Meanwhile, the improved baseline+LTB+GTB,
+which combines the GTB module with the LTB module,
+can effectively bring about an average increase of 2.43% on
+AUC(Pd ,Fa ) . This shows that these two components can be well
+coupled and further improve the detection performance of the
+proposed G2LSSAT.
+3) Effectiveness of IDM: In our method, we design a
+IDM to suppress the anomalies over-reconstruction issue
+during network training. To investigate the effectiveness
+of the IDM on G2LSSAT, several ablation experiments
+have been quantitatively and qualitatively devised. First, as
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+Fig. 13. Ground truth and color anomaly response maps obtained by the proposed G2LSSAT model with IDM and without IDM. The second and third rows
+in the figure present the original HSIs and reconstructed HSIs with our G2LSSAT. The yellow region and green region circled in the fourth and fifth rows
+of the figure represent the MDs and FAs of the G2LSSAT model without IDM in comparison to those of the G2LSSAT model. The red regions denote the
+corresponding regions in the anomaly response map of the G2LSSAT model with IDM. (a) Pavia. (b) Okavango Delta. (c) Indiana. (d) Gainesville. (e) Cat
+Island. (f) Salians.
+
+shown in Table VI, the baseline+GTB+LTB+IDM and the
+baseline+GTB+LTB represents the complete the G2LSSAT
+model and the G2LSSAT model without the IDM. From
+the quantitative results over AUC(Pd ,Fa ) , we can see that the
+AUC(Pd ,Fa ) values derived from the G2LSSAT model with
+IDM are higher than that of the G2LSSAT model with
+IDM on six HSI datasets. Notably, relative to the controlled
+baseline+LTB model, the evolved baseline+LTB+IDM model
+also boosts the detection accuracy performance due to the
+implementation of the IDM. Then, we present the original
+HSI and reconstructed HSI with our G2LSSAT in the second
+and third rows of Fig. 13. As presented in the reconstructed
+HSIs of Pavia and Cat Island datasets in Fig. 13, it can be
+visually observed that the anomalies in reconstructed HSI are
+indeed overwhelmed by the background, which proves the
+overall anomalies reconstruction suppression effect. Furthermore, as elucidated in the fourth and fifth rows of Fig. 13,
+we intuitively compare the detection effect of these two models
+in light of the anomaly response maps. Compared to the
+complete G2LSSAT model, the absence of the IDM results in
+the serious occurrences of FAs and MDs, which are triggered
+by the decrease in background reconstruction residuals and
+the increase in anomalies reconstruction residuals. This finding
+confirms that the IDM in the HAD task results in a notable
+augmentation of anomalies reconstruction inhibition and background reconstruction assistance from the opposite side.
+G. Model Complexity and Convergence
+1) Complexity Analysis: In this section, we investigate the
+complexity of our G2LSSAT model. In the spirit of equality,
+we mainly compare our method with the other two excellent
+DNN-based reconstruction network, DCAE and BockNet,
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+5530422
+
+Fig. 14. Comparative performance of the l1 , l1 , and smooth l1 loss functions over convergence characteristic curves on the six datasets. (a) Pavia. (b) Okavango
+Delta. (c) Indiana. (d) Gainesville. (e) Cat Island. (f) Salians.
+
+TABLE VIII
+M ODEL C OMPLEXITY A NALYSIS OF THE T HREE DNN-BASED M ODELS
+
+based on the same software and hardware implementation
+platform. The comparison results of network parameter quantity, average training time, average testing time, and average
+AUC(Pd ,Fa ) are listed in Table VIII. Compared to DCAE and
+BockNet, G2LSSAT has the highest AUC(Pd ,Fa ) and a moderate level of running time and network parameters. Although
+DCAE has less running time and network parameters than
+G2LSSAT, the detection accuracy of DCAE has no advantages compared with our method. In summary, the proposed
+G2LSSAT exhibits promising detection accuracy performance
+and competitive efficiency advantages.
+2) Convergence Analysis: As described in Figs. 14 and 15,
+we conduct convergence characteristic analysis experiments
+of the proposed G2LSSAT on all datasets. In our experiments, we introduce three different loss functions, i.e., l1 ,
+l2 , and smooth l1 , to observe the corresponding detection
+and convergence performances. l2 loss function stands for
+the mse loss function. From the loss curves of l1 , l2 , and
+smooth l1 loss in Fig. 14, it can be seen that the loss curves
+of l2 loss and smooth l1 loss decrease at a faster rate than that
+provided by the l1 loss function. Moreover, among these three
+loss functions, the l2 loss function has distinct advantages in
+
+Fig. 15.
+
+AUC(Pd ,Fa ) of the three loss functions for the six datasets.
+
+terms of AUC(Pd ,Fa ) outcomes, as shown in Fig. 15. These
+observations, together with the loss curves in Fig. 14, lead us
+to conclude that the l2 loss is excellent in terms of detection
+accuracy and convergence stability for the proposed method.
+IV. C ONCLUSION
+In this article, we devise a transformer-based G2LSSAT
+network model to achieve robust AD in HSIs. The proposed
+model employs a global-to-local network structure in light
+of the visual attention mechanism in HVS. To be specific,
+the GTB and LTB are introduced in sequence to extract
+the global and local spatial–spectral reconstruction features.
+In addition, we embed the elaborate crossbar-based global
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+sparse attention and patch-based local self-invisible attention
+into the GTB and LTB modules to explore the long-range and
+local relation characteristics. Moreover, to avoid unexpected
+anomalies reconstruction problem, we design a IDM to erase
+abnormal pixels itself in the receptive field and effectuate
+accurate reconstruction by means of the global and local
+dependent features. Extensive comparison experiments and
+ablation studies on six datasets demonstrate the superiority and
+robustness of the proposed G2LSSAT compared with the stateof-the-art detectors. However, the proposed G2LSSAT also
+inevitably suffers from the flaws of low computational efficiency and high computational costs during network training.
+In future work, we will explore more strategies for reducing
+the model complexity and design a more lightweight network
+with real-time performance.
+R EFERENCES
+[1] A. Plaza et al., “Recent advances in techniques for hyperspectral image
+processing,” Remote Sens. Environ., vol. 113, pp. S110–S122, Sep. 2009.
+[2] M. E. Paoletti, J. M. Haut, J. Plaza, and A. Plaza, “Deep learning
+classifiers for hyperspectral imaging: A review,” ISPRS J. Photogramm.
+Remote Sens., vol. 158, pp. 279–317, Dec. 2019.
+[3] M. E. Paoletti, S. Moreno-Álvarez, Y. Xue, J. M. Haut, and A. Plaza,
+“AAtt-CNN: Automatical attention-based convolutional neural networks
+for hyperspectral image classification,” IEEE Trans. Geosci. Remote
+Sens., vol. 61, 2023, Art. no. 5511118.
+[4] H. Su, Z. Wu, H. Zhang, and Q. Du, “Hyperspectral anomaly detection:
+A survey,” IEEE Geosci. Remote Sens. Mag., vol. 10, no. 1, pp. 64–90,
+Mar. 2022.
+[5] X. Tao, T. Cui, A. Plaza, and P. Ren, “Simultaneously counting and
+extracting endmembers in a hyperspectral image based on divergent subsets,” IEEE Trans. Geosci. Remote Sens., vol. 58, no. 12, pp. 8952–8966,
+Dec. 2020.
+[6] X. Tao et al., “Fast orthogonal projection for hyperspectral unmixing,”
+IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. 5523313.
+[7] D. W. J. Stein, S. G. Beaven, L. E. Hoff, E. M. Winter, A. P. Schaum,
+and A. D. Stocker, “Anomaly detection from hyperspectral imagery,”
+IEEE Signal Process. Mag., vol. 19, no. 1, pp. 58–69, Jan. 2002.
+[8] S. M. Schweizer and J. M. F. Moura, “Hyperspectral imagery: Clutter
+adaptation in anomaly detection,” IEEE Trans. Inf. Theory, vol. 46, no. 5,
+pp. 1855–1871, Aug. 2000.
+[9] Q. Hao et al., “Fusing multiple deep models for in vivo human brain
+hyperspectral image classification to identify glioblastoma tumor,” IEEE
+Trans. Instrum. Meas., vol. 70, 2021, Art. no. 4007314.
+[10] S. Sudharsan, R. Hemalatha, and S. Radha, “A survey on hyperspectral
+imaging for mineral exploration using machine learning algorithms,” in
+Proc. Int. Conf. Wireless Commun. Signal Process. Netw. (WiSPNET),
+Mar. 2019, pp. 206–212.
+[11] M. T. Eismann, A. D. Stocker, and N. M. Nasrabadi, “Automated
+hyperspectral cueing for civilian search and rescue,” Proc. IEEE, vol. 97,
+no. 6, pp. 1031–1055, Jun. 2009.
+[12] L. Fang, C. Wang, S. Li, and J. A. Benediktsson, “Hyperspectral image
+classification via multiple-feature-based adaptive sparse representation,”
+IEEE Trans. Instrum. Meas., vol. 66, no. 7, pp. 1646–1657, Jul. 2017.
+[13] Y. Ding, Y. Guo, Y. Chong, S. Pan, and J. Feng, “Global consistent
+graph convolutional network for hyperspectral image classification,”
+IEEE Trans. Instrum. Meas., vol. 70, 2021, Art. no. 5501516.
+[14] M. Shimoni, R. Haelterman, and C. Perneel, “Hypersectral imaging for
+military and security applications: Combining myriad processing and
+sensing techniques,” IEEE Geosci. Remote Sens. Mag., vol. 7, no. 2,
+pp. 101–117, Jun. 2019.
+[15] B. Tu, X. Liao, C. Zhou, S. Chen, and W. He, “Feature extraction using
+multitask superpixel auxiliary learning for hyperspectral classification,”
+IEEE Trans. Instrum. Meas., vol. 70, 2021, Art. no. 5018216.
+[16] Y. Cai et al., “Superpixel contracted neighborhood contrastive subspace
+clustering network for hyperspectral images,” IEEE Trans. Geosci.
+Remote Sens., vol. 60, 2022, Art. no. 5530113.
+[17] J. Liu, Z. Hou, W. Li, R. Tao, D. Orlando, and H. Li, “Multipixel
+anomaly detection with unknown patterns for hyperspectral imagery,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 10, pp. 5557–5567,
+Oct. 2022.
+
+[18] I. S. Reed and X. Yu, “Adaptive multiple-band CFAR detection of an
+optical pattern with unknown spectral distribution,” IEEE Trans. Acoust.,
+Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, Aug. 1990.
+[19] J. M. Molero, E. M. Garzón, I. García, and A. Plaza, “Analysis and
+optimizations of global and local versions of the RX algorithm for
+anomaly detection in hyperspectral data,” IEEE J. Sel. Topics Appl. Earth
+Observ. Remote Sens., vol. 6, no. 2, pp. 801–814, Apr. 2013.
+[20] R. Zhao, B. Du, and L. Zhang, “A robust nonlinear hyperspectral
+anomaly detection approach,” IEEE J. Sel. Topics Appl. Earth Observ.
+Remote Sens., vol. 7, no. 4, pp. 1227–1234, Apr. 2014.
+[21] W. Liu et al., “Random selection-based adaptive saliency-weighted RXD
+anomaly detection for hyperspectral imagery,” Int. J. Remote Sens.,
+vol. 39, no. 8, pp. 2139–2158, Apr. 2018.
+[22] L. Ren, L. Zhao, and Y. Wang, “A superpixel-based dual window RX
+for hyperspectral anomaly detection,” IEEE Geosci. Remote Sens. Lett.,
+vol. 17, no. 7, pp. 1233–1237, Jul. 2020.
+[23] H. Kwon and N. M. Nasrabadi, “Kernel RX-algorithm: A nonlinear
+anomaly detector for hyperspectral imagery,” IEEE Trans. Geosci.
+Remote Sens., vol. 43, no. 2, pp. 388–397, Feb. 2005.
+[24] J. Zhou, C. Kwan, B. Ayhan, and M. T. Eismann, “A novel cluster
+kernel RX algorithm for anomaly and change detection using hyperspectral images,” IEEE Trans. Geosci. Remote Sens., vol. 54, no. 11,
+pp. 6497–6504, Nov. 2016.
+[25] S. Matteoli, T. Veracini, M. Diani, and G. Corsini, “A locally adaptive
+background density estimator: An evolution for RX-based anomaly
+detectors,” IEEE Geosci. Remote Sens. Lett., vol. 11, no. 1, pp. 323–327,
+Jan. 2014.
+[26] Q. Guo, B. Zhang, Q. Ran, L. Gao, J. Li, and A. Plaza, “WeightedRXD and linear filter-based RXD: Improving background statistics
+estimation for anomaly detection in hyperspectral imagery,” IEEE J. Sel.
+Topics Appl. Earth Observ. Remote Sens., vol. 7, no. 6, pp. 2351–2366,
+Jun. 2014.
+[27] B. Tu, X. Yang, C. Zhou, D. He, and A. Plaza, “Hyperspectral anomaly
+detection using dual window density,” IEEE Trans. Geosci. Remote
+Sens., vol. 58, no. 12, pp. 8503–8517, Dec. 2020.
+[28] B. Tu, X. Yang, N. Li, C. Zhou, and D. He, “Hyperspectral anomaly
+detection via density peak clustering,” Pattern Recognit. Lett., vol. 129,
+pp. 144–149, Jan. 2020.
+[29] Chein-I. Chang, “Hyperspectral anomaly detection: A dual theory of
+hyperspectral target detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5511720.
+[30] C.-I. Chang, “Target-to-anomaly conversion for hyperspectral anomaly
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5540428.
+[31] C.-I. Chang, “Constrained energy minimization anomaly detection for
+hyperspectral imagery via dummy variable trick,” IEEE Trans. Geosci.
+Remote Sens., vol. 60, 2022, Art. no. 5517119.
+[32] C.-I. Chang, “Effective anomaly space for hyperspectral anomaly
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5526624.
+[33] C.-I. Chang, S. Chen, S. Zhong, and Y. Shi, “Exploration of data scene
+characterization and 3D ROC evaluation for hyperspectral anomaly
+detection,” Remote Sens., vol. 16, no. 1, p. 135, Dec. 2023.
+[34] C.-I. Chang, C.-Y. Lin, and P. Fuming Hu, “Band sampling of hyperspectral anomaly detection in effective anomaly space,” IEEE Trans.
+Geosci. Remote Sens., vol. 62, 2024, Art. no. 5502729.
+[35] J. Li, H. Zhang, L. Zhang, and L. Ma, “Hyperspectral anomaly detection
+by the use of background joint sparse representation,” IEEE J. Sel.
+Topics Appl. Earth Observ. Remote Sens., vol. 8, no. 6, pp. 2523–2533,
+Jun. 2015.
+[36] Q. Ling, Y. Guo, Z. Lin, and W. An, “A constrained sparse representation model for hyperspectral anomaly detection,” IEEE Trans. Geosci.
+Remote Sens., vol. 57, no. 4, pp. 2358–2371, Apr. 2019.
+[37] W. Li and Q. Du, “Collaborative representation for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3,
+pp. 1463–1474, Mar. 2015.
+[38] H. Su, Z. Wu, Q. Du, and P. Du, “Hyperspectral anomaly detection using
+collaborative representation with outlier removal,” IEEE J. Sel. Topics
+Appl. Earth Observ. Remote Sens., vol. 11, no. 12, pp. 5029–5038,
+Dec. 2018.
+[39] Y. Chen, N. M. Nasrabadi, and T. D. Tran, “Sparse representation for
+target detection in hyperspectral imagery,” IEEE J. Sel. Topics Signal
+Process., vol. 5, no. 3, pp. 629–640, Jun. 2011.
+[40] L. Zhu and G. Wen, “Hyperspectral anomaly detection via background
+estimation and adaptive weighted sparse representation,” Remote Sens.,
+vol. 10, no. 2, p. 272, Feb. 2018.
+
+HE et al.: GLOBAL-TO-LOCAL SPATIAL–SPECTRAL AWARENESS TRANSFORMER NETWORK FOR HAD
+
+[41] R. Zhao, B. Du, and L. Zhang, “Hyperspectral anomaly detection via
+a sparsity score estimation framework,” IEEE Trans. Geosci. Remote
+Sens., vol. 55, no. 6, pp. 3208–3222, Jun. 2017.
+[42] M. Vafadar and H. Ghassemian, “Anomaly detection of hyperspectral
+imagery using modified collaborative representation,” IEEE Geosci.
+Remote Sens. Lett., vol. 15, no. 4, pp. 577–581, Apr. 2018.
+[43] Z. Hou, W. Li, R. Tao, P. Ma, and W. Shi, “Collaborative representation
+with background purification and saliency weight for hyperspectral
+anomaly detection,” Sci. China Inf. Sci., vol. 65, no. 1, pp. 1–12,
+Jan. 2022.
+[44] K. Tan, Z. Hou, F. Wu, Q. Du, and Y. Chen, “Anomaly detection for
+hyperspectral imagery based on the regularized subspace method and
+collaborative representation,” Remote Sens., vol. 11, no. 11, p. 1318,
+Jun. 2019.
+[45] S. Chang and P. Ghamisi, “Nonnegative-constrained joint collaborative representation with union dictionary for hyperspectral anomaly
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5534913.
+[46] Z. Wu et al., “Hyperspectral anomaly detection with relaxed collaborative representation,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5533417.
+[47] Y. Xu, Z. Wu, J. Li, A. Plaza, and Z. Wei, “Anomaly detection in
+hyperspectral images based on low-rank and sparse representation,”
+IEEE Trans. Geosci. Remote Sens., vol. 54, no. 4, pp. 1990–2000,
+Apr. 2016.
+[48] N. Huyan, X. Zhang, H. Zhou, and L. Jiao, “Hyperspectral anomaly
+detection via background and potential anomaly dictionaries construction,” IEEE Trans. Geosci. Remote Sens., vol. 57, no. 4, pp. 2263–2276,
+Apr. 2019.
+[49] L. Li, W. Li, Q. Du, and R. Tao, “Low-rank and sparse decomposition
+with mixture of Gaussian for hyperspectral anomaly detection,” IEEE
+Trans. Cybern., vol. 51, no. 9, pp. 4363–4372, Sep. 2020.
+[50] S. Chen, C.-I. Chang, and X. Li, “Component decomposition analysis
+for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5516222.
+[51] C.-I. Chang and J. Chen, “Hyperspectral anomaly detection by data
+sphering and sparsity density peaks,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5526321.
+[52] J. Wang, Y. Xia, and Y. Zhang, “Anomaly detection of hyperspectral
+image via tensor completion,” IEEE Geosci. Remote Sens. Lett., vol. 18,
+no. 6, pp. 1099–1103, Jun. 2021.
+[53] X. Zhang and G. Wen, “A fast and adaptive method for determining
+K 1 , K 2 , and K 3 in the tensor decomposition-based anomaly detection
+algorithm,” IEEE Geosci. Remote Sens. Lett., vol. 15, no. 1, pp. 3–7,
+Jan. 2018.
+[54] Y. Xu, Z. Wu, J. Chanussot, and Z. Wei, “Joint reconstruction
+and anomaly detection from compressive hyperspectral images
+using Mahalanobis distance-regularized tensor RPCA,” IEEE
+Trans. Geosci. Remote Sens., vol. 56, no. 5, pp. 2919–2930,
+May 2018.
+[55] X. He, J. Wu, Q. Ling, Z. Li, Z. Lin, and S. Zhou, “Anomaly
+detection for hyperspectral imagery via tensor low-rank approximation
+with multiple subspace learning,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5509917.
+[56] M. Feng, W. Chen, Y. Yang, Q. Shu, H. Li, and Y. Huang, “Hyperspectral
+anomaly detection based on tensor ring decomposition with factors
+TV regularization,” IEEE Trans. Geosci. Remote Sens., vol. 61, 2023,
+Art. no. 5514114.
+[57] T. Cheng and B. Wang, “Graph and total variation regularized low-rank representation for hyperspectral anomaly detection,”
+IEEE Trans. Geosci. Remote Sens., vol. 58, no. 1, pp. 391–406,
+Jan. 2020.
+[58] R. Feng, H. Li, L. Wang, Y. Zhong, L. Zhang, and T. Zeng, “Local spatial
+constraint and total variation for hyperspectral anomaly detection,” IEEE
+Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. 5512216.
+[59] T. Guo, L. He, F. Luo, X. Gong, Y. Li, and L. Zhang, “Anomaly detection
+of hyperspectral image with hierarchical antinoise mutual-incoherenceinduced low-rank representation,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5510213.
+[60] M. Wang, D. Hong, B. Zhang, L. Ren, J. Yao, and J. Chanussot, “Learning double subspace representation for joint hyperspectral anomaly
+detection and noise removal,” IEEE Trans. Geosci. Remote Sens., vol. 61,
+2023, Art. no. 5507517.
+[61] W. Xie, T. Jiang, Y. Li, X. Jia, and J. Lei, “Structure tensor and guided
+filtering-based algorithm for hyperspectral anomaly detection,” IEEE
+Trans. Geosci. Remote Sens., vol. 57, no. 7, pp. 4218–4230, Jul. 2019.
+
+5530422
+
+[62] L. Li, W. Li, Y. Qu, C. Zhao, R. Tao, and Q. Du, “Prior-based
+tensor approximation for anomaly detection in hyperspectral imagery,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 3, pp. 1037–1050,
+Mar. 2022.
+[63] Q. Xiao, L. Zhao, S. Chen, and X. Li, “Enhanced tensor low-rank
+representation learning for hyperspectral anomaly detection,” IEEE
+Geosci. Remote Sens. Lett., vol. 20, 2023, Art. no. 5512005.
+[64] Q. Xiao, L. Zhao, S. Chen, and X. Li, “Hyperspectral anomaly detection
+via MERA decomposition and enhanced total variation regularization,”
+IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, Art. no. 5514919.
+[65] P. Xiang, S. Ali, S. K. Jung, and H. Zhou, “Hyperspectral anomaly
+detection with guided autoencoder,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5538818.
+[66] G. Fan, Y. Ma, X. Mei, F. Fan, J. Huang, and J. Ma, “Hyperspectral
+anomaly detection with robust graph autoencoders,” IEEE Trans. Geosci.
+Remote Sens., vol. 60, 2022, Art. no. 5511314.
+[67] W. Li, G. Wu, and Q. Du, “Transferred deep learning for anomaly
+detection in hyperspectral imagery,” IEEE Geosci. Remote Sens. Lett.,
+vol. 14, no. 5, pp. 597–601, May 2017.
+[68] X. Fu, S. Jia, L. Zhuang, M. Xu, J. Zhou, and Q. Li, “Hyperspectral
+anomaly detection via deep plug-and-play denoising CNN regularization,” IEEE Trans. Geosci. Remote Sens., vol. 59, no. 11, pp. 9553–9568,
+Nov. 2021.
+[69] Y. Wang, F. Wang, Q. Zhu, M. Song, and C. Yu, “Transferred
+tensor decomposition-based deep learning for hyperspectral anomaly
+detection,” in Proc. IEEE Int. Geosci. Remote Sens. Symp. (IGARSS),
+Jul. 2021, pp. 5279–5282.
+[70] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Auto-AD: Autonomous
+hyperspectral anomaly detection network based on fully convolutional autoencoder,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5503314.
+[71] Y. Liu, W. Xie, Y. Li, Z. Li, and Q. Du, “Dual-frequency autoencoder for
+anomaly detection in transformed hyperspectral imagery,” IEEE Trans.
+Geosci. Remote Sens., vol. 60, 2022, Art. no. 5523613.
+[72] K. Jiang et al., “E2E-LIADE: End-to-end local invariant autoencoding
+density estimation model for anomaly target detection in hyperspectral image,” IEEE Trans. Cybern., vol. 52, no. 11, pp. 11385–11396,
+Nov. 2022.
+[73] Y. Li, K. Jiang, W. Xie, J. Lei, X. Zhang, and Q. Du, “A model-driven
+deep mixture network for robust hyperspectral anomaly detection,” IEEE
+Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no. 5522916.
+[74] T. Jiang, Y. Li, W. Xie, and Q. Du, “Discriminative reconstruction
+constrained generative adversarial network for hyperspectral anomaly
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 58, no. 7,
+pp. 4666–4679, Jul. 2020.
+[75] Z. Wang, X. Wang, K. Tan, B. Han, J. Ding, and Z. Liu, “Hyperspectral anomaly detection based on variational background inference and
+generative adversarial network,” Pattern Recognit., vol. 143, Nov. 2023,
+Art. no. 109795.
+[76] T. Jiang, W. Xie, Y. Li, J. Lei, and Q. Du, “Weakly supervised
+discriminative learning with spectral constrained generative adversarial
+network for hyperspectral anomaly detection,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 33, no. 11, pp. 6504–6517, Nov. 2022.
+[77] Y. Li, T. Jiang, W. Xie, J. Lei, and Q. Du, “Sparse coding-inspired GAN
+for hyperspectral anomaly detection in weakly supervised learning,”
+IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. 5512811.
+[78] K. Jiang, W. Xie, J. Lei, T. Jiang, and Y. Li, “LREN: Low-rank
+embedded network for sample-free hyperspectral anomaly detection,” in
+Proc. AAAI Conf. Artif. Intell., Feb. 2021, vol. 35, no. 5, pp. 4139–4146.
+[79] D. Ma, Y. Hou, M. Chen, B. Li, Z. Wang, and M. Li, “S2G2HAD:
+A graph-guided Siamese reconstruction network for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 61, 2023,
+Art. no. 5526121.
+[80] K. Li et al., “Spectral difference guided graph attention autoencoder for
+hyperspectral anomaly detection,” IEEE Trans. Instrum. Meas., vol. 72,
+pp. 1–17, 2023, Art. no. 5001817.
+[81] D. Ma, M. Chen, Y. Yang, B. Li, M. Li, and Y. Gao, “Coarse-to-fine multiview anomaly coupling network for hyperspectral anomaly detection,”
+IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, Art. no. 5507715.
+[82] P. Xiang, S. Ali, J. Zhang, S. Ki Jung, and H. Zhou, “Pixel-associated
+autoencoder for hyperspectral anomaly detection,” Int. J. Appl. Earth
+Observ. Geoinf., vol. 129, May 2024, Art. no. 103816.
+[83] Z. Wu et al., “Background-guided deformable convolutional autoencoder
+for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5531816.
+
+5530422
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 62, 2024
+
+[84] L. Gao, D. Wang, L. Zhuang, X. Sun, M. Huang, and A. Plaza,
+“BS3LNet: A new blind-spot self-supervised learning network for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 61,
+2023, Art. no. 5504218.
+[85] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. J. Plaza, “PDBSNet: Pixel-shuffle downsampling blind-spot reconstruction network for
+hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5511914.
+[86] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. Plaza,
+“BockNet: Blind-block reconstruction network with a guard window for
+hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5531916.
+[87] F. Chollet, “Xception: Deep learning with depthwise separable convolutions,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jul. 2017, pp. 1251–1258.
+[88] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 30, 2017.
+[89] W. Liu, Y. Wen, Z. Yu, and M. Yang, “Large-margin softmax loss
+for convolutional neural networks,” in Proc. Int. Conf. Mach. Learn.,
+Jun. 2016, pp. 507–516.
+[90] X. Kang, X. Zhang, S. Li, K. Li, J. Li, and J. A. Benediktsson, “Hyperspectral anomaly detection with attribute and edge-preserving filters,”
+IEEE Trans. Geosci. Remote Sens., vol. 55, no. 10, pp. 5600–5611,
+Oct. 2017.
+[91] S. Yu, X. Li, L. Zhao, and J. Wang, “Hyperspectral anomaly detection
+based on low-rank representation using local outlier factor,” IEEE
+Geosci. Remote Sens. Lett., vol. 18, no. 7, pp. 1279–1283, Jul. 2021.
+[92] T. Cheng and B. Wang, “Total variation and sparsity regularized
+decomposition model with union dictionary for hyperspectral anomaly
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 59, no. 2,
+pp. 1472–1486, Feb. 2021.
+[93] D. F. Williamson, R. A. Parker, and J. S. Kendrick, “The box plot: A
+simple visual method to interpret data,” Ann. Internal Med., vol. 110,
+no. 11, pp. 916–921, 1989.
+[94] C.-I. Chang, “An effective evaluation tool for hyperspectral target
+detection: 3D receiver operating characteristic curve analysis,” IEEE
+Trans. Geosci. Remote Sens., vol. 59, no. 6, pp. 5131–5153, Jun. 2020.
+[95] D. Shen, X. Ma, W. Kong, J. Liu, J. Wang, and H. Wang, “Hyperspectral
+target detection based on interpretable representation network,” IEEE
+Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no. 5519416.
+
+Xu He received the B.E. degree in electronic
+engineering and the M.E. degree in information
+and communication engineering from Air Force
+Engineering University, Xi’an, Shaanxi, China, in
+2019 and 2021, respectively. He is currently pursuing the Ph.D. degree with the College of Electronic
+Science, National University of Defense Technology,
+Changsha, China.
+His research interests include hyperspectral image
+processing, infrared small target detection, and pattern recognition.
+
+Shilin Zhou received the B.S., M.S., and Ph.D.
+degrees in electrical engineering from Hunan University, Changsha, China, in 1994, 1996, and 2000,
+respectively.
+He is currently a Full Professor with the College of Electrical Science, National University of
+Defense Technology, Changsha. He has authored or
+co-authored more than 100 refereed articles. His
+research interests include image processing and pattern recognition.
+
+Qiang Ling received the B.E. degree in measurement engineering and the M.Eng. degree in control
+science and engineering from Air Force Engineering
+University, Xi’an, Shaanxi, China, in 2013 and 2016,
+respectively, and the Ph.D. degree in information and
+communication engineering from the National University of Defense Technology (NUDT), Changsha,
+China, in 2019.
+He is currently a Lecturer with the College of
+Electronic Science and Technology, NUDT. His
+research interests include pattern recognition and
+hyperspectral image processing.
+
+Miao Li received the M.E. and Ph.D. degrees
+from the National University of Defense Technology (NUDT), Changsha, China, in 2012 and 2017,
+respectively.
+He is currently an Associate Professor with the
+College of Electronic Science and Technology,
+NUDT. His research interests include infrared dim
+and small target detection.
+
+Zhaoxu Li received the B.E. degree in communication engineering and the M.E. degree in
+information and communication engineering from
+the National University of Defense Technology
+(NUDT), Changsha, China, in 2018 and 2020,
+respectively, where he is currently pursuing the
+Ph.D. degree with the College of Electronic Science.
+His research interests include pattern recognition, machine learning, and hyperspectral image
+processing.
+
+Yuyuan Zhang received the B.E. and M.E. degrees
+in electronics and communication engineering from
+Naval Aeronautical University, Yantai, China, in
+2019 and 2021, respectively. He is currently pursuing the Ph.D. degree with the College of Electronic
+Science, National University of Defense Technology,
+Changsha, China.
+His research interests include semantic communication and signal processing.
+
+Zaiping Lin received the B.E. and Ph.D. degrees
+from the National University of Defense Technology (NUDT), Changsha, China, in 2007 and 2012,
+respectively.
+He is currently an Associate Professor with the
+College of Electronic Science and Technology,
+NUDT. His research interests include infrared image
+processing and signal processing.
+PAPER_TEXT

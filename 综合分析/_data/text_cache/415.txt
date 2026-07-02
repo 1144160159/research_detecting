@@ -1,0 +1,136 @@
+18312                                            IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+
+
+
+        End-to-End Abnormal Subgraph Detection via
+            Subgraph-Level Contrastive Learning
+                    Zhen Peng , Yunfan Wang , Qika Lin , Member, IEEE, Bin Shi , Chen Chen ,
+                                    Bo Dong , Member, IEEE, and Chao Shen
+
+
+
+   Abstract—Abnormal subgraph (AS) detection plays a signifi-                  for subgraph anomaly detection, which is a variant of vanilla
+cant role in ensuring the security of many high-impact domains.                NMI and quantifies detection performance from both subgraph
+Unlike node anomaly detection, identifying subgraph anomalies                  partition and anomaly recognition. The experimental results on
+is extremely challenging due to the exponentially large subgraph               synthetic and real-world datasets corroborate the superiority of
+space caused by various combinations of nodes and edges. More-                 end-to-end unsupervised subgraph anomaly detection framework
+over, in the absence of supervisory signals, how to quantify the               (EndSubG) in terms of area under the curve (AUC), average
+abnormality of subgraphs poses another pressing challenge. Tra-                precision (AP), and AS-WNMI. We also provide an intuitive
+ditional methods typically rely on handcrafted subgraph anomaly                analysis of the detected subgraphs through visualization for
+measures, making it hard to handle potential unknown anoma-                    better understanding.
+lies with limited prior knowledge. Recent deep learning-based
+techniques are predominantly designed to discover individual                      Index Terms—Anomaly-aware graph embedding, contrastive
+node anomalies, which could be suboptimal for AS detection due                 learning, graph neural networks, subgraph anomaly detection.
+to the inconsideration of collaborative behaviors between nodes                                       I. I NTRODUCTION
+in the subgraph. In fact, existing studies have put very little
+effort into this task, and even dedicated performance evaluation
+metrics are not yet available. To address the above challenges
+                                                                               G      RAPH-STRUCTURED data is ubiquitous and has
+                                                                                      proved to be a powerful tool to model and analyze
+                                                                               various modern information networks, such as social networks,
+and promote related research, in this article, we propose a
+end-to-end unsupervised subgraph anomaly detection framework                   transaction networks, and biological networks. To prevent
+(EndSubG), which jointly models subgraph partition and AS                      unpredictable hazards, graph anomaly detection has been
+detection as a whole instead of treating them as two separate                  widely used to help regulators proactively uncover suspicious
+stages. Specifically, E ND S UB G uncovers potential AS boundaries             objects. In addition to the well-known abnormal objects that
+that violate the Homophily assumption by modeling the edge exis-               exist in the form of individuals, such as a rumor spreader in
+tence probability, then achieves anomaly-aware graph embedding
+and subgraph partition based on the refined topology. By forming               social media, some anomalies may exhibit collective behavior
+a coarsened subgraph network, E ND S UB G picks out subgraph                   in reality, such as multiple fraudsters colluding with each other
+anomalies by learning the “subgraph-vicinity” matching patterns.               to garner benefits [1]. These anomalies and their interactions
+Additionally, we design an evaluation metric weighted normalized               typically form subgraph structures. Effectively mining those
+mutual information centered on AS (AS-WNMI) specifically                       unusual subgraphs in networks is of great significance to many
+                                                                               high-impact domains [2], [3], [4]. For instance, as shown in
+   Received 20 May 2024; revised 16 February 2025 and 3 May 2025;              Fig. 1, locating corporate groups that issue false and fictitious
+accepted 22 May 2025. Date of publication 5 June 2025; date of cur-            VAT invoices will help maintain a healthy and fair business
+rent version 9 October 2025. This work was supported in part by the
+National Key Research and Development Program of China under Grant             environment. In a health surveillance network, the Centers for
+2021ZD0110700; in part by the National Natural Science Foundation of China     Disease Control and Prevention (CDC) staff have an interest
+under Grant 62302380, Grant 62476215, Grant 62250009, Grant 62037001,          in locating a collective of infected patients with significant
+Grant U24B20185, Grant T2442014, Grant 62161160337, Grant 62132011,
+and Grant U21B2018; in part by the Key Research and Development Program
+                                                                               abnormal symptoms, which may reveal a potential disease
+of Shaanxi Province under Grant 2022GXLH01-03, Grant 2023-ZDLGY-               outbreak like COVID-19.
+38, and Grant 2021ZDLGY01-02; in part by China Post-Doctoral Science              The superior performance of deep neural nets, especially
+Foundation under Grant 2023M742789; and in part by Shaanxi Continuing          graph neural networks [5], has promoted the rapid develop-
+Higher Education Teaching Reform Research Project under Grant 21XJZ014.
+(Corresponding author: Bin Shi.)                                               ment of deep graph anomaly detection. However, most existing
+   Zhen Peng and Bin Shi are with the School of Computer Science and           efforts [6], [7], [8] only focus on spotting individual graph
+Technology, Xi’an Jiaotong University, Xi’an 710049, China (e-mail: zhen-      anomalies, that is, single nodes or edges. In contrast, the
+peng27@outlook.com; shibin@xjtu.edu.cn).
+   Yunfan Wang and Chen Chen are with the Department of Computer               abnormal subgraph (AS) detection task has received much
+Science, University of Virginia, Charlottesville, VA 22904 USA (e-mail:        less scrutiny despite the pressing need from real applications
+abe6fq@virginia.edu; zrh6du@virginia.edu).                                     [1]. For instance, early methods [9], [10] exploit topological
+   Qika Lin is with the Saw Swee Hock School of Public Health,
+National University of Singapore, Singapore 117549 (e-mail:
+                                                                               signals such as L1 properties of the eigenvectors of the
+linqika@nus.edu.sg).                                                           modularity matrix to reveal dense anomaly regions, yet the
+   Bo Dong is with the School of Distance Education, Xi’an Jiaotong            neglect of node attributes limits their identification of vari-
+University, Xi’an 710049, China (e-mail: dong.bo@xjtu.edu.cn).                 ous intricate anomalies. Instead, AMEN [11] considers both
+   Chao Shen is with the School of Cyber Science and Engineering, Xi’an
+Jiaotong University, Xi’an 710049, China (e-mail: chaoshen@xjtu.edu.cn).       attribute and topological information. It spots subgraph anoma-
+   Digital Object Identifier 10.1109/TNNLS.2025.3573922                        lies that exhibit special attribute distributions by measuring the
+             2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+PENG et al.: END-TO-END AS DETECTION VIA SUBGRAPH-LEVEL CONTRASTIVE LEARNING                                                                  18313
+
+
+
+                                                                                   the solution space exponentially large, which makes manual
+                                                                                   annotation almost impossible. Thus, exploring an unsuper-
+                                                                                   vised framework for AS detection is quite necessary. Second,
+                                                                                   deriving the anomaly-aware subgraph partition from both
+                                                                                   topological and attribute perspectives simultaneously can be a
+                                                                                   daunting task. Unlike independent nodes or edges, subgraphs
+                                                                                   composed of nodes and edges come in various sizes and
+                                                                                   inner structures due to their different construction forms.
+                                                                                   Meanwhile, the abnormality of subgraphs may be manifested
+                                                                                   in deviated attributes, dense topological connections, incon-
+                                                                                   sistent associations between attributes and structures, and so
+                                                                                   forth. To reveal ASs, adaptively searching an anomaly-aware
+                                                                                   subgraph division through attribute and structural information
+                                                                                   is indispensable yet challenging, especially in unsupervised
+                                                                                   conditions where the potential subgraph space can be as high
+                                                                                   as exponential. Finally, it is challenging to design training
+                                                                                   objectives to effectively distinguish ASs from benign ones
+                                                                                   and quantify their degree of abnormality. The anomaly detec-
+                                                                                   tion process necessitates appropriate objective functions to
+                                                                                   enable the detection model to capture the distinction between
+                                                                                   anomalies and benign counterparts. However, it is extremely
+                                                                                   hard to model the deviation or even quantify the arbitrary
+                                                                                   abnormal patterns within subgraphs when the ground-truth
+Fig. 1. (a) Fraudulent companies engage in tax evasion by issuing false VAT
+invoices to each other, often forming a subgraph with dense edge connections.      anomaly type is unknown. Although the previous nondeep
+(b) Group of patients infected with COVID-19 have unusual disease symptoms         methods [16], [17] resort to handcrafted measure functions,
+from healthy residents, that is, higher temperature (T), lower oxygen saturation   the poor expressive power of fixed features limits their ability
+(SaO2 ), and higher respiratory rate (RR).
+                                                                                   to generalize to unseen anomalies.
+                                                                                      To cope with the above challenges, we propose a end-
+                                                                                   to-end unsupervised subgraph anomaly detection framework
+normality of the subgraph. However, the traditional data sta-                      (EndSubG), which jointly models subgraph partition and AS
+tistical technique used by AMEN results in low computational                       recognition in an end-to-end manner. Specifically, E ND S UB G
+efficiency and poor scalability. Recent deep learning methods                      learns anomaly-aware graph embedding by explicitly capturing
+DeepFD [12] and FraudNE [13] first derive node embeddings                          possible abnormal edges that violate the Homophily assump-
+through an autoencoder and then feed them into distribu-                           tion [18]. Note that nodes exhibiting unusual collaborative
+tion density-based DBSCAN [14] to detect dense blocks as                           behaviors have similar patterns and tend to form a subgraph.
+anomalies. However, this pipeline scheme is difficult to ensure                    A trainable clustering layer is employed to learn subgraph
+that the learned representations are conducive to identify-                        partition according to semantic distribution while capturing
+ing anomalies and can easily lead to suboptimal solutions                          the boundaries between anomalies and normal regions that
+compared to end-to-end optimization. As a recent sophis-                           contribute to uncovering anomalies. The learned soft clustering
+ticated end-to-end subgraph anomaly detection framework,                           assignment ensures the possibility of nodes belonging to
+AS-GAE [4] presents a location-aware graph autoencoder and                         multiple subgraphs, which is more consistent with reality
+a supermodular graph scoring function to uncover anomalous                         [19]. By coarsening the node and edge sets into subgraphs,
+areas. However, its reliance on a manually set threshold is                        we arrive at the subgraph-level composition of the input
+prone to mislocating abnormal areas, limiting its effectiveness                    network. Then, a contrastive learning strategy that models the
+in many complicated scenarios. Additionally, existing node                         congruence between each subgraph and its vicinity derived
+anomaly detection approaches such as ANEMONE [15] and                              from the coarsened subgraph network is introduced to measure
+GRADATE [8] cannot be simply applied to identify subgraph-                         the abnormality. Through end-to-end joint optimization, E ND -
+level anomalies as they lack recognition of subgraph structures                    S UB G implements adaptive anomaly-aware graph embedding
+and consideration of collaborative behaviors between nodes                         and subgraph division to facilitate the identification of ASs
+within the subgraph. More dedicated efforts are therefore                          that deviate from the majority. In contrast, the two-stage
+needed to explore a promising solution for anomalous sub-                          pipeline method is prone to erroneously dividing the graph
+graph detection, which motivates our research work.                                due to not directly targeting the anomaly detection task (e.g.,
+   Combined with practical application scenarios, identifying                      the partitioning stage targets maximizing modularity [20] or
+subgraph anomali

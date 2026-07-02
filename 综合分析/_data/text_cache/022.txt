@@ -1,0 +1,162 @@
+INTERNATIONAL JOURNAL OF NETWORK MANAGEMENT
+Int. J. Network Mgmt 2014; 00:1–24
+Published online in Wiley InterScience (www.interscience.wiley.com). DOI: 10.1002/nem
+
+
+
+
+                       A Survey of Methods for Encrypted Traffic
+                              Classification and Analysis
+
+                      Petr Velan∗† , Milan Čermák, Pavel Čeleda, Martin Drašar
+                         Institute of Computer Science, Masaryk University, Brno, Czech Republic
+
+
+
+
+                                                     SUMMARY
+
+With the widespread use of encrypted data transport network traffic encryption is becoming a standard
+nowadays. This presents a challenge for traffic measurement, especially for analysis and anomaly detection
+methods which are dependent on the type of network traffic. In this paper, we survey existing approaches
+for classification and analysis of encrypted traffic. First, we describe the most widespread encryption
+protocols used throughout the Internet. We show that the initiation of an encrypted connection and the
+protocol structure give away a lot of information for encrypted traffic classification and analysis. Then, we
+survey payload and feature-based classification methods for encrypted traffic and categorize them using an
+established taxonomy. The advantage of some of described classification methods is the ability to recognize
+the encrypted application protocol in addition to the encryption protocol. Finally, we make a comprehensive
+comparison of the surveyed feature-based classification methods and present their weaknesses and strengths.
+Copyright c 2014 John Wiley & Sons, Ltd.
+
+Received . . .
+
+
+KEY WORDS: encrypted traffic; monitoring; network; traffic classification; traffic analysis; machine
+           learning; encryption protocols
+
+
+
+
+                                               1. INTRODUCTION
+
+Network visibility is becoming a necessity in current networks. Security, traffic provisioning, and
+failure detection are the prime reasons to deploy traffic measurement. Yet, measurement has other
+uses and new ones are still being discovered. For instance, application performance can be measured
+using the data from the application layer. Information about certain applications can also be used to
+detect attacks and intrusions on the application level. In contrast to this, the need for protection of
+transmitted data and user privacy is rapidly increasing. It is for this reason that, the encryption of
+transmitted data is increasingly used. The ratio of encrypted traffic has recently been rising steeply
+as common Internet services become protected [62]. This change poses a challenge to currently
+used methods for traffic measurement, for which the identification and analysis of network traffic
+becomes more difficult.
+
+∗
+    Correspondence to: Institute of Computer Science, Masaryk University, Botanická 68a, Brno, Czech Republic
+†
+    Email: velan@ics.muni.cz
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+2                  PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+
+   Before any further analysis of encrypted network traffic can be done, the traffic needs to be
+identified. Statistical and behaviour-based application identification methods are less affected by
+encryption than deep packet inspection methods. Therefore, a lot of attention has been given to
+these methods, which are also considered to be privacy-conscious. However, information can event
+be extracted from encrypted connections, mainly from the session’s initiation.
+   The goal of this survey is to provide a comprehensive overview of methods for classifying
+and analysing encrypted traffic. To the best of our knowledge, this is the first work which
+comprehensively summarizes available approaches for encrypted traffic classification and analysis.
+Although there has been a lot of research on traffic classification in the past decade [25, 58, 71, 20,
+32], most of the existing surveys do not explicitly consider research which targets encrypted traffic.
+A recent survey by Cao et al. [21] describes the fundamentals of encrypted traffic classification. It
+briefly introduces recent advances and challenges in this field. However, the survey covers only a
+few methods of traffic classification and does not provide any comparison or assessment of these
+methods. Moreover, while traffic classification is an important part of network monitoring, there are
+other methods for analysing encrypted traffic which need to be taken into consideration.
+   To achieve this goal, we have produced a survey of methods for classifying and analysing
+encrypted traffic in journals, conference papers, proceedings of specialized workshops and
+technical reports. We studied works presented in selected computer science journals, mainly the
+Communications Surveys & Tutorials, Computer Networks, International Journal of Network
+Management and Transactions on Network and Service Management. We also surveyed
+international conferences such as IMC, PAM, CISDA, CNSM, IM and NOMS over the period 2005-
+2014. Other methods were found in references provided by the surveyed papers and in papers that
+referenced them.
+   The contribution of our work is four-fold. First, we describe several of the most widely used
+encryption protocols to show their packet structure and standard behaviour in a network. This
+information forms the basis of all classification protocols which use either a specific packet structure
+or a communication pattern to identify the protocol. Second, we investigate what information is
+provided by these encryption protocols. Most protocols negotiate encryption algorithms in clear-
+text, these data can be monitored, e.g., to reveal the use of weak ciphers. Third, we describe how
+the structure of encryption protocols can be used to detect these protocols in a network. Traffic
+classification algorithms using such information are presented and we describe several open-source
+tools which implement these algorithms. Fourth, we provide an extensive survey of behaviour-based
+methods for encrypted traffic classification. We show that surprisingly detailed information can be
+obtained using these methods. In specific cases, even the content of the encrypted connection can be
+established. To describe and categorize the classification methods, we use the taxonomy of Khalife
+et al. [48].
+   Over the last decade, many statistical and machine learning algorithms have been applied to
+the problem of traffic classification. However, authors use different methodological data sets to
+evaluate their methods and the results are therefore not directly comparable. Most of the methods use
+supervised or semi-supervised machine learning algorithms to classify flows and even determine the
+application protocol of the flow. Most methods target encryption protocols such as SSH, SSL/TLS
+and encrypted BitTorrent.
+
+
+
+Copyright c 2014 John Wiley & Sons, Ltd.                                       Int. J. Network Mgmt (2014)
+Prepared using nemauth.cls                                                                DOI: 10.1002/nem
+         A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS                            3
+
+   This paper is organized into seven sections. Section 2 explains the principles of several widely
+used encryption protocols. Section 3 describes what information can be obtained from encrypted
+traffic using specific knowledge of the encryption protocols. Section 4 describes the traffic
+classification taxonomy used in this article. Section 5 describes traffic classification methods based
+on the specific knowledge of encryption protocols. Section 6 surveys papers on the classification of
+encrypted traffic using statistical and behavioural methods. Finally, Section 7 concludes the paper
+and provides directions for future research.
+
+
+
+
+                        2. A DESCRIPTION OF ENCRYPTION PROTOCOLS
+
+This section provides a description of chosen encryption protocols. We selected the most widely
+used protocols to demonstrate the basic principles and show different approaches for secure data
+transport. Our choice of encryption protocols was also influenced by protocols which are the most
+commonly used in research of encrypted traffic classification. We shall describe IPsec, TLS, SSH,
+BitTorrent and Skype protocols in this section. All these protocols provide confidentiality using
+encryption and they usually offer authentication of communication peers, data integrity, replay
+protection and non-repudiation. We shall describe the use of these protocols, their fundamental
+properties, the structure of encrypted packets, and the type of exchanged data. The information
+provided in this section will serve as the basis for the next sections of this paper.
+   Almost all the presented encryption protocols can be divided into two main phases: the
+initialization of the connection and the transport of encrypted data. The first phase can be further
+divided to an initial handshake, an authentication and a shared secret establishment. During the first
+phase, algorithm capabilities are usually exchanged, communication parties are authenticated and
+secret keys are established. These keys are then used for encrypting transferred data in the second
+phase. This general protocol scheme is depicted in Figure 1, which, with minor modifications, can
+be applied to almost any protocol providing confidential data transfer.
+
+
+
+                                                     Confirmation
+              Initial        Authentication and shared          Authenticated and encrypted
+            handshake          secret establishment                   data exchange
+
+                                                                                                Time
+                      Unencrypted initialization                 Encrypted data transport
+
+
+                         Figure 1. A general scheme of network security protocols.
+
+
+
+  The protocols presented in this section are listed in order of their position in the ISO/OSI reference
+model [43]. IPsec protocol suite, which operates on the network layer is described first, followed
+by TLS and SSH protocols on the presentation layer. BitTorrent and Skype protocols represent the
+application layer and they implement their own protocols for secure data transmission.
+
+Copyright c 2014 John Wiley & Sons, Ltd.                                         Int. J. Network Mgmt (2014)
+Prepared using nemauth.cls                                                                  DOI: 10.1002/nem
+

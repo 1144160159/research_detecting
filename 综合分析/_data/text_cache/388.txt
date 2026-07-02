@@ -1,0 +1,147 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025                                                                               5504312
+
+
+
+
+          Contrastive Self-Supervised Learning-Based
+         Background Reconstruction for Hyperspectral
+                      Anomaly Detection
+            Xiaoming Sun, Yuxiang Zhang , Senior Member, IEEE, Yanni Dong , Senior Member, IEEE,
+                                      and Bo Du , Senior Member, IEEE
+
+
+   Abstract— Deep learning (DL) has received a lot of attention                knowledge of anomalous targets or backgrounds [3]. In recent
+in hyperspectral anomaly detection (HAD) in recent years. While                years, HAD has flourished and is widely used in medicine [4],
+some progress has been made in boosting the generalization of                  oil spill detection [5], civilian rescue [6], and other fields [7].
+DL-based HAD methods, existing methods still face limitations
+in labeled sample generation or transfer flexibility. To address                  Over the past few decades, numerous traditional methods for
+these issues, we propose a contrastive self-supervised learning-               HAD have been proposed. The most classical of these methods
+based background reconstruction method for HAD (CSSBR).                        are the statistical assumption-based methods, which assume
+By constructing a self-supervised pretraining model based on                   that the backgrounds obey a certain statistical distribution
+a pixel- and patch-level masking strategy and a dual attention                 and consider the pixels that deviate significantly from this
+network (DAN) encoder, the pretraining model can learn general
+background representation without labeled sample generation.                   distribution as anomalies. The Reed–Xiaoli (RX) detector [8]
+The DAN encoder is constructed by the vision transformer                       is the most widely used algorithm among the statistical
+(ViT) and channel attention module (CAM) to extract the                        assumption-based methods, which assumes that the back-
+global context information and the correlation between spectra.                grounds obey a multivariate Gaussian distribution and utilizes
+A transfer learning model is constructed based on the DAN                      all the pixels in the image to compute the background statistics.
+encoder and a lightweight decoder, which is simply fine-tuned by
+background reconstruction guided (BRG) loss to flexibly transfer               According to the different ways of background statistical
+the pretrained model to various HAD tasks. Experiments on                      estimation, various RX-based variants have been proposed,
+four challenging hyperspectral datasets confirm that the CSSBR                 such as kernel RX [9], subspace RX [10], local RX [11],
+method outperforms other state-of-the-art methods.                             local adaptive iterative RX (LAIRX) [12], and two-step
+   Index Terms— Background reconstruction, contrastive learn-                  generalized likelihood ratio test (2S-GLRT) [13]. Subse-
+ing, hyperspectral anomaly detection (HAD), self-supervised                    quently, the representation-based methods have gradually
+learning (SSL).                                                                garnered widespread attention, encompassing collaborative
+                                                                               representation [14], [15], [16], low-rank representation [17],
+                         I. I NTRODUCTION                                      [18], [19], tensor representation [20], [21], and entropy
+                                                                               representation [22]. For example, Li and Du [14] proposed
+H     YPERSPECTRAL imaging technology records both
+      spectral and spatial information of ground objects [1].
+Compared with other remote sensing images, hyperspectral
+                                                                               the collaborative representation-based detector (CRD) to
+                                                                               represent the pixel with the local background dictionary
+images (HSIs) contain hundreds or even thousands of                            and separate anomalies from backgrounds by the recovery
+almost continuous spectral bands, which can provide very                       residuals. Ma et al. [23] combined the integrating fractional
+detailed spectral information [2]. Therefore, HSI can provide                  Fourier transform (FrFT) with the row-constrained low-rank
+unique advantages for anomaly detection tasks. Hyperspectral                   and sparse matrix decomposition technique. Wang et al.
+anomaly detection (HAD) focuses on distinguishing unusual                      [20] extended the 3-D tensor low-rank model to separate
+materials from typical backgrounds in the absence of a priori                  the background component. Tao et al. [22] combined FrFT
+                                                                               and Shannon entropy to maximize the distinction between
+  Received 10 November 2024; revised 11 January 2025; accepted 21 January      anomalies and backgrounds. These traditional methods are
+2025. Date of publication 27 January 2025; date of current version
+11 February 2025. This work was supported in part by the National Natural      generally simple and extract shallow features to distinguish
+Science Foundation of China under Grant 62222116, Grant 62071438, Grant        anomalies from backgrounds.
+62225113, and Grant 62171417; and in part by the Major Special Project of         Recently, deep learning (DL) has gained prominence in
+China Innovation Challenge (Ningbo) under Grant 2024T008. (Corresponding
+author: Yuxiang Zhang.)                                                        HAD due to its powerful capabilities of feature mining and
+  Xiaoming Sun and Yuxiang Zhang are with the School of Geophysics and         feature representation. The most widely used deep neural
+Geomatics, China University of Geosciences, Wuhan 430074, China (e-mail:       networks include convolutional neural network (CNN) [24],
+sunxiaoming@cug.edu.cn; zhangyx@cug.edu.cn).
+  Yanni Dong is with the School of Resource and Environmental Sciences,        [25], [26], autoencoder (AE) [27], [28], [29], and generative
+Wuhan University, Wuhan 430079, China (e-mail: dongyanni@whu.edu.cn).          adversarial network (GAN) [30], [31], [32]. For example,
+  Bo Du is with the School of Computer Science, Wuhan University, Wuhan
+430079, China (e-mail: gunspace@163.com).
+                                                                               Li et al. [33] proposed a two-stream CNN with deep support
+  Digital Object Identifier 10.1109/TGRS.2025.3534185                          vector data description that incorporates feature learning and
+               1558-0644 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5504312                                                            IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+
+
+anomaly detection into a unified framework. Wang et al.             method that can not only perform pretraining without labeled
+[34] proposed an autonomous HAD network based on fully              sample generation but also flexibly transfer the pretrained
+convolutional AE (Auto-AD), which designs the adaptive              model to various HAD datasets without the limitation of image
+weighted loss function and the anomaly detector in an end-          sensor and image size.
+to-end manner. Xiang et al. [35] enhanced the ability of               Inspired by the SSL [44], we propose a contrastive SSL
+representing the background by introducing a guided model           (CSSL)-based background reconstruction method for HAD,
+to the hidden layer of AE. Xie et al. [36] proposed a spectral      which can be labeled as contrastive self-supervised learning
+adversarial feature learning method for HAD, which uses the         based background reconstruction method for HAD (CSSBR).
+adversarial AE (AAE) as its backbone and introduces the             The overall architecture of CSSBR consists of two parts: self-
+structure tensor matrix to adaptively calculate the contribution    supervised pretraining and transferring the pretrained model
+rate of each feature. Wang et al. [37] proposed an HAD              to HAD tasks. First, the pretraining model is constructed
+method based on variational background inference and GAN            via a pixel- and patch-level random masking strategy, a dual
+(VBIGAN-AD), which establishes the relationship between             attention network (DAN) encoder, and a lightweight decoder.
+data samples and latent samples through two subnetworks             The pixel- and patch-level random masking strategy is
+to capture the data distribution. It is worth noting that           designed to randomly mask off some pixels or patches of the
+self-supervised learning (SSL) with deep neural networks            original HSI to obtain pixel- and patch-level random masked
+is gaining attention in the field of HAD. Wang et al.               image pairs with the same semantic information, which can
+[38] proposed a pixel-shuffle downsampling masked-spot              help to complete the pretraining task. The DAN encoder
+reconstruction network (PDBSNet) in a self-supervised oper-         based on vision transformer (ViT) and channel attention
+ating fashion for HAD, which achieves effective background          module (CAM) is constructed to extract the global context
+reconstruction by means of an AE consisting of centrally            information and the correlation between spectra. A lightweight
+masked and dilated convolutions. Liu et al. [39] proposed a         decoder is introduced to reconstruct the original image
+self-supervised multiscale network (MSNet) for HAD with             by reverse-mapping the encoded features and the masked
+enhanced separation training, where the network consists            patches. The pretraining model is trained by reconstructing
+of convolutional AEs at multiple scales. Wang et al. [40]           the backgrounds from the patch-level random masked image
+proposed a self-supervised HAD transformer (SSHADFormer)            and contrasting between pixel- and patch-level random
+method based on finite spatialwise attention and AE, which          masked images. Also, the loss function based on a designed
+performs background reconstruction via the RGB cube                 background reconstruction guided (BRG) loss and a cross-
+associated with the given dataset. The DL-based methods             entropy (CE) loss is introduced to guide pretraining to obtain
+described above are usually trained and tested on the same          background reconstruction without labeled sample generation
+scene, which can learn feature representations for a specific       and to learn general background representations for different
+scene and HAD task. The learned feature representations tend        downstream HAD tasks. Subsequently, the DAN encoder and
+to work poorly when directly transferred to other scenes or         the lightweight decoder are transferred to downstream tasks,
+HAD tasks, exhibiting poor generalization.                          and a simple fine-tuning of the lightweight decoder through
+   In order to improve the generalization of DL-based methods,      BRG loss can obtain adaptive background reconstruction for
+some scholars have introduced novel methods for HAD, which          various HAD tasks. Finally, anomaly detection is performed
+are trained in some scenes and transferred to other scenes.         using reconstruction errors.
+For example, Jiang et al. [41] proposed a weakly supervised            The main contributions of our research are summarized as
+discriminative learning method with spectrally constrained          follows.
+GAN for HAD (WeaklyAD). This method trains the model                  1) A novel DAN encoder is proposed based on ViT and
+by the labeled samples obtained via coarse anomaly detection             CAM, which can effectively extract the global context
+on a specific scene and transfers the trained model to the other         information and the correlation between spectra.
+scene obtained from the same sensor. Liu et al. [42] proposed a       2) A pretraining model is constructed by a CSSL-based
+dual-frequency AE (DFAE) method, which introduces spectral               background reconstruction method, where a pixel- and
+domain learning to enhance the separability of backgrounds               patch-level random masking strategy is designed to
+from anomalies. This method uses an HSI for training and                 construct background reconstruction task and contrastive
+transfers the trained model to other HSIs obtained from the              learning task to learn general background representations
+same sensor for testing. Li et al. [43] proposed a general               of HSI without labeled sample generation.
+anomaly enhancement network with generative SSL (GSSL)                3) A transfer learning model is constructed based on the
+for HAD, named AETNet, which was trained on a set of                     DAN encoder and a lightweight decoder, where a BRG
+anomaly-free HSIs with block-level random masks. The best                loss is proposed to fine-tune the transfer learning model
+pretrained model was searched during the transfer learning               to obtain adaptive background reconstruction without
+stage by using global Mahalanobis distance to adapt the                  labeled sample generation for various HAD tasks.
+pretrained model to HAD tasks. In addition, AETNet is trained
+and tested on images of the same size, which requires complex          The rest of this article is organized as follows. Section II
+window resizing when transferred to scenes of various sizes.        briefly analyzes the related work. Section III describes the
+According to the above analysis, while some progress has            details of the proposed CSSBR method in detail. Section IV
+been made in boosting the generalization of DL-based HAD            analyzes and discusses the experimental results. Finally, the
+methods, there is still a pressing need for a DL-based HAD          conclusions are drawn in Section V.
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD                                       5504312
+
+
+
+                     II. R ELATED W ORK                             the sequence and all other elements in the sequence [61].
+A. Self-Supervised Learning                                         It can process all elements in the sequence in parallel,
+                                                                    thereby improving training efficiency. The transformer encoder
+   SSL learns general feature representations of large amounts
+                                                                    is composed of multiple identical layers stacked, each
+of unlabeled data by designing a pretext task [45]. SSL
+                                                                    including a multihead SA (MSA) mechanism sublayer and a
+has been a huge success not only in computer vision (CV)
+                                                                    fully connected (FC) feedforward network sublayer. Residual
+[46], [47], [48], [49], [50] but also in natural language
+                                            

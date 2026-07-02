@@ -1,0 +1,1694 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [698] Hermes: Boosting the Performance of Machine-Learning-Based Intrusion Detection System Through Geometric Feature Learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：698
+题名：Hermes: Boosting the Performance of Machine-Learning-Based Intrusion Detection System Through Geometric Feature Learning
+年份：2026
+DOI：10.1109/ton.2026.3697115
+来源：IEEE Transactions on Networking
+PDF：paper/10.1109_TON.2026.3697115.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：无
+相关性：强相关，分数 14
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\698.txt
+- 原始字符数：84175
+- 本次发送字符数：84175
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+5381
+
+Hermes: Boosting the Performance of
+Machine-Learning-Based Intrusion
+Detection System Through
+Geometric Feature Learning
+Chaoyu Zhang , Student Member, IEEE, Shanghao Shi , Member, IEEE, Ning Wang ,
+Xiangxiang Xu, Member, IEEE, Shaoyu Li, Student Member, IEEE, Lizhong Zheng , Fellow, IEEE,
+Randy Marchany , Member, IEEE, Mark Gardner, Member, IEEE, Y. Thomas Hou , Fellow, IEEE,
+and Wenjing Lou , Fellow, IEEE
+
+Abstract—Anomaly-Based Intrusion Detection Systems (IDSs)
+have been extensively studied for their ability to detect zero-day
+attacks by establishing a baseline of normal behavior from benign
+traffic and flagging deviations as potential threats. However,
+they often suffer from higher false positive rates compared to
+signature-based IDSs. Unlike image data, raw network traffic
+lacks directly useful features and requires additional processing to capture meaningful patterns. Simple traffic statistics
+(e.g., connection duration, packet inter-arrival time) often fail
+to represent the complex relationships necessary for accurate
+detection, making feature engineering essential. We propose a
+geometric feature learning method to optimize feature extraction.
+Specifically, we employ contrastive feature learning to build a representation space where benign traffic forms a compact cluster,
+and then apply H-Score feature learning to further enhance intraclass compactness and inter-class separability, thereby improving
+anomaly detection performance. Beyond the NSL-KDD and
+N-BaIoT datasets, we further validate our approach on more
+Received 15 January 2025; revised 11 August 2025 and 5 February 2026;
+accepted 4 May 2026; approved by IEEE T RANSACTIONS ON N ETWORKING
+Editor E. Bertino. Date of publication 26 May 2026; date of current version
+1 June 2026. This work was supported in part by the Office of Naval Research
+under Grant N00014-24-1-2730 and Grant N00014-19-1-2621; in part by
+U.S. National Science Foundation under Grant 1916902, Grant 2154929,
+Grant 2247560, Grant 2235232, and Grant 2312447; and in part by Virginia
+Commonwealth Cyber Initiative (CCI). The preliminary version of this paper
+was published in ACM MobiHoc 2024 [DOI: 10.1145/3641512.3686380].
+(Corresponding author: Chaoyu Zhang.)
+Chaoyu Zhang, Shaoyu Li, and Wenjing Lou are with the Department
+of Computer Science, Virginia Tech, Arlington, VA 22203 USA (e-mail:
+chaoyu@vt.edu; shaoyuli@vt.edu; wjlou@vt.edu).
+Shanghao Shi is with the Department of Computer Science, Washington
+University in St. Louis, St. Louis, MO 63144 USA (e-mail: shanghao@wustl.edu).
+Ning Wang is with the Department of Computer Science and Engineering,
+University of South Florida, Tampa, FL 33620 USA (e-mail: ningw@usf.edu).
+Xiangxiang Xu is with the Department of Computer Science, University of
+Rochester, Rochester, NY 14627 USA (e-mail: xiangxiangxu@rochester.edu).
+Lizhong Zheng is with the Department of Electrical Engineering and
+Computer Science, Massachusetts Institute of Technology, Cambridge,
+MA 02139 USA (e-mail: lizhong@mit.edu).
+Randy Marchany is with the IT Security Office, Virginia Tech, Blacksburg,
+VA 24061 USA (e-mail: marchany@vt.edu).
+Mark Gardner is with the Advanced Research Computing, Virginia Tech,
+Blacksburg, VA 24061 USA (e-mail: mkg@vt.edu).
+Y. Thomas Hou is with the Bradley Department of Electrical and Computer Engineering, Virginia Tech, Blacksburg, VA 24061 USA (e-mail:
+thou@vt.edu).
+Digital Object Identifier 10.1109/TON.2026.3697115
+
+advanced and realistic benchmarks, including CIC-IDS-2017,
+TON-IoT, and UNSW-NB15, demonstrating strong generalizability. To address privacy concerns and enable collaborative learning
+across distributed environments, we extend our centralized design
+to a federated learning (FL) setting, preserving user privacy while
+leveraging the collective knowledge of diverse IoT devices. Finally,
+we deploy the proposed IDS on a Raspberry Pi 4 to showcase its
+efficiency and suitability for resource-constrained IoT scenarios.
+Index Terms—Machine learning-based intrusion detection system, geometric feature learning, contrastive learning, federated
+learning, anomaly detection, IoT security.
+
+I. I NTRODUCTION
+HE development of cloud computing, the expansion of
+5G networks, and the exponential growth of IoT devices
+have led to an unprecedented increase in network traffic and
+complexity. This expansion not only facilitates innovative
+applications but also causes significant vulnerabilities [2].
+Cyber threats have evolved to be more sophisticated, and
+attackers are exploiting these vulnerabilities to compromise the
+confidentiality, integrity, and availability of critical information
+on the network. The 2016 Mirai botnet [3] is a notable example
+of powerful distributed denial-of-service (DDoS) attacks. In
+these attacks, numerous Internet-connected devices, infected
+with Mirai malware, flooded targeted servers with excessive
+Internet traffic. This attack rendered major websites, including
+Twitter, Netflix, Reddit, and CNN, temporarily inaccessible
+to millions of users. Given these circumstances, the implementation of an intrusion detection system (IDS) has become
+imperative. IDS plays a crucial role in the continuous monitoring and analysis of network traffic, capable of identifying
+potential attacks.
+In general, there are two types of IDSs to safeguard network infrastructures: signature-based and anomaly-based IDS.
+Signature-based IDS functions by comparing observed traffic
+against a database of known attack patterns or signatures [4],
+[5], [6], [7]. This method is highly effective in recognizing
+and thwarting established threats, making it an essential tool
+for defending against known attacks. However, its efficacy
+is limited to known threats, leaving a gap that anomalybased IDS aims to fill. Anomaly-based IDS works on the
+
+T
+
+2998-4157 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+5382
+
+principle of behavioral analysis [8], [9], [10], [11], [12], [13].
+It establishes a baseline of normal network behavior and
+continuously monitors for deviations, flagging any unusual
+activity that could signify a potential intrusion. This approach
+enables it to detect novel (a.k.a., zero-day) attacks, which do
+not match any known signatures. While more adaptable to
+emerging threats, anomaly-based IDS can be prone to higher
+false-positive rates [14], [15].
+Research Motivation: An effective anomaly-based IDS
+should not only detect intrusions but also identify their types,
+including both known attacks and generalized zero-day threats.
+This capability is essential for Intrusion Response Systems
+(IRS) [16], [17], which rely on attack type identification
+to trigger targeted responses. For example, a DDoS attack
+may require rate limiting [18], while malware infiltration may
+demand system isolation [19], [20]. Detecting zero-day attacks
+is also critical [21], [22], as it enables the discovery of new
+signatures to enhance signature-based IDSs and provides novel
+samples to improve anomaly-based models through retraining.
+However, building such an all-in-one solution is particularly challenging for resource-constrained devices, which have
+limited compute, memory, and energy. Signature-based IDSs
+require substantial resources to maintain and update attack
+signature databases, an especially difficult task in large-scale
+IoT environments with limited bandwidth and massive device
+populations.
+Research Objective: Therefore, the goal of our research is
+to 1) improve the overall performance of the anomaly-based
+IDS by minimizing the false positive rate and reducing the
+incidence of detection omissions, and 2) extend the capabilities
+of anomaly-based IDS by enabling them not only to detect an
+intrusion but also to precisely identify the specific type of the
+intrusion for resource-limited devices.
+In the conventional approach to machine learning-based
+IDS, feature engineering holds substantial importance within
+the pipeline as it directly impacts the ultimate detection
+performance. Unlike image data, where the observed features
+provide immediate utility, raw network traffic necessitates
+additional processing for effective detection [23], [24]. Learning useful patterns directly from raw data traffic or simple
+traffic statistics (e.g., connection duration, packet inter-arrival
+time) is challenging as the complex relationships are difficult
+to distinguish. Therefore, it becomes imperative to extract
+features that can directly enhance the performance of detection
+models rather than relying solely on raw data traffic or simple
+traffic statistics.
+Existing contrastive learning-based IDS methods, such as
+FeCo [14] and CIDS [25], employ contrastive loss to learn
+representations of complex network traffic and improve IDS
+performance. AOC-IDS [26] introduces a contrastive loss
+tailored for autoencoders to obtain better baseline representations, thereby enhancing anomaly detection.
+Our Contribution: Going beyond contrastive learning,
+which relies on similarity-based objectives to structure representations in latent space, we interpret the neural network’s
+latent space through a geometric lens. We propose Hermes
+[1], a novel IDS that projects complex network traffic into
+a geometrically optimized space for enhanced representation,
+enabling clearer decision boundaries and more accurate intrusion detection. We adopt geometric feature learning [27],
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+which enables principled, distance-based feature extraction
+with a clear geometric interpretation. For clarity, we define
+features as the feature representations extracted by the neural
+network. The space mapped by this neural network is referred
+to as the feature space, and the space encompassing all benign
+feature representations is termed the baseline.
+The high-level design of Hermes includes a two-step
+training phase. The first step involves Contrastive Feature
+Learning. To achieve clear separation between benign and
+malicious traffic representations in the latent space, we employ
+it to guide the representation structure. Our approach forms a
+positive pair using two normal traffic records, and a negative
+pair using one normal and one abnormal traffic record. This
+learning process pulls positive pairs closer and pushes negative
+pairs farther apart, thereby generating a new baseline. In this
+space, benign instances are tightly clustered, while attack
+instances are repelled from the benign cluster, enhancing
+the effectiveness of subsequent anomaly detection. The second step involves H-Score Feature Learning, which further
+refines the learned features by maximizing the compactness
+of the cluster representing normal behavior. It also increases
+the separation between different types of traffic, enabling the
+IDS to more clearly distinguish between attack classes. The
+theoretical foundation of the geometrically optimal distance
+optimization underpinning H-Score feature learning is formally established in [27] and [28].
+For IDS inference, Hermes employs a dual inference mechanism: it uses a similarity-based rule to measure deviations of
+traffic features from the baseline for anomaly-based detection,
+and a Maximum A Posteriori (MAP) rule for attack type
+identification. This inference mechanism also evaluates if an
+instance is a zero-day attack using entropy-based uncertainty
+from the posterior distribution and inconsistency between the
+two predictions.
+In this work, we further extend the Hermes centralized
+design to a decentralized setting through federated learning
+(FL). In centralized IDSs, while collecting data from multiple
+sources can provide better intrusion detection performance,
+they are hindered by privacy concerns and legal restrictions,
+such as those imposed by HIPAA,1 which prevent the collection of sensitive user data on central servers. On the other hand,
+naı̈ve distributed IDSs, trained only with local private datasets,
+often suffer from low performance due to both the quantity and
+quality of local data. FL offers a promising solution to these
+challenges by enabling local gateways to collaboratively train a
+global model without sharing raw data, thus preserving privacy
+while leveraging the collective knowledge of diverse IoT
+devices [29], [30], [31], thereby enabling the creation of more
+powerful IDS models for various IoT devices. Therefore, we
+build FL-Hermes by incorporating geometric feature learning
+into the FL system to achieve better detection performance
+while simultaneously preserving user data privacy. In this FLbased design, each gateway trains an individual IDS model
+locally via geometric feature learning, and all gateways cooperatively upload local updates to a central parameter server for
+model aggregation. After the FL-Hermes training phase, the
+well-trained model is deployed to these gateways for traffic
+1 https://www.hhs.gov/hipaa/index.html
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+5383
+
+TABLE I
+A R EVIEW OF M ACHINE -L EARNING -BASED I NTRUSION D ETECTION S YSTEMS : M ECHANISMS , C APABILITIES , AND TARGETED T HREATS
+
+inference. We further extend our evaluation to demonstrate
+the effectiveness of Hermes in the FL setting.
+Our contributions are summarized as follows:
+1) Hermes employs contrastive feature learning to establish a well-formed baseline to distinguish benign and
+intrusion features, thus enabling anomaly detection.
+2) Building on this, Hermes employs H-Score feature learning to capture the dependencies between traffic and their
+types, enabling the inference phase to identify the attack
+types. This method focuses on reducing geometrical
+distance in the baseline, narrowing distances among features of the same type, and increasing distances between
+features of different classes, further enhancing anomaly
+detection ability and enabling attack identification.
+3) The dual inference of Hermes applies a similarity-based
+rule to the learned features to determine if the traffic
+is malicious and utilizes MAP estimation to assess the
+preliminary type of intrusion. Furthermore, it classifies
+the types of known attacks and flags zero-day attacks.
+4) We extend the Hermes centralized design to an FLbased distributed setting to address privacy concerns in
+centralized IDS learning processes and overcome the
+performance limitations of naı̈ve distributed IDSs trained
+on low-quality and low-quantity data.
+5) Extensive evaluations of Hermes across five datasets
+and diverse hardware platforms, in both centralized and
+federated learning settings, have consistently demonstrated its effectiveness. Hermes outperforms various
+state-of-the-art IDS baselines.
+
+II. R ELATED W ORK
+A critical factor in anomaly-based IDS performance is the
+construction of a representative baseline space. Prior work
+has explored various strategies: Yan et al. [47] employed
+non-parametric density estimation to learn legitimate access
+patterns, while KNN-based approaches [11] assess similarity
+to benign instances. Deep learning models have also been
+applied, including LSTMs for log modeling [48], autoencoder
+ensembles for traffic features [33], and VAEs for feature
+compression [10], [35]. Sequence-based modeling using GRUs
+[49] and Isolation Forests [41], [43] further contribute diverse
+anomaly detection strategies. Recent methods such as FeCo
+[14], CIDS [25], and AOC-IDS [26] leverage contrastive learning to improve feature representations and baseline quality.
+To enhance intrusion classification, signature-based IDSs [4],
+[5], [6], [7] match traffic patterns against known attack signatures. For example, graphical models [9], SVMs for botnet
+detection [8], two-tier classifiers [37], and hybrid clusteringclassification approaches [34] demonstrate the strengths of this
+paradigm in identifying specific attack types. We summarize
+existing ML-based IDS by analyzing their underlying ML
+mechanisms, capabilities, and the security threats they target
+in Tab. I.
+
+5384
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 1. The system workflow of Hermes. (a) Centralized system model where
+the IDS model is trained on a single server. (b) Distributed system model
+leveraging FL to collaboratively train the IDS model across multiple local
+gateways.
+
+III. S YSTEM M ODEL AND T HREAT M ODEL
+Centralized System Model: We consider a general IDS
+architecture following prior work [50], [51], as illustrated
+in Fig. 1 (a). We assume that a network gateway G interconnects multiple local devices and manages both incoming
+and outgoing traffic, making it a natural vantage point for
+traffic monitoring and analysis. The IDS operates in two
+modes: training and inference. In the training mode, raw
+network packets observed at the gateway are first summarized
+into flow-level records by a Flow Record Generator. This
+module represents a general abstraction that aggregates packets
+belonging to the same communication session and extracts
+flow-level features. Such functionality can be implemented
+using various schemes or tools, including NetFlow [52],
+CICFlowMeter [53], or customized aggregation mechanisms.
+NetFlow is referenced here only as a representative example,
+rather than a required component. The generated flow records,
+which encapsulate key characteristics of network communications, are forwarded to a training server S and used as input
+for IDS model training. In the inference mode, the trained
+IDS model is deployed at the gateway G to perform real-time
+intrusion detection based on locally generated flow records.
+For clarity, we refer to recorded traffic as flow-level records
+that summarize sequences of packets and capture essential
+communication characteristics between network endpoints.
+Distributed System Model: In FL-Hermes (Fig. 1 (b)),
+we extend the centralized design to a federated learning
+(FL) setting. The system consists of a set of local gateways
+
+G = {G1 , G2 , . . . , GN } and a parameter server S that coordinates
+model aggregation. Each gateway locally monitors traffic,
+generates flow records using the Flow Record Generator, and
+trains a local IDS model. At each FL round t, the parameter
+server S initializes or maintains a global model M(t) with the
+same architecture as the centralized IDS. A trusted subset of
+gateways G0 ⊆ G is selected to participate, and the current
+global model is broadcast to these clients to initialize their
+local models. Each selected gateway Gi ∈ G0 performs local
+training using its own flow records and computes a model
+update δ(t)
+i . After local training, participating gateways upload
+their updates {δ(t)
+i }Gi ∈G0 to the server S. The server aggregates
+these updates using a standard FL aggregation rule, such as
+FedAvg or FedSGD [29], to obtain an updated global model
+M(t+1) . This process is repeated for multiple rounds until
+convergence, resulting in a global IDS model that generalizes
+across heterogeneous local traffic distributions without sharing
+raw traffic data.
+Threat Model: In our threat model, we assume attackers
+manipulate network traffic to launch various network-based
+attacks, including probing, data injection, denial of service, malware, infiltration, exfiltration, and man-in-the-middle
+attacks. These may include zero-day attacks with no known
+signatures. We assume such manipulations result in detectable
+deviations from benign traffic patterns. The IDS and the
+gateways on which it resides are assumed to be trusted and
+secure. To ensure trustworthiness, we assume only verified
+clients participate in the FL system, contributing diverse and
+distributed data for collaborative training. While Byzantine
+threats like poisoning attacks are a known concern, we assume
+an honest and cooperative setting. As extensive work exists on
+poisoning resilience [54], we consider such threats mitigable
+and beyond the scope of this study.
+We acknowledge that adversarial evasion attacks, including
+black-box attacks such as transfer-based and query-based
+attacks, remain an important and challenging research problem. Defending against such attacks typically requires dedicated threat modeling and specialized defense mechanisms,
+and thus represents a complementary line of work beyond
+the scope of this paper [13], [55]. In this work, Hermes is
+evaluated under standard IDS deployment assumptions, where
+the detection model is accessed as a black box, and attackers
+do not have access to internal parameters or gradients. Rather
+than claiming explicit adversarial robustness, Hermes focuses
+on improving detection accuracy and generalization under
+realistic traffic conditions. As a possible extension, adversarial
+training [55] could be incorporated into our framework without
+modifying its core design, which we leave as future work.
+The privacy aspects of Hermes, including leakage risks
+and resilience strategies inspired by [56] and [57], form an
+orthogonal research direction deserving further exploration.
+IV. D ESIGN OF H ERMES
+A. Overview
+The key steps of the Hermes learning process are depicted
+in Fig. 1 (a), offering an overview of our system. The pretraining phase begins with the traffic monitor gathering packet
+data from network gateways (¬). This data is processed and
+then relayed to the flow record generator (­), which creates
+structured flow records (®). The training phase (¯) involves
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+5385
+
+Fig. 2. Hermes Design: Our approach begins with contrastive feature learning to train a model f (x; θ0 ), establishing a baseline space (Training Step One).
+Subsequently, we refine this model to f (x; θ1 ) and develop the identification model g(y; θ2 ) using H-Score feature learning (Training Step Two). During the
+Inference phase, the established IDS model employs a similarity-based rule for anomaly detection and a MAP rule for attack identification. We further analyze
+each instance to ascertain whether it could be a zero-day attack, based on the results from dual inference.
+
+two critical steps: first, we construct an initial anomaly
+detection model f (x; θ0 ) using contrastive feature learning to
+define a baseline. We then refine this model from f (x; θ0 ) to
+f (x; θ1 ), and develop the identification model g(y; θ2 ) through
+H-Score feature learning (as shown in Fig. 2). Once the fully
+trained IDS model is deployed at the gateway G (°), Hermes
+performs dual inference: it utilizes a similarity-based rule for
+anomaly detection and a MAP rule for attack identification,
+and analyzes whether the intrusion is a zero-day attack. The
+system’s pivotal elements, contrastive feature learning, HScore feature learning, and dual inference, are expounded in
+the following sections.
+
+TABLE II
+D EFINITIONS AND N OTATIONS
+
+B. Training Step One: Contrastive Feature Learning
+To establish a representative baseline for anomaly detection,
+we employ geometrical feature extraction through contrastive
+feature learning. This method leverages the inherent differences and similarities in network traffic to enhance the
+performance of anomaly-based IDS. Specifically, each training
+data record in our system consists of two components: the flow
+record x ∈ Rd , where d represents the dimensionality of the
+flow record, and its corresponding output label y ∈ {0, 1}. Here,
+0 denotes benign traffic flow, while 1 indicates an intrusion.
+The primary aim of our contrastive learning algorithm is to
+extract a representative benign feature cluster as a baseline.
+To achieve this, we train a neural network f (x; θ0 ) with
+weights θ0 , which takes the input record x ∈ Rd and produces
+a feature f (x) ∈ Rk . Let xi and x j represent benign inputs,
+and xm represent an intrusive input. Given a training dataset
+containing benign and intrusion instances, we compute feature
+representations f (xi ) and f (x j ) for pairs of benign samples.
+Here, x j is another benign sample within the same minibatch as xi to form a positive pair. Positive and negative pairs
+are constructed dynamically within each mini-batch to reduce
+computational overhead, following the strategy in [58].
+In contrastive feature learning, training is performed in a
+mini-batch manner. Within each mini-batch of size B, we
+denote benign samples as xi and x j , where xi is an anchor
+benign sample and x j is another benign sample in the same
+mini-batch forming a positive pair, and malicious samples as
+
+xm , which serve as negative samples. Let N and M denote the
+numbers of benign and malicious samples in the mini-batch,
+
+5386
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+respectively. The values of N and M are not manually specified
+hyperparameters; instead, they are determined by the natural
+class distribution of the (non-IID) training dataset within
+each mini-batch and may vary across batches. Intuitively, a
+sufficient number of benign samples (N) helps learn a compact
+and stable representation of normal traffic, while the presence of malicious samples (M) promotes separability between
+benign and intrusive behaviors. The mini-batch size B controls
+the trade-off between representation stability and computational cost, and is selected accordingly in our evaluation.
+Notably, malicious samples are typically not used as anchors
+because anomaly detection fundamentally relies on modeling
+consistent benign behavior and detecting deviations from it.
+Incorporating variable and sparse malicious data as anchors
+may obscure the learned boundary by introducing unstable
+or non-generalizable representations. We follow the original
+dataset’s class distribution and a widely used partitioning
+strategy to preserve the benign-to-malicious ratio. A complete
+list of definitions and notations is provided in Table II.
+Based on the above mini-batch construction and sample
+roles, the contrastive learning objective aims to maximize
+the similarity between f (xi ) and f (x j ), while simultaneously
+distinguishing between benign f (xi ) and all malicious f (xm )
+instances, where f (xm )|m∈{M} . In this context, ui = f (xi ) and
+u j = f (x j ) are the features of benign inputs xi and x j ,
+respectively, and vm = f (xm ) is the feature of an intrusive
+input xm .
+!
+exp(uTi u j /τ)
+li j = − log
+. (1)
+PM
+exp(uTi u j /τ) + m=1
+exp(uTi vm /τ)
+The term 0 < τ < 1 represents the temperature coefficient.
+The overall loss function L aggregates all pairwise losses,
+encompassing both li j and l ji terms:
+N
+
+L=
+
+N
+
+X X
+1
+(li j + l ji ).
+N(N − 1)
+
+(2)
+
+i=1 j=i+1
+
+Phase one of the training, as depicted in Fig. 2, offers an
+intuitive visualization of the learning process. In this phase,
+by minimizing the loss function, we enhance the similarity
+among benign data representations, effectively drawing them
+closer together. Concurrently, this process distances benign
+representations from those indicative of intrusions. Once the
+model converges, it results in a well-defined baseline for normal traffic, which is essential for effective anomaly detection.
+C. Training Step Two: H-Score Feature Learning
+While our current model is adept at anomaly detection,
+it cannot identify specific types of attack and the baseline
+is not optimal yet. To address this limitation, we employ
+H-Score feature learning [28], [59], which explores the
+geometric feature space beyond the established baseline.
+In essence, H-Score learning geometrically maps the feature to construct unique clusters for each attack type. This
+enables the identification of specific attack types during the
+inference phase. Additionally, it increases the separability
+between features of different classes. This approach further
+refines the baseline feature space, distancing it from intrusion
+clusters, which in turn enhances the performance of the
+anomaly-based IDS.
+
+To begin, we define a variable X indicating flow records, and
+a variable Y as corresponding labels. In this context, each label
+yi is an integer where yi ∈ {0, 1, . . . , n − 1}; here, 0 represents
+a benign label, while any non-zero number corresponds to
+a specific type of attack. These variables, X and Y, follow
+the joint distribution PX,Y . Given the complexity of traffic
+encountered by IDS, this joint distribution PX,Y is typically
+unknown, making the direct computation or estimation of the
+statistical dependence, as indicated by the CDK (canonical
+dependence kernel) function iX;Y (referenced in [27, Eq. 4]),
+infeasible.
+PX,Y (x, y) − PX (x)PY (y)
+iX;Y =
+.
+(3)
+PX (x)PY (y)
+Consequently, we focus on learning iX;Y from data samples
+using H-Score feature learning, specifically by considering its
+rank-k approximation ζ≤k (iX;Y ), given k ≥ 1. The approximation of iX;YP by the rank-k joint function is expressed
+k
+k
+k
+as f ⊗ g =
+i=1 fi ⊗ gi , where f ∈ FX and g ∈ FY
+represent k-dimensional features. This formulation translates
+the computation of ζ≤k (iX;Y ) into an optimization problem,
+aiming to minimize the approximation error kiX;Y − f ⊗ gkF ,
+where k · kF is as defined in Table II. The optimization
+variables in this context are the k-dimensional features f and
+g. However, the error kiX;Y − f ⊗ gkF for a specific f and g
+cannot be directly computed due to the unknown nature of iX;Y .
+To overcome this challenge, we utilize the H-Score H ( f , g),
+defined for k ≥ 1 and f ∈ FXk , g ∈ FYk , as
+
+1
+2
+2
+iX;Y F − iX;Y − f ⊗ g F
+H ( f , g) ,
+2
+ T
+
+
+T 
+ 1
+
+= E f (X)g(Y) − E f (X) E g(Y) − · tr Λ f Λg ,
+2
+(4)
+
+
+
+ 
+T
+where Λ f = E f (X) f T (X) − E f (X) E f (X) and Λg =
+
+
+
+
+
+
+T
+E g(Y)gT (Y) − E g(Y) E g(Y) are the covariance matrices
+of f (X) and g(Y) respectively, with tr(·) denoting the trace
+function. The H-Score serves as a measure of the quality of the
+approximation, where a higher H-Score value indicates a lower
+approximation error. Accordingly, the optimal weights refined
+through the H-Score are designed to maximize the correlation
+between the traffic flow record and its specific types. This
+approach not only maximizes the average distance between
+different classes but also minimizes the distance within the
+same class, thereby enhancing class separability. This detailed
+discussion can be found in [28, Proposition 4], with its proof
+provided in Appendix F therein.
+In the subsequent discussion, we delve into how features
+are integrated to discern the specific type of traffic. Assuming
+we have obtained f ∈ FXk and g ∈ FYk by maximizing the
+H-Score H ( f , g), we determine the traffic flow where k ≥
+rank(iX;Y ), having established that f ⊗ g = iX;Y . With the above
+assumption, we can obtain the following result, as discussed in
+[27, Section 3.2].
+Suppose f ⊗ g = iX;Y . Then, we will have
+kiX;Y k2F = tr(Λ f · Λg ),
+
+(5)
+
+PY|X (y|x) = PY (y)(1 + f (x)g(y)).
+T
+
+(6)
+
+Using the features f and g, we are able to compute the
+strength of the dependence between X and Y, represented
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+as iX;Y . The posterior distribution, as outlined in Eq. 6, is
+instrumental in identifying the specific type of traffic. In
+Hermes, where X represents the input records and Y denotes
+the types, the system obtains the results of the posterior
+distribution PY|X of the label Y by Eq. 6. The traffic type
+is determined through a corresponding maximum a posteriori
+(MAP) estimation, defined as follows:
+ŷMAP (x) = arg max PY|X (y|x)
+y∈Y
+
+= arg max PY (y)(1 + f T (x)g(y)),
+y∈Y
+
+(7)
+(8)
+
+where PY can be sourced from the monitored daily traffic. This
+method is proposed and explained in [27, Eq. 25].
+A visual representation of H-Score feature learning is
+illustrated in Fig. 2. In Training Step Two, the primary loss
+function used is −H ( f , g). This function is used for calculating the optimal parameters θ1 and θ2 during the second step of
+the training phase. It is specifically designed for the joint training of the parameters θ1 and θ2 in a two-network architecture.
+In this architecture, the neural network f (x; θ1 ) is responsible
+for generating k-dimensional features f in the feature space
+FXk . The identification model g(y; θ2 ) is a fully connected
+network, given the underlying distribution of Y. This network
+takes the one-hot encoded vector [1{y = 1}, . . ., 1{y = |n|}]
+of y as input, and produces the k-dimensional features g
+from labels in the feature space FYk as output. Thus, the HScore estimator evaluates the H-Score between f and g to
+capture the dependence between traffic and the corresponding
+type. The main goal during the second step of the training
+phase is to maximize this H-Score for geometrically optimal
+representation of features, as depicted in the training step two
+of Fig. 2.
+D. Dual Inference Phase
+The inference phase, as shown in Fig. 2, is designed to
+detect the intrusion, identify the type, and explore zero-day
+attacks. In this phase, two rules are employed, both utilizing
+the same features extracted from the model f (x; θ1 ). The first
+rule, a similarity-based detection rule, measures the deviation
+of traffic features from the learned baseline, thereby enabling
+anomaly detection. The second rule, a Maximum A Posteriori
+rule, identifies the type of attack. It compares the posterior
+distribution for all types of traffic and outputs the type with
+the maximum value as the classification result. The dual
+inference mechanism also evaluates if an instance is a zero-day
+attack using entropy-based uncertainty from the posterior
+distribution and inconsistency between the two predictions.
+1) Rule 1: Similarity-Based Detection: The anomaly-based
+detection in our system utilizes a threshold-based mechanism
+based on similarity measures. This process starts with the
+aggregation of features from the baseline space. We then
+compute the mean of these normalized features to establish
+an anchor baseline template, denoted as z̄:
+
+X
+1
+f (xi )
+z̄ = P
+1(yi = 0)
+,
+(9)
+k f (xi )k2
+i 1(yi = 0) i
+where 1(·) denotes the indicator function, with yi = 0 signifying benign traffic, and k·k2 represents the L2 -norm.
+
+5387
+
+To assess the similarity S (xi ) between a new traffic flow xi
+and the anchor baseline template z̄, we employ the similarity
+estimator:
+z̄T f (xi )
+S (xi ) =
+.
+(10)
+kz̄k × k f (xi )k
+This similarity score ranges between 0 and 1. In order to
+classify a new traffic flow xi as normal or anomalous, we set a
+threshold score ρ within the range of [0, 1]. This threshold is
+derived from the distribution of similarity scores of the benign
+training data. We start by sorting these scores in ascending
+order, resulting in a sequence S = [S 1 , S 2 , . . . , S N ]. The
+threshold ρ is then determined by selecting the p-th percentile
+of this sequence:
+k
+j p
+·N ,
+(11)
+r=
+100
+where b·c denotes the floor function, and p represents a
+percentage. As a result, the threshold ρ is set to S r , which
+corresponds to the r-th value in the sorted sequence S. To
+minimize the False Positive Rate, a low percentile p is
+recommended. An observation x is predicted as an intrusion
+if its similarity score falls below this threshold ρ:
+ŷS im (x) = 1(S (x) < ρ).
+
+(12)
+
+2) Rule 2: Maximum A Posteriori Rule for Attack Identification: The second rule, a MAP rule, can help to identify
+the type of attack. It does this by comparing the correlation
+between the features extracted from the traffic and the geometric features corresponding to specific attack types. The
+neural network f (x; θ1 ) processes these records to extract the
+corresponding features, represented as f (x). The identification
+model g(y; θ2 ) generates the feature for each class, denoted as
+g(y). For a new record x, we predict the corresponding attack
+type using the MAP rule as:
+˚
+ŷMAP (x) = arg max PY (y)[1 + f T (x)g(y)] ,
+(13)
+y∈Y
+
+where PY (y) is the true traffic type distribution that can be
+monitored from the daily network flow traffic.
+E. Zero-Day Attack Analysis
+The dual inference of Hermes is adept at discerning whether
+an attack could be a zero-day attack.
+Suppose an instance is a zero-day attack; it will exhibit
+new characteristics and previously unseen signatures, leading
+to increased uncertainty in the model’s predictions. This
+uncertainty is evaluated based on the entropy of the posterior
+distribution (see Equation 6): PY|X (y|x) = PY (y)·(1+ f T (x)g(y)).
+The features of a zero-day attack may manifest in a feature
+space distinct from any known attack’s space, resulting in no
+dominant probability for any known attack in the posterior
+distribution and consequently, a higher entropy. This metric
+can help to determine if it is a zero-day attack. We define this
+uncertainty as follows:
+X
+Z (PY|X (y|x)) = −
+PY|X (yi |x) log PY|X (yi |x).
+(14)
+i
+
+Consistent results from similarity-based and MAP rules are
+typically observed in detection scenarios. However, inconsistencies may arise, such as when the similarity rule indicates
+an instance is benign, while the MAP rule identifies it as an
+
+5388
+
+attack, or vice versa. These inconsistencies are more likely to
+occur when the features of a zero-day attack are geometrically
+situated in the mid-area between the feature spaces of different
+types of traffic. Therefore, if an instance is a zero-day attack, it
+is more likely to provoke inconsistent predictions between the
+similarity and MAP rules, necessitating further investigation
+to confirm if it is a zero-day attack. We have validated these
+findings through observations and experimental results.
+Algorithm 1 Training Phase
+1: Training Step One: Contrastive Feature Learning
+N
+2: Input: Flow Records with benign inputs {xi }i=1
+and maliM
+cious inputs {xm }m=1
+3: Output: Optimized parameters θ0 for f (x; θ0 )
+4: for each epoch in num epochs do
+5:
+for each benign input pair (xi , x j ) do
+/* Compute the features */
+6:
+ui ← f (xi ), u j ← f (x j )
+7:
+vm ← f (xm )
+/* Compute the pairwise loss li j */
+
+exp(uT u /τ)
+8:
+li j = − log exp(uT u /τ)+Pi M j exp(uT v /τ)
+m=1
+i j
+i m
+9:
+end for
+/* Compute the
+loss function L */
+Pcumulative
+N PN
+1
+10:
+L = N(N−1)
+i=1
+j=i+1 (li j + l ji )
+/* Update the parameters */
+11:
+θ0 = θ0 − α∇L,
+12: end for
+13: Training Step Two: H-Score Feature Learning
+N
+14: Input: Flow Records with labels {(xi , yi )}i=1
+15: Output: Optimized parameters θ1 for f (x; θ1 ), and θ2 for
+g(y; θ2 )
+16: for each epoch in num epochs do
+N
+17:
+for each (xi , yi ) in Training data {(xi , yi )}i=1
+do
+/* Convert labels (y to one-hot encoding yone-hot */
+1 if i = y
+18:
+yone-hot [i] =
+0 otherwise
+/* Get f and g values using x and yone-hot */
+N
+N
+19:
+f = { f (xi )}i=1
+, g = {g(yone-hot, i )}i=1
+/* Compute the negative H-Score as loss, L */
+20:
+L = −H ( f , g)
+/* Update the models’ parameters */
+21:
+θ1 = θ1 − α∇L, θ2 = θ2 − α∇L
+22:
+end for
+23: end for
+We summarize the whole training phase and dual inference
+procedures in Algorithms 1 and 2, and compose the notations
+in Tab. II. The whole illustration for H-Score feature learning
+can be found in [27].
+F. FL-Hermes Design
+In FL-Hermes (Fig. 1 (b)), the learning process, instead of
+operating on a central server, distributes the training process
+across a set of local gateways G = {G1 , G2 , . . . , GN } and utilizes
+a parameter server S to coordinate the training. This FL
+training paradigm allows participants to jointly train a shared
+IDS model without sharing raw data. The learning process can
+be outlined as follows:
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Algorithm 2 Dual Inference
+N
+1: Input: Flow Records {(xi )}i=1
+N
+2: Output: Anomaly detection results: {ŷS im (xi )}i=1
+, and the
+N
+traffic types {ŷ MAP (xi )}i=1 .
+/* Compute normalized features for benign traffic */
+3: z sum ← 0
+4: for all benign records xi do
+5:
+z sum ← z sum + k ff(x(xii)k) 2
+6: end for
+z sum
+7: z̄ ← number of benign
+records
+/* Compute the threshold ρ from the benign similarity
+distribution */
+8: S ← sorted similarity
+scores of benign records
+˘
+p
+9: r ← 100 · N
+10: ρ ← S r
+N
+do
+11: for each xi in Flow Records {(xi )}i=1
+/*Compute the similarity S for new traffic flow xi */
+z̄T f (xi )
+12:
+S (xi ) ← kz̄k×k
+f (xi )k
+/* Predict new observation based on similarity score and
+threshold */
+13:
+ŷS im (xi ) = 1(S (xi ) < ρ)
+/* Predict the traffic by MAP rule ŷ(x) */
+14:
+Estimate the prior distribution PY (y)
+15:
+ŷ MAP (xi ) = arg maxy∈Y PY (y) · (1 + f T (xi )g(y))
+/* Zero-Day Attack
+P Analysis */
+16:
+Z (PY|X ) = − j PY|X (y j |xi ) log PY|X (y j |xi )
+17:
+if Z (PY|X ) is an outlier then
+18:
+return zero-day attack
+19:
+else if ŷ MAP (x) is consistent with ŷS im (x) then
+20:
+return not zero-day attack
+21:
+else if ŷ MAP (x) is inconsistent with ŷS im (x) then
+22:
+return zero-day attack
+23:
+end if
+24: end for
+
+In step ¬, at the beginning of FL iteration t, the parameter
+server S initializes a global IDS model M(t) . The model
+architecture is the same as the centralized setting ( f (x; θ0 )
+and g(y; θ2 )), consistent across all participating local gateways.
+During each FL iteration t, S selects a subset of gateways
+G0 = {G1 , G2 , . . . , Gn } ⊆ G to participate. The global model
+M(t) is broadcast to the selected gateways G0 .
+In the local training phase, each selected gateway Gi , where
+Gi ∈ G0 , initializes its local model using the received global
+model M(t) . The gateway trains the local IDS model using
+flow records collected from its network, as in step ­. Similarly
+to the centralized setting, step ® involves two critical substeps: first, the client constructs a local anomaly detection
+model f (x; Θ0 ) using contrastive feature learning to define
+a baseline; it then optimizes the traffic representation of this
+model from f (x; Θ0 ) to f (x; Θ1 ) and develops the identification
+model g(y; Θ2 ) using H-Score feature learning, allowing the
+identification of intrusion types and the analysis of zero-day
+attacks. After training for several local epochs, the gateway
+(t)
+computes the model update δ(t)
+= {Θ1 , Θ2 }. In step
+i as δi
+¯, Model Update Aggregation, the local gateways upload
+their model updates δ(t)
+i to the parameter server S. The server
+aggregates these updates using an aggregation rule, such as
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+5389
+
+TABLE III
+P ERFORMANCE (%) OF H ERMES ON NSL-KDD DATASET
+
+Fig. 3. Evaluating Hermes on Raspberry Pi 4, an IoT device in a resourceconstrained environment.
+
+FedAvg, to produce a new global
+M(t+1) for the next
+P model
+(t)
+1
+(t+1)
+FL iteration: M
+← |G0 | i∈G0 δi , The updated global
+model M(t+1) is broadcast back to the selected gateways in
+the subsequent iteration. This process repeats across multiple
+FL iterations until the global model converges to an optimal
+solution M∗ , which generalizes well across all gateways. Once
+the fully trained IDS model M∗ is deployed at the gateway
+G, it operates, similar to the previous design, as described
+in step °. The model uses a similarity-based rule to detect
+anomalies and a MAP rule to identify the type of attack.
+Additionally, it analyzes whether the detected intrusion is a
+zero-day attack. This FL-Hermes design ensures data privacy
+by keeping sensitive flow records locally while leveraging
+collaborative learning to enhance IDS performance across
+diverse network environments.
+V. E XPERIMENT
+We evaluate Hermes under both centralized and federated
+settings, focusing on three aspects: anomaly detection accuracy, attack identification capability, and performance under
+zero-day attack scenarios. We further benchmark Hermes
+against representative baseline methods and state-of-the-art
+anomaly-based IDSs.
+A. Datasets and Experiment Settings
+We prototype Hermes using the PyTorch framework and
+evaluate on two prominent network traffic datasets: NSLKDD [32] and N-BaIoT [46]. The NSL-KDD dataset, a
+well-established benchmark in IDS performance evaluation
+[34], [37], [50], includes benign traffic along with four categories of intrusions, as listed in Tab. IV. We highlight the
+16 intrusion sub-classes that are only present in the test
+dataset. This presents a significant challenge to Hermes in
+detecting emerging zero-day threats. Each record in the dataset
+features 41 attributes extracted from network traffic. These
+
+evaluations are conducted on a server equipped with an Intel
+Core i9-11900K CPU (8 cores / 16 threads, 3.50 GHz base),
+an NVIDIA GeForce RTX 3080 GPU, and running Ubuntu
+20.04.5 LTS.
+The N-BaIoT dataset focuses on IoT traffic, encompassing data from nine commercial IoT devices, including those
+compromised by malicious software, such as Mirai and BASHLITE. This dataset records benign traffic and five types
+of attacks for both Mirai (‘scan’, ‘ack’, ‘syn’, ‘udp’, and
+‘udpplain’) and BASHLITE (‘scan’, ‘junk’, ‘udp’, ‘tcp’, and
+‘combo’) [46]. A principal goal to use this dataset is to
+verify the applicability of Hermes in resource-constrained IoT
+environments. Accordingly, our experiments with the N-BaIoT
+dataset are conducted on a Raspberry Pi 4 as depicted in Fig. 3,
+equipped with a 1.5 GHz quad-core A72 64-bit ARMv8 CPU,
+4GB RAM, 32GB SD card storage, and running the Raspbian
+OS, to evaluate Hermes’s efficiency in such settings.
+The default configurations of Hermes are outlined as follows. For the NSL-KDD dataset, the network f (x; θ0 )/ f (x; θ1 )
+is composed of an input layer with d = 112 dimensions
+and an output layer with k = 256 dimensions. Additionally,
+it includes two hidden layers with sizes of 128 and 256.
+The g(y; θ2 ) network, designed for attack identification, utilizes a three-layer structure with 256, 128, and 5 neurons.
+For the N-BaIoT dataset, the architecture largely mirrors
+that of the NSL-KDD. The key difference is in the input
+and output layers of the f (x; θ0 )/ f (x; θ1 ) network, which are
+configured to accommodate 115 feature inputs and 11 class
+outputs. The ReLU (Rectified Linear Unit) activation function
+is implemented after each hidden layer in both models to
+introduce non-linearity. Hermes employs the Adam optimizer
+with parameters that include a learning rate of α = 10−4 and
+a mini-batch size of B = 128. The training regimen varies
+between datasets: for the first phase, e = 20 epochs are used for
+NSL-KDD and e = 15 for the N-BaIoT dataset. In the second
+training phase, an additional 20 epochs are applied to both
+datasets. For comprehensive analysis, Hermes’s performance
+is benchmarked against machine learning models from the
+renowned scikit-learn library [60].
+B. Evaluation Metric and Baselines
+We evaluate intrusion detection performance using standard metrics, including Accuracy, Recall, Precision, F1-score,
+and False Positive Rate (FPR), following commonly adopted
+definitions in prior IDS studies [11], [34], [37]. In addition,
+
+5390
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE IV
+I NTRUSION C LASSES (S UB -C LASSES ) OF THE NSL-KDD DATASET
+
+Fig. 4. Visualization of FXk and MLP Output on a Randomly Selected 5% Subset of the NSL-KDD Test Dataset for: (a) Hermes Anomaly-Detection,
+(b) MLP Anomaly-Detection, (c) Hermes Attack Identification, and (d) MLP Attack Identification.
+
+we report ROC curves by plotting Recall against FPR under
+varying decision thresholds, and use the Area Under the Curve
+(AUC) to summarize overall detection performance.
+Our experimental configuration is as follows: Hermes Sim
+employs f (x; θ1 ) with the similarity rule for anomaly detection.
+Hermes MAP uses f (x; θ1 ) and g(y; θ2 ) with the MAP rule
+for attack identification. CL (Contrastive Learning) utilizes
+the architecture of f (x; θ1 ) and adheres to the similarity
+rule. The multi-layer perceptron (MLP) model integrates the
+architectures of f (x; θ1 ) and a classification head, optimized
+using cross-entropy loss. Comparative performance evaluations include models such as support vector machine (SVM),
+variational autoencoder (VAE), isolation forest (IsoForest),
+logistic regression (LGR), Bernoulli naive Bayes (BNB), Knearest neighbors (KNN), and decision tree classifier (DTC),
+along with IDS methods TDTC [37], Two-Tier [11], ESFCM
+[34], and contrastive-learning-based variants AOC-IDS [26],
+FeCo [14], and CIDS [25].
+C. Hermes Results on NSL-KDD Dataset
+1) Feature Space Insights: We utilize t-SNE—a dimensionality reduction technique—to project the feature space,
+FXk , into a two-dimensional figure as shown in Fig. 4. In the
+presented visualizations of FXk with a randomly selected 5%
+subset of the NSL-KDD test dataset, distinct patterns emerge
+when comparing Hermes and the MLP method across both
+binary anomaly detection and multi-class attack identification.
+For anomaly detection, the Hermes approach in (a) exhibits
+a more discernible separation between the “malicious” and
+“benign” clusters, whereas the MLP model in (b) shows a
+considerable overlap between the two categories. (c) Hermes
+and (d) MLP demonstrate multi-cluster separations. Hermes in
+(c) maintains better-delineated boundaries between the classes,
+especially when differentiating subtle distinctions like between
+“DoS”, “Probe”, “U2R”, and “R2L”. In contrast, the MLP’s
+features in (d) show more intermingling among classes.
+2) Centralized Hermes Evaluation: In Tab. III, Hermes Sim achieves high accuracy, recall, precision, and F1
+
+Fig. 5. (a) The ROC curve of Hermes Sim. (b) Uncertainty analysis for
+traffic subclasses in exploring zero-day attacks.
+
+score among all tested methods while maintaining an FPR as
+low as 3.74%.
+The ablation study demonstrates that adding contrastive
+feature learning to the basic MLP method results in improvements across all metrics, including a 3.97% increase in recall,
+while keeping a similar FPR. Introducing H-Score feature
+learning further enhances performance, with overall improvements of 7.63% in recall, while reducing the FPR by 1.36%
+compared to the baseline MLP. Detection Speed: The average
+inference time (over 100 records) is 3.58 ms for MLP, 3.20 ms
+for CL, and 4.25 ms for Hermes Sim. Other methods like
+KNN, although having a low FPR, do not perform as well in
+Recall, accuracy, and F1 score. TDTC (4.86%) and Two-Tier
+(5.43%) systems show competitive FPRs but are less effective
+in other metrics and in identifying specific attack types.
+The ROC curves of Hermes and three other baselines are
+plotted in Fig. 5 (a), with our method exhibiting a higher AUC
+score compared to the baselines. For intrusion identification,
+Tab. III shows that Hermes MAP attains an 87.77% accuracy
+in identifying four classes of intrusions amid normal traffic.
+The table’s lower section details the identification performance
+for each traffic class, alongside their ratio in the training data.
+With adequate samples, Hermes consistently maintains high
+accuracy. Remarkably, it effectively identifies the R2L attack,
+which represents a mere 0.13% of the training dataset, with a
+low FPR of 4.85%.
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+5391
+
+TABLE V
+P ERFORMANCE (%) OF H ERMES IN FL, NA ÏVE D ISTRIBUTED L EARNING , AND C ENTRALIZED L EARNING
+
+TABLE VI
+D EVICES S PECIFICATION IN N-BA I OT DATASET
+
+TABLE VII
+I MPACT OF THE N UMBER OF FL C LIENTS ON D ETECTION P ERFORMANCE
+
+To illustrate Hermes’s ability to identify zero-day attacks,
+we display in Fig. 5 (b) the uncertainty for each intrusion
+subclass and normal traffic, calculated using Eq. 14. The x-axis
+in the figure represents the intrusion subclasses enumerated in
+Tab. IV, with indices 0 to 23 denoting benign and known
+attacks, and 24 to 39 indicating zero-day attacks. The y-axis
+is the uncertainty associated with the corresponding traffic.
+Notably, known traffic types exhibit lower mean and variance
+in uncertainty, whereas zero-day samples display significantly
+higher variance and mean. This pattern suggests that highuncertainty outliers could be potential zero-day attack samples
+warranting further investigation. Furthermore, by analyzing the
+discrepancies between outputs from ŷS im (x) and ŷ MAP (x), we
+find that 77.24% of the intrusions are zero-day attacks. This
+insight offers an additional method for identifying potential
+zero-day attack samples.
+FL System Setting: We simulate an FL system with 50
+clients to evaluate Hermes in distributed settings. This choice
+follows common practice in prior FL studies (e.g., FeCo [14],
+PyramidFL [61], AUCTION [62]). We additionally evaluate
+different client scales by varying the number of clients from
+25 to 100 under the same training configuration. As shown
+in Table VII, FL-Hermes exhibits stable performance across
+these settings; therefore, we adopt 50 clients in the rest of the
+evaluation for fair comparison and engineering practicality.
+We consider both IID and non-IID data partitioning strategies, where the same training dataset used in the centralized
+setting is partitioned and distributed among clients. For the
+
+IID data distribution, the training dataset is randomly and
+evenly divided among all clients, ensuring that each client
+receives a balanced subset. In the non-IID-1 setting, each
+client is assigned data from n ∈ {1, 2, 3, 4}, representing one
+to four of the total intrusion attack categories. In the nonIID-2 setting, each client is restricted to data from only one
+(n = 1) intrusion attack category. Notably, the non-IID-2
+setting represents a more extreme case of non-IID-1, where
+FL training becomes significantly more challenging. This is
+due to the highly uneven data distribution, with each client
+holding data from only a single intrusion category. The lack
+of diversity in local datasets amplifies the non-IID nature,
+resulting in more biased local models and making it more
+challenging to achieve well-trained global models.
+To ensure a fair comparison, the testing dataset across all
+settings remains the same as in the centralized setting. We
+evaluate Hermes under three different learning frameworks:
+FL, naı̈ve distributed learning, and centralized learning. In the
+naı̈ve distributed learning framework, training is performed
+entirely on local devices using only local data, and evaluation
+metrics are averaged across all clients. Centralized learning, as
+discussed in Sec. V-C2, involves training on a single merged
+dataset.
+For local training, we configure E = 3 epochs for both
+the contrastive feature learning and H-Score feature learning
+phases. The FL process is set to run for I = 20 iterations to
+train the local models. Across all settings, we use the Adam
+optimizer with a consistent learning rate to ensure uniformity
+in the experiments.
+Experimental Results: We evaluate the performance of
+FL-Hermes, naı̈ve distributed learning with Hermes, and centralized Hermes under various local client data distributions,
+as shown in Tab. V.
+FL-Hermes consistently outperforms naı̈ve distributed learning across most evaluation metrics, regardless of the data
+distribution. Moreover, FL-Hermes demonstrates consistent
+detection performance across the three data distributions (IID,
+non-IID-1, and non-IID-2), highlighting the ability of the FL
+design to enable distributed clients, each holding different
+types of data, to collaboratively train a robust model. This
+aligns well with real-world privacy-sensitive application scenarios, where different clients hold their own private data,
+resulting in inherently highly non-IID distributions. In contrast,
+naı̈ve distributed learning, although preserving privacy, heavily
+relies on the quality of local data. For example, under the
+non-IID-2 distribution, naı̈ve distributed learning achieves an
+average accuracy as low as 67.11% and an average recall
+as low as 48.68%, highlighting its vulnerability to imbalanced data distribution and limited local data diversity. While
+
+5392
+
+the detection accuracy of FL-Hermes is lower than that of
+centralized learning, the latter is challenging to deploy in
+privacy-sensitive scenarios, making FL-Hermes a more practical alternative.
+We also compare the performance of Hermes across different data distributions within the same learning framework.
+In the FL setting, Hermes achieves an accuracy of 87.28%
+under the non-IID-1 distribution, which is higher than the
+83.19% accuracy achieved under the non-IID-2 distribution.
+A similar trend is observed for recall, where Hermes achieves
+81.60% under the non-IID-1 distribution, compared to 73.75%
+under the non-IID-2 distribution. Similar trends are also
+observed in naı̈ve distributed learning across non-IID-1 and
+non-IID-2 distributions. This decreased diversity makes it
+more challenging to learn stable representations of benign
+instances, as geometric feature learning iteratively optimizes
+the feature representations away from diverse types of attack
+representations.
+In summary, FL-Hermes achieves robust performance across
+diverse data distributions and significantly outperforms naı̈ve
+distributed learning. Although centralized Hermes achieves
+higher accuracy, its practical limitations in privacy-sensitive
+applications underscore the importance of FL-Hermes as a
+viable and effective alternative.
+D. Hermes Results on N-BaIoT Dataset
+1) IoT Device Evaluation: To demonstrate the feasibility
+of utilizing IoT devices for intrusion detection, we conduct
+evaluations of Hermes on real IoT botnet traffic datasets
+derived from nine commercially available IoT devices infected
+by the Mirai and BASHLITE botnets. The specifications
+of these devices are detailed in Tab. VI, which provides
+a comprehensive breakdown of their characteristics. For a
+detailed analysis, we create a specific model for each IoT
+device and evaluate its performance individually. To simulate
+a typical resource-constrained IoT environment, we implement
+our system on a Raspberry Pi 4, as illustrated in Fig. 3.
+The Hermes Sim model consistently demonstrates a lower
+FPR compared to the CL approach, confirming its effectiveness in reducing erroneous anomaly detections. Meanwhile,
+the Hermes MAP variant excels in attack identification tasks,
+achieving consistently high classification accuracy while maintaining competitive FPR values across all devices. These
+experimental results highlight the robustness of Hermes in
+detecting anomalies, identifying attack types, and addressing
+zero-day attacks. Importantly, the results validate the practicality of deploying Hermes in resource-constrained environments,
+showcasing its ability to operate effectively across a variety of
+IoT devices and multi-application scenarios.
+To further evaluate the effectiveness of our approach, we
+compare the performance of Hermes Sim with several baseline methods across multiple performance metrics, as shown in
+Fig. 6. Both Hermes Sim and CL demonstrate high levels of
+performance across all metrics, including accuracy, recall, precision, and F1 scores, while maintaining consistently low FPR
+values. These comparisons underscore the superior capability
+of Hermes Sim in balancing robust detection performance
+with minimal false alarms.
+2) FL-Hermes Evaluation: We extend the evaluation by
+leveraging FL to collaboratively train a global model across
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 6. The performance (%) of Hermes compared with baselines on the NBaIoT dataset is presented across various metrics: (a) Accuracy, (b) Recall,
+(c) Precision, (d) F1 Score, and (e) FPR.
+
+IoT devices, instead of training models independently on
+local data from each device. In this setup, local models are
+trained by each client and then uploaded to a parameter server
+for aggregation into a global model. After the FL training
+phase, the well-trained global model is deployed back to
+each IoT device, where it is evaluated using the same testing
+data collected from the respective devices. The results are
+summarized in Tab. IX.
+The experimental results demonstrate the robust performance of FL-Hermes across various evaluation metrics. Specifically, under the similarity-based rule (FLHermes Sim), the system achieves high detection accuracy,
+recall, precision, and F1 score, all exceeding 99.30%. Additionally, the FPR remains exceptionally low, never exceeding
+0.35%. This highlights the system’s ability to detect intrusions effectively while minimizing false alarms in a federated
+environment. Similarly, FL-Hermes MAP Rule achieves consistently strong detection performance across individual IoT
+devices, even with distributed and heterogeneous local clients.
+The ability of FL-Hermes to collaboratively train a global
+model that is then deployed to individual IoT devices ensures
+effective detection of intrusion types in distributed and privacysensitive environments. The results validate FL-Hermes as a
+practical and robust solution for real-world intrusion detection scenarios in IoT environments, where data privacy and
+distributed deployments are critical.
+E. Extended Experimental Evaluation
+Table X reports a comprehensive comparison of Hermes
+against advanced deep learning baselines on three benchmark
+IDS datasets. Hermes achieves competitive accuracy across all
+datasets, reaching 99.12% on CIC-IDS-2017, 100% on TONIoT, and 89.17% on the challenging UNSW-NB15 dataset.
+While LSTM slightly outperforms Hermes on CIC-IDS-2017
+in accuracy, Hermes consistently delivers substantially faster
+inference. On TON-IoT, both Hermes and LSTM achieve
+perfect classification with zero false positives. The most
+notable gains are observed on UNSW-NB15, where Hermes
+outperforms all baselines by 1.48–4.31% in accuracy while
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+5393
+
+TABLE VIII
+P ERFORMANCE (%) OF H ERMES ON THE N-BA I OT DATASET
+
+TABLE IX
+P ERFORMANCE (%) OF FL-H ERMES ON THE N-BA I OT DATASET
+
+TABLE X
+P ERFORMANCE (%) OF H ERMES AND D EEP L EARNING BASELINES (CNN, LSTM, AND TF = T RANSFORMER ) ON R ECENT IDS DATASETS . VALUES A RE
+M EAN [95% CI] F ROM 1000 B OOTSTRAP S AMPLES . T IME I NDICATES AVERAGE I NFERENCE T IME IN M ILLISECONDS
+
+TABLE XI
+S IGNIFICANCE T ESTS : H ERMES VS . BASELINES
+( T-T EST / W ILCOXON P -VALUES )
+
+competing methods, highlighting its suitability for real-time
+intrusion detection. Statistical significance tests (Table XI)
+confirm that the observed performance differences are significant (p < 0.001). We further evaluate the training overhead
+of the proposed contrastive learning framework by comparing
+it with an MLP trained using cross-entropy loss under the
+same architecture and batch size. Leveraging in-mini-batch
+pairing and cached latent representations, Hermes incurs only
+a modest training time increase of 2.45×, 2.28×, and 2.59×
+on CIC-IDS-2017, TON-IoT, and UNSW-NB15, respectively.
+Combined with its lightweight geometry-guided feature learning, Hermes achieves a favorable balance between accuracy,
+inference efficiency, and training cost, making it practical for
+deployment across diverse IDS scenarios.
+VI. C ONCLUSION
+
+maintaining high precision (98.41%). Across all datasets,
+Hermes achieves approximately 5–11× faster inference than
+
+In this paper, we proposed Hermes, a machine-learningbased anomaly IDS that leverages geometric feature learning
+
+5394
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+to improve detection accuracy and reduce false positives. By
+learning compact and discriminative feature representations,
+Hermes unifies the strengths of anomaly-based and signaturebased IDSs: it models normal traffic to detect deviations while
+incorporating known attack data to improve separability and
+enable attack classification. Extensive evaluations demonstrate
+that Hermes achieves strong detection performance and efficiency, and is suitable for deployment on resource-constrained
+IoT devices. To address privacy and scalability concerns,
+we further extended Hermes to a federated learning setting.
+FL-Hermes enables distributed gateways to collaboratively
+train IDS models without sharing raw traffic data, preserving privacy while benefiting from diverse local observations.
+Experimental results show that FL-Hermes maintains stable
+detection performance across different client scales and data
+distributions. While Hermes improves robustness and generalization, it does not aim to provide definitive classification for
+zero-day attacks, which remain a long-standing challenge in
+intrusion detection. Enhancing interpretability and robustness
+against adaptive adversaries is an important direction for future
+work.
+R EFERENCES
+[1]
+
+C. Zhang et al., “Hermes: Boosting the performance of machinelearning-based intrusion detection system through geometric feature
+learning,” in Proc. 25th Int. Symp. Theory, Algorithmic Found., Protocol
+Design Mobile Netw. Mobile Comput., Oct. 2024, pp. 251–260.
+[2] S. Li, S. Shi, Y. Xiao, C. Zhang, Y. T. Hou, and W. Lou, “Bijack:
+Breaking Bitcoin network with TCP vulnerabilities,” in Proc. Eur. Symp.
+Res. Comput. Secur. Cham, Switzerland: Springer, 2023, pp. 306–326.
+[3] M. Antonakakis et al., “Understanding the Mirai botnet,” in Proc. 26th
+USENIX Secur. Symp., 2017, pp. 1093–1110.
+[4] M. Eskandari, Z. H. Janjua, M. Vecchio, and F. Antonelli, “Passban IDS:
+An intelligent anomaly-based intrusion detection system for IoT edge
+devices,” IEEE Internet Things J., vol. 7, no. 8, pp. 6882–6897, Aug.
+2020.
+[5] P. Garcı́a-Teodoro, J. Dı́az-Verdejo, G. Maciá-Fernández, and
+E. Vázquez, “Anomaly-based network intrusion detection: Techniques,
+systems and challenges,” Comput. Secur., vol. 28, nos. 1–2, pp. 18–28,
+Feb. 2009.
+[6] V. Jyothsna, V. V. R. Prasad, and K. M. Prasad, “A review of anomaly
+based intrusion detection systems,” Int. J. Comput. Appl., vol. 28, no. 7,
+pp. 26–35, 2011.
+[7] O. Kopuklu, J. Zheng, H. Xu, and G. Rigoll, “Driver anomaly detection:
+A dataset and contrastive learning approach,” in Proc. IEEE Winter Conf.
+Appl. Comput. Vis. (WACV), Jan. 2021, pp. 91–100.
+[8] Q. Yan, Y. Zheng, T. Jiang, W. Lou, and Y. T. Hou, “PeerClean: Unveiling peer-to-peer botnets through dynamic group behavior analysis,”
+in Proc. IEEE Conf. Comput. Commun. (INFOCOM), Apr. 2015,
+pp. 316–324.
+[9] B. Wang, Y. Zheng, W. Lou, and Y. T. Hou, “DDoS attack protection in
+the era of cloud computing and software-defined networking,” Comput.
+Netw., vol. 81, pp. 308–319, Apr. 2015.
+[10] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, and J. Lloret,
+“Conditional variational autoencoder for prediction and feature recovery
+applied to intrusion detection in IoT,” Sensors, vol. 17, no. 9, p. 1967,
+Aug. 2017.
+[11] H. H. Pajouh, G. Dastghaibyfard, and S. Hashemi, “Two-tier network
+anomaly detection model: A machine learning approach,” J. Intell. Inf.
+Syst., vol. 48, no. 1, pp. 61–74, Feb. 2017.
+[12] S. Rezvy, Y. Luo, M. Petridis, A. Lasebae, and T. Zebin, “An efficient
+deep learning model for intrusion classification and prediction in 5G and
+IoT networks,” in Proc. 53rd Annu. Conf. Inf. Sci. Syst. (CISS), Mar.
+2019, pp. 1–6.
+[13] N. Wang, Y. Chen, Y. Hu, W. Lou, and Y. T. Hou, “MANDA: On
+adversarial example detection for network intrusion detection system,”
+in Proc. IEEE Conf. Comput. Commun., May 2021, pp. 1–10.
+[14] N. Wang, S. Shi, Y. Chen, W. Lou, and Y. T. Hou, “FeCo: Boosting intrusion detection capability in IoT networks via contrastive learning,” IEEE
+Trans. Dependable Secure Comput., vol. 22, no. 4, pp. 4215–4230, Jul.
+2025.
+
+[15] C. Zhang, N. Wang, S. Shi, C. Du, W. Lou, and Y. T. Hou, “MINDFL:
+Mitigating the impact of imbalanced and noisy-labeled data in federated
+learning with quality and fairness-aware client selection,” in Proc. MILCOM - IEEE Mil. Commun. Conf. (MILCOM), Oct. 2023, pp. 331–338.
+[16] S. Anwar et al., “From intrusion detection to an intrusion response
+system: Fundamentals, requirements, and future directions,” Algorithms,
+vol. 10, no. 2, p. 39, Mar. 2017.
+[17] M. Bashendy, A. Tantawy, and A. Erradi, “Intrusion response systems
+for cyber-physical systems: A comprehensive survey,” Comput. Secur.,
+vol. 124, Jan. 2023, Art. no. 102984.
+[18] G. Dayanandam, T. Rao, D. B. Babu, and S. N. Durga, “DDoS attacksanalysis and prevention,” in Proc. 5th Innov. Comput. Sci. Eng. Cham,
+Switzerland: Springer, 2019, pp. 1–10.
+[19] M. Yao, J. Fuller, R. P. Kasturi, S. Agarwal, A. K. Sikder, and
+B. Saltaformaggio, “Hiding in plain sight: An empirical study of Web
+application abuse in malware,” in Proc. 32nd USENIX Secur. Symp.,
+2023, pp. 6115–6132.
+[20] R. Canzanese, “Cloud as a malware infiltration channel,” Comput. Fraud
+Secur., vol. 2023, no. 4, Apr. 2023.
+[21] H. Hindy, R. Atkinson, C. Tachtatzis, J.-N. Colin, E. Bayne, and
+X. Bellekens, “Utilising deep learning techniques for effective zero-day
+attack detection,” Electronics, vol. 9, no. 10, p. 1684, Oct. 2020.
+[22] S. I. Popoola, R. Ande, B. Adebisi, G. Gui, M. Hammoudeh, and
+O. Jogunola, “Federated deep learning for zero-day botnet attack
+detection in IoT-edge devices,” IEEE Internet Things J., vol. 9, no. 5,
+pp. 3930–3944, Mar. 2022.
+[23] J. Holland, P. Schmitt, N. Feamster, and P. Mittal, “New directions
+in automated traffic analysis,” in Proc. ACM SIGSAC Conf. Comput.
+Commun. Secur., Nov. 2021, pp. 3366–3383.
+[24] G. D’Angelo and F. Palmieri, “Network traffic classification
+using deep convolutional recurrent autoencoder neural networks for
+spatial–temporal features extraction,” J. Netw. Comput. Appl., vol. 173,
+Jan. 2021, Art. no. 102890.
+[25] Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+enhanced intrusion detection,” IEEE Trans. Netw. Service Manage.,
+vol. 19, no. 4, pp. 4232–4247, Dec. 2022.
+[26] X. Zhang et al., “AOC-IDS: Autonomous online framework with contrastive learning for intrusion detection,” in Proc. IEEE Conf. Comput.
+Commun., May 2024, pp. 581–590.
+[27] X. Xu and L. Zheng, “Neural feature learning in function space,”
+J. Mach. Learn. Res., vol. 25, no. 142, pp. 1–76, 2024.
+[28] X. Xu and S.-L. Huang, “Maximal correlation regression,” IEEE Access,
+vol. 8, pp. 26591–26601, 2020.
+[29] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y. Arcas,
+“Communication-efficient learning of deep networks from decentralized
+data,” in Proc. 20th Int. Conf. Artif. Intell. Statist., vol. 54, Fort
+Lauderdale, FL, USA, 2017, pp. 1273–1282.
+[30] P. Kairouz and H. B. McMahan, “Advances and open problems in
+federated learning,” Found. Trends Mach. Learn., vol. 14, nos. 1–2,
+pp. 1–210, Jun. 2021.
+[31] N. H. Tran, W. Bao, A. Zomaya, M. N. H. Nguyen, and C. S. Hong,
+“Federated learning over wireless networks: Optimization model design
+and analysis,” in Proc. IEEE Conf. Comput. Commun., Apr. 2019,
+pp. 1387–1395.
+[32] M. Tavallaee, E. Bagheri, W. Lu, and A. A. Ghorbani, “A detailed
+analysis of the KDD CUP 99 data set,” in Proc. IEEE Symp. Comput.
+Intell. Secur. Defense Appl., Jul. 2009, pp. 1–6.
+[33] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ensemble of autoencoders for online network intrusion detection,” in
+Proc. Netw. Distrib. Syst. Secur. Symp., 2018.
+[34] S. Rathore and J. H. Park, “Semi-supervised learning based distributed
+attack detection framework for IoT,” Appl. Soft Comput., vol. 72,
+pp. 79–89, Nov. 2018.
+[35] Y. Yang, K. Zheng, C. Wu, and Y. Yang, “Improving the classification
+effectiveness of intrusion detection by using improved conditional variational AutoEncoder and deep neural network,” Sensors, vol. 19, no. 11,
+p. 2528, Jun. 2019.
+[36] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set
+for network intrusion detection systems (UNSW-NB15 network data
+set),” in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015,
+pp. 1–6.
+[37] H. H. Pajouh, R. Javidan, R. Khayami, A. Dehghantanha, and K.-K.R. Choo, “A two-layer dimension reduction and two-tier classification
+model for anomaly-based intrusion detection in IoT backbone networks,”
+IEEE Trans. Emerg. Topics Comput., vol. 7, no. 2, pp. 314–323, Apr.
+2019.
+
+ZHANG et al.: BOOSTING THE PERFORMANCE OF MACHINE-LEARNING-BASED IDS
+
+[38] N. Moustafa, B. Turnbull, and K.-K.-R. Choo, “An ensemble intrusion
+detection technique based on proposed statistical flow features for
+protecting network traffic of Internet of Things,” IEEE Internet Things
+J., vol. 6, no. 3, pp. 4815–4830, Jun. 2019.
+[39] R. Alshammari and A. N. Zincir-Heywood, “Can encrypted traffic be
+identified without port numbers, IP addresses and payload inspection?,”
+Comput. Netw., vol. 55, no. 6, pp. 1326–1350, Apr. 2011.
+[40] C. Kolias, G. Kambourakis, A. Stavrou, and S. Gritzalis, “Intrusion
+detection in 802.11 networks: Empirical evaluation of threats and a public dataset,” IEEE Commun. Surveys Tuts., vol. 18, no. 1, pp. 184–208,
+1st Quart., 2016.
+[41] Y. Zhang et al., “Efficient and intelligent attack detection in software
+defined IoT networks,” in Proc. IEEE Int. Conf. Embedded Softw. Syst.
+(ICESS), Jul. 2020, pp. 1–9.
+[42] R. Fontes, S. Afzal, S. Brito, M. Santos, and C. Esteve Rothenberg,
+“Mininet-WiFi: Emulating software-defined wireless networks,” in Proc.
+11th Int. Conf. Netw. Service Manag., Nov. 2015, pp. 1–16.
+[43] Y. Fan, Y. Li, M. Zhan, H. Cui, and Y. Zhang, “IoTDefender: A federated
+transfer learning intrusion detection framework for 5G IoT,” in Proc.
+IEEE 14th Int. Conf. Big Data Sci. Eng. (BigDataSE), Guangzhou,
+China, Dec. 2020, pp. 88–95.
+[44] I. Sharafaldin, A. Habibi Lashkari, and A. A. Ghorbani, “Toward
+generating a new intrusion detection dataset and intrusion traffic
+characterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018,
+pp. 108–116.
+[45] N. Ravi and S. M. Shalinie, “Semisupervised-learning-based security to
+detect and mitigate intrusions in IoT network,” IEEE Internet Things J.,
+vol. 7, no. 11, pp. 11041–11052, Nov. 2020.
+[46] Y. Meidan et al., “N-BaIoT—Network-based detection of IoT botnet
+attacks using deep autoencoders,” IEEE Pervasive Comput., vol. 17,
+no. 3, pp. 12–22, Jul. 2018.
+[47] Q. Yan et al., “SpecMonitor: Toward efficient passive traffic monitoring
+for cognitive radio networks,” IEEE Trans. Wireless Commun., vol. 13,
+no. 10, pp. 5893–5905, Oct. 2014.
+[48] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection
+and diagnosis from system logs through deep learning,” in Proc. ACM
+SIGSAC Conf. Comput. Commun. Secur., Oct. 2017, pp. 1285–1298.
+[49] T. D. Nguyen et al., “Dı̈oT: A federated self-learning anomaly detection
+system for IoT,” in Proc. IEEE 39th Int. Conf. Distrib. Comput. Syst.
+(ICDCS), Aug. 2019, pp. 756–767.
+[50] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and
+P. Faruki, “Network intrusion detection for IoT security based on
+learning techniques,” IEEE Commun. Surveys Tuts., vol. 21, no. 3,
+pp. 2671–2701, 3rd Quart., 2019.
+[51] M. A. Al-Garadi, A. Mohamed, A. K. Al-Ali, X. Du, I. Ali, and
+M. Guizani, “A survey of machine and deep learning methods for
+Internet of Things (IoT) security,” IEEE Commun. Surveys Tuts., vol. 22,
+no. 3, pp. 1646–1685, 3rd Quart., 2020.
+[52] B. Claise, “Cisco systems netflow services export version 9,”
+RFC, vol. 3954, pp. 1–33, 2004. [Online]. Available: https://
+api.semanticscholar.org/CorpusID:6125326
+[53] (2026). CICFlowmeter: A Network Traffic Flow Generator and
+Analyzer.
+[Online].
+Available:
+https://www.unb.ca/cic/research/
+applications.html#CICFlowMeter
+[54] N. Wang, C. Zhang, Y. Xiao, Y. Chen, W. Lou, and Y. T. Hou,
+“FLARE: Defending federated learning against model poisoning attacks
+via latent space representations,” IEEE Trans. Dependable Secure Comput., vol. 22, no. 3, pp. 2607–2623, May 2025.
+[55] I. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing
+adversarial examples,” in Proc. Int. Conf. Learn. Represent., 2014.
+[56] R. Fotohi, F. Shams Aliee, and B. Farahani, “Decentralized and
+robust privacy-preserving model using blockchain-enabled federated
+deep learning in intelligent enterprises,” Appl. Soft Comput., vol. 161,
+Aug. 2024, Art. no. 111764.
+[57] R. Fotohi, F. Shams Aliee, and B. Farahani, “A lightweight and
+secure deep learning model for privacy-preserving federated learning
+in intelligent enterprises,” IEEE Internet Things J., vol. 11, no. 19,
+pp. 31988–31998, Oct. 2024.
+[58] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. 37th Int.
+Conf. Mach. Learn., vol. 119, pp. 1597–1607.
+[59] X. Xu and L. Zheng, “Multivariate feature extraction,” in Proc. 58th
+Annu. Allerton Conf. Commun., Control, Comput. (Allerton), Sep. 2022,
+pp. 1–8.
+[60] F. Pedregosa et al., “Scikit-learn: Machine learning in Python,” J. Mach.
+Learn. Res., vol. 12, pp. 2825–2830, Nov. 2011.
+
+5395
+
+[61] C. Li, X. Zeng, M. Zhang, and Z. Cao, “PyramidFL: A fine-grained
+client selection framework for efficient federated learning,” in Proc. 28th
+Annu. Int. Conf. Mobile Comput. Netw., Oct. 2022, pp. 158–171.
+[62] Y. Deng et al., “AUCTION: Automated and quality-aware client selection framework for efficient federated learning,” IEEE Trans. Parallel
+Distrib. Syst., vol. 33, no. 8, pp. 1996–2009, Aug. 2022.
+
+Chaoyu Zhang (Student Member, IEEE) received
+the Bachelor of Science degree in electrical engineering from Beijing University of Posts and
+Telecommunications, Beijing, China, in 2018, and
+the Master of Science degree in computer science
+from Arkansas State University, Arkansas, USA, in
+2021. He is currently pursuing the Ph.D. degree in
+computer science with Virginia Tech, USA, under
+the supervision of Prof. Wenjing Lou. His research
+focuses on machine learning security, network security, blockchain technology, and high-performance
+computing. He was a recipient of the Best Paper Award at IEEE CNS 2024.
+
+Shanghao Shi (Member, IEEE) received the B.S.
+degree in telecommunication engineering from Beijing University of Posts and Telecommunications
+in 2019 and the Ph.D. degree in computer science from Virginia Tech in 2025. He is currently
+a Post-Doctoral Research Associate of computer
+science with Washington University in St. Louis.
+His research focuses on network security and information privacy, with particular interests in machine
+learning security and privacy, wireless security, and
+CPS/IoT security.
+
+Ning Wang received the B.E. degree in communication engineering and the M.S. degree in electronics
+and communication engineering from Beijing University of Posts and Telecommunications, Beijing,
+China, in 2015 and 2018, respectively, and the
+Ph.D. degree in computer engineering from Virginia
+Tech in 2023. She is currently an Assistant Professor with the Department of Computer Science
+and Engineering, University of South Florida. Her
+current research interests include federated learning,
+anomaly detection, adversarial machine learning,
+differential privacy, and LLM applications in cybersecurity.
+
+5396
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Xiangxiang Xu (Member, IEEE) received the
+B.Eng. and Ph.D. degrees in electronic engineering
+from Tsinghua University, Beijing, China, in 2014
+and 2020, respectively. He is currently an Assistant
+Professor of computer science with the University
+of Rochester. Prior to joining the University of
+Rochester, he was a Post-Doctoral Associate with the
+Department of EECS, MIT. His research focuses on
+information theory, statistical learning, representation learning, and their applications in understanding
+and developing artificial intelligence and machine
+learning algorithms. He was a recipient of the IEEE PES Student Prize
+Paper Award in Honor of T. Burke Hayes and the Information Theory and
+Applications (ITA) Workshop Sand Award.
+
+Shaoyu Li (Student Member, IEEE) received the
+B.S. degree from the College of Cyber Science,
+Nankai University, and the M.S. degree from the
+College of Science and Engineering, University of
+Glasgow. He is currently pursuing the Ph.D. degree
+with the Department of Computer Science, Virginia
+Tech, under the supervision of Prof. Wenjing Lou.
+His research interests include network security and
+blockchain.
+
+Lizhong Zheng (Fellow, IEEE) received the B.S.
+and M.S. degrees from the Department of Electronic
+Engineering, Tsinghua University, and the Ph.D.
+degree from the Department of Electrical Engineering and Computer Science, UC Berkeley. Since
+2002, he has been with MIT, where he is currently a
+Professor of electrical engineering and computer science. His current research interests include statistics,
+information theory, and their applications in data
+science. He received the NSF CAREER Award, the
+AFOSR Young Investigator Award, and the IEEE
+Information Theory Society Paper Award. He is an Area Editor of IEEE
+T RANSACTIONS ON I NFORMATION T HEORY.
+
+Randy Marchany (Member, IEEE) has been
+involved in the computer industry since 1972. He is
+currently the Virginia Tech Information Technology
+Security Officer and the Director of Virginia Tech
+IT Security Laboratory. He is the co-holder of three
+cybersecurity patents on moving target IPV6 defense
+and IDS via power monitoring. His research interests are in network security and forensics. He is a
+member of the Center for Internet Security (CIS)
+working group that created version 8 of the CIS
+Security Controls. He is a Former Member of the
+Research, Education, Networking, Information Sharing, and Analysis Center
+(REN-ISAC) Board. He is an Executive Committee Member of Virginia Cyber
+Range. He is one of the founders of Virginia Alliance for Secure Computing
+and Networking, a consortium of security practitioners and researchers from
+the major universities in Virginia. He received the 2021 SANS Difference
+Maker Award. He was a recipient of the 2016 Shirley C. Payne IT Security
+Advancement Award, the 2000 SANS Institute’s Security Technology Leadership Award, the 2003 VA Governor’s Technology Silver Award, a member
+of the team that won the EDUCAUSE Excellence in Information Technology
+Solutions Award in 2005, and a member of the Virginia Cyber Range Team
+that won the 2017 Virginia Governor’s Technology Award for innovative use
+of technology in education.
+
+Mark Gardner (Member, IEEE) is currently the
+Network Research Manager of advanced research
+computing with the Division of Information Technology, Virginia Tech. His research interests include
+network monitoring and measurement, cybersecurity, virtualization, high-performance networking,
+high-performance storage and file systems, research
+computing, operating systems, and programming
+languages, including interpreters and compilers.
+
+Y. Thomas Hou (Fellow, IEEE) received the
+Ph.D. degree from the NYU Tandon School of
+Engineering in 1998. He is currently the Bradley
+Distinguished Professor of electrical and computer
+engineering with Virginia Tech, Blacksburg, VA,
+USA, where he joined in 2002. He has published over 400 papers in IEEE/ACM journals
+and conferences. He holds six U.S. patents. He
+has authored/co-authored two graduate textbooks,
+such as Applied Optimization Methods for Wireless
+Networks (Cambridge University Press, 2014) and
+Cognitive Radio Communications and Networks: Principles and Practices
+(Academic Press/Elsevier, 2009). His current research focuses on developing
+real-time optimal solutions to complex science and engineering problems
+arising from wireless and mobile networks. He is also interested in wireless
+security. He was named an IEEE Fellow for contributions to the modeling
+and optimization of wireless networks. His papers were recognized by 12
+best paper awards from IEEE and ACM, including the IEEE INFOCOM Test
+of Time Paper Award in 2023. He was the Steering Committee Chair of the
+IEEE INFOCOM Conference and a member of the IEEE Communications
+Society Board of Governors. He served on the editorial boards of several
+IEEE and ACM transactions and journals. He was a Distinguished Lecturer
+of the IEEE Communications Society.
+
+Wenjing Lou (Fellow, IEEE) is the W. C. English
+Endowed Professor of computer science with Virginia Tech. Her research interests cover many topics
+in the cybersecurity field, with her current research
+interests focusing on wireless network security, trustworthy AI, blockchain, and security and privacy
+problems in the Internet of Things (IoT) systems.
+She is a Steering Committee Member of IEEE
+INFOCOM and IEEE T RANSACTIONS ON M OBILE
+C OMPUTING. She served as the Program Director
+for U.S. National Science Foundation (NSF) from
+2014 to 2017. She is a Highly Cited Researcher by the Web of Science Group.
+She received the Virginia Tech Alumni Award for Research Excellence in
+2018 and the INFOCOM Test-of-Time Paper Award in 2020. She was the
+TPC Chair of IEEE INFOCOM 2019 and ACM WiSec 2020. She was the
+Steering Committee Chair of the IEEE CNS Conference from 2013 to 2020.
+PAPER_TEXT

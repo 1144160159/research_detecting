@@ -1,0 +1,138 @@
+5328                                                     IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+
+
+
+              A Unified Framework for Hybrid Network
+                         Intrusion Detection
+                            Yan Wang , Sheng Cao , Member, IEEE, Jingwei Li , Member, IEEE,
+                                       and Xiaosong Zhang , Senior Member, IEEE
+
+
+   Abstract—Lately, hybrid network intrusion detection systems                    aims to detect and respond to malicious behavior or secu-
+(HNIDSs) have progressed significantly. Through the cascade                       rity incidents promptly. Its primary function is to detect
+or ensemble of multiple machine learning models, HNIDS                            malicious network traffic and provide relevant information
+benefits from each model and achieves better performance.
+A widely adopted framework for designing HNIDS consists                           for network administrators to take defensive or responsive
+of two models: a misuse detector and an anomaly detector.                         measures. Most NIDS construct intrusion detection models
+However, (1) benign traffic must be analyzed by both models,                      through machine learning or deep learning, converting network
+reducing inference speed; (2) the misuse detector performs dual                   intrusion detection into anomaly detection or multi-class clas-
+functionalities, leading to suboptimal accuracy; (3) deploying                    sification tasks [3], [4], [5].
+the misuse and anomaly detectors on two devices introduces
+substantial latency and restricts distributed deployment. In this                    Due to the increasing types of malicious traffic, relying on
+article, we propose a unified framework called AUF. To solve                      a single machine learning model to accurately detect mali-
+(1), we deploy the anomaly detector in the first stage rather                     cious traffic is difficult [6], [7], [8]. Therefore, some studies
+than the second, which improves inference speed. To solve (2),                    attempted to integrate multiple machine-learning models to
+we employ two independent models to implement the misuse                          enhance the performance of intrusion detection, referred to
+detector’s functionality, enhancing overall accuracy. To solve
+(3), we ensure that the different models operate independently,                   as the HNIDS [9], [10], [11]. The core idea of HNIDS is
+supporting distributed deployment. To demonstrate the effec-                      to cascade multiple models and fully exploit their advan-
+tiveness of the AUF framework, we implement XGBoost for                           tages. However, due to the guidance of the framework, i.e.,
+detection and classification and propose an adaptive k-nearest                    specifying the functionalities required for each model and
+neighborhood-based approach to achieve accurate discrimina-                       their correlations, many HNIDSs simply cascade multiple
+tion. We also introduce zero-shot learning to showcase the
+framework’s customized model. Extensive experiments validate                      models together, as shown in Figure 1(a). This Non-framework
+the effectiveness of the AUF framework and methods. Our                           cascading tends to focus on improving the accuracy of
+code is available at https://github.com/wangyann2000/A-Unified-                   the hybrid model. However, they ignore some of the other
+Framework-for-Hybrid-Network-Intrusion-Detection.                                 important performance metrics, including detection accu-
+   Index Terms—Intrusion detection, anomaly detection, out-                       racy, functionality completeness (e.g., detecting malicious
+of-distribution detection, multi-class classification, zero-shot                  traffic and identifying malicious traffic classes), inference
+learning, network security.                                                       speed, and distributed deployment capability. For conve-
+                                                                                  nience, we name such an issue the “loss-gain imbalance”
+                           I. I NTRODUCTION                                       in HNIDS.
+                                                                                     Proposing the framework for guiding the design of HNIDS
+       HE NETWORK intrusion detection system (NIDS) is
+T      a security tool that monitors the network [1], [2]. It
+                                                                                  is the key to alleviating the “loss-gain imbalance,” where
+                                                                                  Kim et al. [12] construct the framework that combines a
+  Received 29 September 2024; revised 5 March 2025 and 13 July 2025;              misuse and an anomaly detector (MADF), as shown in
+accepted 11 September 2025. Date of publication 16 September 2025; date of        Figure 1(b). All traffic is first analyzed by the misuse detector,
+current version 5 December 2025. This work is supported by Key Research           followed by the anomaly detector for the MADF framework.
+and Development Program of Sichuan Province (2023ZHJY0006), Sichuan
+Province Science and Technology Support Program (2024NSFSC0004), and              The misuse detector identifies seen malicious traffic, i.e.,
+National Natural Science Foundation of China (U2336204). The associate            types/classes of malicious traffic available during training
+editor coordinating the review of this article and approving it for publication   based on comparing features stored in the database, while
+was R. Doriguzzi-Corin. (Corresponding author: Sheng Cao.)
+  Yan Wang and Jingwei Li are with the School of Computer Science and             the anomaly detector identifies unseen malicious traffic, i.e.,
+Engineering (School of Cyber Security), University of Electronic Science and      new types/classes of malicious traffic unseen during training
+Technology of China, Chengdu 610054, Sichuan, China.                              by detecting features that deviate from benign traffic. Traffic
+  Sheng Cao is with the School of Computer Science and Engineering (School
+of Cyber Security), the Yibin Park, the Sichuan–Chongqing Co-construction         that successfully passes the detection of both models will
+Key Laboratory of Digital Economy Intelligence and Security, and the              be considered benign traffic. Despite the MADF framework’s
+Blockchain Storage and Trade Engineering Center of Sichuan province,              attempt, it still suffers from the “loss-gain imbalance” issue:
+University of Electronic Science and Technology of China, Chengdu 610054,
+Sichuan, China (e-mail: caosheng@uestc.edu.cn).                                   (1) benign traffic that constitutes most of the network traffic
+  Xiaosong Zhang is with the School of Computer Science and Engineering           needs to pass through both models, resulting in low inference
+(School of Cyber Security) and the Shenzhen Institute for Advanced Study,         speed; (2) the misuse detector both differentiates between
+University of Electronic Science and Technology of China, Chengdu 610054,
+Sichuan, China.                                                                   seen and unseen malicious traffic and classifies seen malicious
+  Digital Object Identifier 10.1109/TNSM.2025.3609854                             traffic, leading to suboptimal accuracy; (3) the misuse and
+                1932-4537 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION                                                                         5329
+
+
+
+                                                                                 identify the categories of unseen samples with the help of
+                                                                                 auxiliary information. With the assistance of the classifier
+                                                                                 trained based on ZSL, administrators only need to provide
+                                                                                 auxiliary information and validate the classification results,
+                                                                                 thereby reducing labeling costs. The proposed semantic-
+                                                                                 guided zero-shot learning approach (SG-ZSL) enhances the
+                                                                                 correlation between auxiliary information and features by
+                                                                                 maximizing mutual information, thus extracting more discrim-
+                                                                                 inative features for unseen malicious traffic. We summarize
+Fig. 1.    (a) Visualization of the “Non-framework cascading”: Different
+methods introduce models with different functionalities, and the relationships   our contributions as follows:
+between models vary. All network traffic typically needs to pass through all        • Problem and Framework. We address the limita-
+models for analysis. (b) Visualization of the MADF framework: Two models               tions of “Non-framework cascading” and the MADF
+are responsible for separately detecting seen and unseen malicious traffic,
+requiring all traffic to be analyzed by both models. (c) Visualization of the          framework—the “loss-gain imbalance” issue in HNIDS—
+AUF framework: Most network traffic only needs to be analyzed by a single              by proposing a unified framework AUF. The AUF
+detector. The models are independent in functionality and support distributed          framework cascades four unified models: a detector,
+deployment.
+                                                                                       a discriminator, a classifier, and a customized model.
+                                                                                       HNIDS built upon the AUF will benefit from the
+anomaly detectors deployed across different devices lead                               unified framework’s advantage, with faster inference
+to high traffic transmission costs and introduce substantial                           speed, better overall accuracy, and distributed deployment
+latency, making distributed deployment difficult.                                      capabilities.
+   To tackle the “loss-gain imbalance,” we propose a unified                        • Discriminator. The adaptive KNN-based approach
+framework for HNIDS called AUF. As shown in Figure 1(c),                               exploits the distribution differences between seen
+the AUF framework consists of four unified, decoupled,                                 and unseen malicious traffic in nearest neighbors.
+cascaded models: a detector, a discriminator, a classifier, and a                      The adaptive k estimated based on local density
+customized model. The detector distinguishes between benign                            benefits minority classes, thereby achieving accurate
+and malicious traffic, including seen and unseen malicious traf-                       discrimination.
+fic. The discriminator differentiates between seen and unseen                       • Customized Model. We introduce ZSL to train a classifier
+detected malicious traffic and forwards seen malicious traffic                         as the customized model within the AUF framework to
+to the classifier. The classifier categorizes detected seen mali-                      reduce the labeling cost for unseen malicious traffic. The
+cious traffic into its corresponding classes. The customized                           semantic-guided and contrastive learning loss preserves
+model can be integrated in a cascaded manner to analyze                                semantic consistency and enhances the discriminability
+malicious traffic based on the requirements. Compared to the                           of malicious traffic features.
+MADF framework, the advantages of the AUF framework                                 • Sufficient Experiment Support. Our experimental results
+are threefold. Firstly, benign traffic accounts for most of the                        on the CIC-IDS2017 and the BoT-IoT datasets demon-
+network traffic and is analyzed only by the detector, thereby                          strate that the AUF framework (i) achieves satisfying
+improving inference speed. Furthermore, each model focuses                             performance both in individual models and in the cas-
+on implementing a single functionality, leading to better                              caded hybrid model, (ii) highlights the importance of
+performance than models handling multiple functionalities.                             handling class imbalance and generalization to unseen
+Finally, the decoupled models support distributed deployment,                          classes, and (iii) provides new baselines and insights for
+such as cloud-edge collaborative deployment. The detector can                          future research.
+be deployed on edge since malicious traffic detection requires
+high real-time performance. In contrast, the discriminator,
+                                                                                                      II. R ELATED W ORK
+classifier, and customized models can be deployed in the cloud
+to reduce the computational burden on edge devices.                              A. HNIDS Built Upon “Non-Framework Cascading”
+   We further introduce different methods to showcase                               Table I illustrates the differences in functionalities, infer-
+the design of HNIDS based on the AUF framework.                                  ence speed, and distributed deployment support between SOTA
+(1) Detector and Classifier: We adopt tree-based models                          HNIDS, where N, M, and U denote HNIDS built upon the
+adaptable in multiple scenarios as the detector and the clas-                    “Non-framework cascading,” the MADF framework and the
+sifier. (2) Discriminator: We propose an adaptive k-nearest                      proposed unified framework, respectively. Based on model
+neighborhood-based (KNN) approach for better discrimina-                         functionality, we categorize the models in HNIDS into detector
+tion. The key of the adaptive KNN-based approach is to                           (anomaly detector), discriminator, classifier (misuse detector),
+determine whether malicious traffic belongs to the seen or                       and the customized model. Detector refers to models built on
+unseen based on the number of neighbors from the seen                            anomaly detection techniques, characterized by their ability
+categories in k-nearest neighbors. The value of k for each                       to distinguish between benign and malicious traffic, regard-
+sample is adaptively determined according to its local density,                  less of whether the malicious traffic categories were seen
+mitigating the impact of class imbalance. (3) Customized                         or unseen during training. Discriminator refers to models
+model: 

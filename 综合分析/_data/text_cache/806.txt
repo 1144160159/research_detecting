@@ -1,0 +1,149 @@
+2430                                                                                                 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+
+         SOFA: Service-Oriented Fine-Grained Attack
+            Traffic Detection With Meta Learning
+  Peng Fang , Feiyang Huang, Ziming Zhao , Member, IEEE, Fan Zhang , Member, IEEE, and Wenrui Ma
+
+
+   Abstract—Enterprise networks face an ever-growing threat                    achieved certain effectiveness, existing methods still have
+from various unknown cyberattacks originating from the Inter-                  some limitations in practice [9]. We summarize the two
+net. Anomaly-based Network Intrusion Detection Systems (NIDS)                  challenges as follows.
+have become essential for safeguarding corporate networks, but
+existing technologies have some limitations in practice. (i) The
+                                                                                  (i) The interweaving of traffic from different service types
+interweaving of traffic from different service types increases the             increases the difficulty of identification. In existing traffic
+difficulty of identification. (ii) The scarcity of labeled malicious           classification studies, previous schemes fed all benign traf-
+samples hinders the detection of both known and emerging                       fic types (e.g., SSH, Web, FTP) into the model en bloc
+threats. To tackle these issues, we propose a service-oriented                 [10], [11], [12]. However, benign traffic comprises various
+approach to model benign traffic and leverage meta-learning                    applications with distinct behavioral patterns. This leads to
+to construct a robust metric space for precise sample com-
+parison. Based on this, we develop SOFA, a two-stage traffic                   misclassifications where a malicious session (a session refers
+detection framework. In the first stage, SOFA identifies distinct              to a bidirectional flow, uniquely identified by a 5-tuple <
+service types within the network and trains independent one-                   srcip, srcport, dstip, dstport, protocol >) may be closer to an
+class models for each, ensuring service-specific attack traffic is             unrelated benign session than to other malicious ones [13].
+detected with high precision. The second stage employs a ResNet-               For better understanding, we trained a one-class learner [14]
+based Siamese network to overcome the limitations posed by                     with benign traffic on a specific port (e.g., TCP port 21, 22
+scarce malicious samples, enhancing detection of both known
+and emerging attacks. We evaluate SOFA on four widely used                     and 80) and tested it on various malicious traffic. The results
+network tracing datasets, demonstrating that it achieves state-of-             in Fig. 1 uncover notable misclassification instances. For
+the-art performance and significantly outperforms a diverse set                example, DDoS attacks are hard to distinguish from normal
+of existing methods in fine-grained attack detection. These results            SSH traffic (Fig. 1a). Botnet activity on port 8080 overlaps
+highlight the potential of SOFA for improving network security                 with benign web traffic on port 80 (Fig. 1b) and FTP services
+in a highly dynamic and unbalanced threat environment.
+                                                                               on port 21 (Fig. 1c). However, these misclassification instances
+  Index Terms—Fine-grained attack detection, unknown attack                    occur on traffic of different types of services. Therefore, if we
+detection, Siamese network, service-oriented scheme.                           use service type to perform a preliminary screening on traffic,
+                                                                               a one-class learner will not struggle with these unnecessary
+                         I. I NTRODUCTION                                      misclassifications.
+                                                                                  Some studies analyze benign traffic by category (e.g.,
+
+E     NTERPRISE networks are increasingly targeted by
+      sophisticated cyberattacks, including both known and
+unknown threats [1], [2]. Protecting these networks requires
+                                                                               videos, emails) [14] or similarity (e.g., K-means clustering)
+                                                                               [15]. However, these methods fail to resolve the fundamen-
+                                                                               tal issue of interweaving traffic from different applications.
+advanced and scalable mechanisms to detect and mitigate such                   Moreover, their approach of forcing each session through
+threats. Among existing approaches, Network Intrusion Detec-                   multiple classifiers significantly reduces detection efficiency.
+tion Systems (NIDS) have undergone significant advancements                    As shown in Fig. 2, four classifiers in an enterprise network
+[3], evolving from signature-based [4], [5] to anomaly-based                   require each session to undergo four sequential detections.
+detection methods [6], [7], [8], driven by the rise of encryption              Under our experimental environment, a single model takes
+technologies and the growing prevalence of unknown threats.                    0.5 ms per session, while four models accumulate to 2.1 ms,
+Although the anomaly-based intrusion detection scheme has                      introducing latency that degrades user experience, especially
+                                                                               with numerous classifiers. Thus, a system that can route each
+  Received 13 January 2025; revised 2 August 2025; accepted 1 December
+2025; approved by IEEE T RANSACTIONS ON N ETWORKING Editor S. Lin.             session to the appropriate learner efficiently is critical. This not
+Date of publication 26 December 2025; date of current version 12 January       only improves detection speed but also enables fine-grained
+2026. This work was supported in part by the National Natural Science          identification of benign traffic by service type.
+Foundation of China under Grant 62227805 and Grant 62572437 and in part
+by the Key Research and Development Program of Zhejiang Province under            (ii) The scarcity of labeled malicious samples hinders
+Grant 2023C01039. (Corresponding authors: Ziming Zhao; Fan Zhang.)             the detection of both known and emerging threats. In an
+  Peng Fang, Feiyang Huang, Ziming Zhao, and Fan Zhang are with the            enterprise network environment, large volumes of normal
+College of Computer Science and Technology, Zhejiang University, Hangzhou
+310027, China (e-mail: fangpeng@zju.edu.cn; feiyanghuang@zju.edu.cn;           business traffic (e.g., web browsing, file transfers, and emails)
+zhaoziming@zju.edu.cn; fanzhang@zju.edu.cn).                                   coexists with relatively small amounts of malicious attack
+  Wenrui Ma is with the School of Computer Science and Technol-                traffic (e.g., DDoS, SqlInjection, and Botnet). This imbalance
+ogy, Zhejiang Gongshang University, Hangzhou 310018, China (e-mail:
+mawenrui@zjgsu.edu.cn).
+                                                                               makes it challenging for detection models to effectively learn
+  Digital Object Identifier 10.1109/TON.2025.3648394                           the characteristics of malicious traffic during training [16],
+             2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+FANG et al.: SOFA: SERVICE-ORIENTED FINE-GRAINED ATTACK TRAFFIC DETECTION WITH META LEARNING                                                             2431
+
+
+
+
+Fig. 1. Misclassification during training on single benign class and testing on different attack classes with dataset CICIDS2017. (a) Training with benign ssh
+traffic. (b) Training with benign web traffic. (c) Training with benign ftp traffic.
+
+
+                                                                                     design and meta-learning for fine-grained traffic detection
+                                                                                     in few-shot scenarios.
+                                                                                   • To overcome the limitations of coarse-grained modeling,
+                                                                                     we propose a one-class learner construction method for
+                                                                                     service triples, and develop a method to determine service
+                                                                                     triples through a pruning and reconstruction strategy of
+                                                                                     the session relationship graph, which does not depend on
+                                                                                     the characteristics of any protocol.
+Fig. 2. Comparison of detection efficiency of one-class learners. Sessions         • To enhance the accuracy of fine-grained detection in
+with the same color come from the same service.                                      few-shot scenarios, we propose applying Resnet to
+                                                                                     the Siamese network to construct a multi-classification
+often resulting in high false positive (FP) rates for a small                        learner. To mitigate the impact of noise on few-shot learn-
+number of attack samples. Although oversampling and data                             ing, we introduce a feature enhancement method, which
+augmentation schemes [17], [18] have been introduced to                              effectively improves the model’s detection accuracy.
+balance datasets across different categories, these methods                        • We implemented the prototype of SOFA and conducted
+typically rely on duplicating or synthesizing existing data,                         extensive experiments using various real-world malicious
+offering limited improvements in data diversity. Especially for                      traffic to verify its superior accuracy and efficiency com-
+unknown classes, previous solutions require large amounts of                         pared to SOTA.
+labeled malicious samples to achieve high detection accuracy                       The rest of the paper is organized as follows: Section II
+[8], [19]. However, in real-world scenarios, emerging attacks                   reviews related works. Section III presents the problem formu-
+such as zero-day exploits are rare and lack sufficient labeled                  lation. Section IV introduces the high-level design of SOFA.
+samples for effective training. This scarcity of labeled attack                 In Section V, we describe the detailed designs. In Section VI,
+samples limits the ability of conventional NIDS to adapt to                     we experimentally evaluate the performances. Section VII
+emerging threats.                                                               provides an in-depth discussion of SOFA and points out its
+   To address these challenges, we propose the novel Service-                   limitations. Section VIII concludes this paper.
+Oriented Fine-Grained Attack traffic detection (SOFA) frame-
+work, which redefines unknown attack detection as a two-stage
+                                                                                                          II. R ELATED W ORK
+task. In the first stage, a one-class anomaly detector identifies
+attacks using only benign traffic. To resolve traffic interweav-                   This section mainly summarizes the NIDS technologies
+ing issues, SOFA adopts service-oriented one-class modeling                     involved in this paper in terms of unknown attack detection
+based on service triplets.1 It first identifies all service triplets in         and few-shot detection, as shown in Table I. The column of
+the enterprise network and trains independent one-class mod-                    Few-Shot Learning indicates whether the model supports the
+els for each, enabling accurate detection of attacks targeting                  few-shot learning paradigm; Limited Labeled Samples signifies
+specific services by learning their normal traffic patterns. The                whether the model achieves practical performance when there
+second stage uses a multi-classifier to classify isolated attacks               are ≤ 15 labeled samples per class; Unknown Detection
+and recognize emerging ones. Leveraging meta-learning with                      indicates model’s ability to identify unknown attacks; Robust
+limited labeled samples, it utilizes a ResNet-based Siamese                     Detection represents the performance stability under traffic
+network, which is adept at capturing subtle distinctions in                     obfuscation or noise injection; Computational Efficiency refers
+known attacks, to detect both familiar and new variants.                        to whether the inference speed of the model ≤ 2ms.
+   In summary, the contributions of this paper are four-fold:                      NIDS with Unknown Attack Detection. Unknown
+   • We carefully examine the problems of current anomaly-                      attack detection mainly includes unsupervised learning, semi-
+      based NIDS in practice and summarize them as two key                      supervised learning methods. (i) Unsupervised methods. Many
+      challenges. To facilitate addressing the above issues, we                 unsupervised learning methods have been proposed to identify
+      propose SOFA, a framework based on service-oriented                       outliers in network traffic, mainly using clustering methods
+                                                                                [20], [21], graph association methods [14], [22] and encoder-
+  1 A service triplet <ip, port, protocol> uniquely identifies a server-side    decoder learning methods [23]. These methods are unable to
+process (server-side socket).                                                   identify malicious behavior in a fine-grained manner, and the
+2432                                                                                 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+                                                            TABLE I
+                                                C OMPARISON OF D ETECTION M ODELS
+
+
+
+
+sparsity of benign traffic increases the difficulty of model      [30] constructed a FS-IDS framework based on a Prototype
+training and fitting, resulting in a high false alarm rate.       network, encoding traffic into grayscale images and combining
+(ii) Semi-supervised methods. Semi-supervised methods (e.g.,      it with autoencoder feature fusion. Du et al. [28] introduced
+Cls-Anomaly [15], FARE [19], FOSS [8]) combine unsuper-           BFS-NID, which combines visual Transformer self-supervised
+vised feature learning with limited labeled data. Although        pretraining and branch classifier learning modules to optimize
+some methods have utilized the labels of few samples to           prototype representations. Similarly, Chai et al. [29] proposed
+i

@@ -1,0 +1,712 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019 445
+
+Mobile Encrypted Traffic Classification Using Deep
+ Learning: Experimental Evaluation, Lessons
+ Learned, and Challenges
+ Giuseppe Aceto , Domenico Ciuonzo , Senior Member, IEEE,
+ Antonio Montieri , Graduate Student Member, IEEE, and Antonio Pescapé , Senior Member, IEEE
+
+ Abstract—The massive adoption of hand-held devices has led satisfied. The process of associating network traffic with speto the explosion of mobile traffic volumes traversing home and cific applications is known as Traffic Classification (TC)
+enterprise networks, as well as the Internet. Traffic classifi- and has a long-established application in several fields [1].
+cation (TC), i.e., the set of procedures for inferring (mobile)
+applications generating such traffic, has become nowadays the Notwithstanding, TC is challenged by the massive diffuenabler for highly valuable profiling information (with certain sion of handheld devices (as supported by recent evaluations
+privacy downsides), other than being the workhorse for ser- in Internet usage [2]), which is revolutionizing the nature
+vice differentiation/blocking. Nonetheless, the design of accurate and the composition of traffic traversing home and enterclassifiers is exacerbated by the raising adoption of encrypted prise networks and connecting contents and services over the
+protocols (such as TLS), hindering the suitability of (effective)
+deep packet inspection approaches. Also, the fast-expanding set Internet. Thus, the necessity and the difficulty of mobile TC
+of apps and the moving-target nature of mobile traffic makes have both become consistently high nowadays, fueled (other
+design solutions with usual machine learning, based on man- than common drivers for TC) by valuable profiling informaually and expert-originated features, outdated and unable to tion (e.g., to advertisers, insurance companies, and security
+keep the pace. For these reasons deep learning (DL) is here agencies) [3], [4], while also implying privacy downsides (e.g.,
+proposed, for the first time, as a viable strategy to design practical mobile traffic classifiers based on automatically extracted recognition of context-sensitive apps, such as health and datfeatures, able to cope with encrypted traffic, and reflecting their ing ones, and in case of bring-your-own-device policies from
+complex traffic patterns. To this end, different state-of-the-art DL companies).
+techniques from (standard) TC are here reproduced, dissected Equally important, the growing adoption [5], [6] of
+(highlighting critical choices), and set into a systematic frame- encrypted protocols (TLS) as well as network address transwork for comparison, including also a performance evaluation
+workbench. The latter outcome, although declined in the mobile lation and dynamic ports, poses new challenges to accurate
+context, has the applicability appeal to the wider umbrella of TC, defeating established approaches such as deep packet
+encrypted TC tasks. Finally, the performance of these DL classi- inspection and port-based methods [7]. Indeed, the presence
+fiers is critically investigated based on an exhaustive experimental of Encrypted Traffic (ET) is a severe limitation that can be
+validation (based on three mobile datasets of real human users’ bypassed only in closed-world enterprise scenarios and adoptactivity), highlighting the related pitfalls, design guidelines, and
+challenges. ing workarounds as man-in-the-middle proxies [8]. Moreover,
+ other than the ET issue, mobile TC comes with exacerbated
+ Index Terms—Traffic classification, mobile apps, Android apps, challenges and requirements due to (i) a large number of
+iOS apps, encrypted traffic, deep learning, automatic feature
+extraction. apps to discriminate from and (ii) the automatic frequent
+ updates of the apps—leading to inadequate number of train-
+ I. I NTRODUCTION ing samples per app and hindering the achievement of targeted
+ ARIOUS tools, such as security/quality-of-service performance.
+V enforcement devices and network monitors, rely on the
+knowledge of the application generating the traffic and thus are
+ Hence, classifiers based on Machine Learning (ML) are
+ deemed the most appropriate, especially in this context, since
+limited (or impaired) when this requirement is not completely they suit also ET while not necessarily relying on port information [9]–[11], and they are also able to discriminate traffic
+ Manuscript received May 24, 2018; revised September 25, 2018 and generated from several apps.1 However, the successful use
+February 1, 2019; accepted February 5, 2019. Date of publication of standard ML classifiers relies on obtaining handcrafted
+February 12, 2019; date of current version June 10, 2019. The associate editor coordinating the review of this paper and approving it for publication was (domain-expert driven) features, which in TC context usually
+N. Zincir-Heywood. (Corresponding author: Antonio Pescapé.) correspond to statistics extracted from the sequence of pack-
+ G. Aceto and A. Pescapé are with the DIETI, University of Napoli ets [9], [13] or message sizes [14], [15]. Sadly, such process
+Federico II, 80125 Naples, Italy, and also with Network Measurement
+and Monitoring, 80143 Naples, Italy (e-mail: giuseppe.aceto@unina.it; is time-consuming, unsuited to automation, and it is becompescape@unina.it). ing rapidly outdated when compared to the evolution and mix
+ D. Ciuonzo and A. Montieri are with the DIETI, University of
+Napoli Federico II, 80125 Naples, Italy (e-mail: domenico.ciuonzo@unina.it;
+antonio.montieri@unina.it). 1 ML techniques can be also hybridized with port-association algorithms (in
+ Digital Object Identifier 10.1109/TNSM.2019.2899085 scenarios where port information can be considered reliable), e.g., [12].
+ 1932-4537 c 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+446 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+ TABLE I
+of mobile traffic, being a constantly moving target, and pre- L IST OF THE ACRONYMS U SED IN THE M ANUSCRIPT
+cluding the design of accurate and up-to-date mobile-traffic
+classifiers [10], [13], [16] with “traditional” ML approaches.
+Based on these considerations, we believe that Deep Learning
+(DL), which allows to train classifiers directly from input
+data by automatically learning structured (and complex) feature representations [17], may be the stepping stone toward
+high-performing TC in the dynamic and challenging mobile
+context.
+ However, a naïve adoption of DL techniques to (mobile) TC
+may imply misleading design choices and lead to biased conclusions, due to the peculiar (and tricky) nature of network
+traffic data. This constitutes, in our opinion, one of the
+main gaps to fill (viz. the prerequisite) for the capitalization of DL assets to mobile TC, thus echoing its successful
+use in “mature” fields, e.g., image and natural language
+processing [17].
+ Hence, this paper proposes for the first time (see Table II)
+the design of mobile traffic classifiers (able to operate with
+ET) via the adoption of DL umbrella. To this end, this work The rest of the paper is organized as follows. Section II
+resorts on the development of a systematic framework for the reviews the related TC literature for the present work, whereas
+design of novel DL-based TC architectures and comparison Section III describes the DL framework for mobile TC, focusof existing ones, declined herein in the mobile scenario, but ing on key aspects to address, including the performance
+having a wider applicability to encrypted TC.2 This originates evaluation workbench here proposed; the experimental evaluafrom a critical analysis (later provided in Section II) of sev- tion is reported and discussed in Section IV; finally, Section V
+eral non-mobile-specific DL classifiers recently appeared in provides lessons learned and highlights challenges. For the
+TC literature [19]–[24] and here reproduced (so as to avoid sake of readability, the acronyms used in this manuscript are
+focusing on a specific DL technique and draw close-to-general summarized in Table I.
+conclusions).
+ In detail, the proposed framework dissects the DL-based TC II. BACKGROUND
+problem from different viewpoints (highlighted via Fig. 1):
+ Several recent works have dealt with TC of mobile apps,
+(A) the TC object adopted, (B) the type (and the amount)
+ mainly under the assumption of ET. Nonetheless, TC in both
+of input data fed to the DL classifier, (C) the DL archia mobile and encrypted scenario by means of DL appears
+tecture employed, and (D) the required set of performance
+ currently unexplored. To this end, we first describe foremost
+measures for an objective and comprehensive evaluation.
+ works performing TC in the mobile context, using standard
+Our framework is then applied to a realistic experimental
+ ML-based approaches to deal with encrypted traffic. Then, we
+setup, consisting of three different (mobile) datasets of real
+ briefly discuss DL applied to the conceptually-similar task of
+human users’ activity, to assess the most appealing tech-
+ Website Fingerprinting (WF), and, finally, we introduce the
+niques, the potential gain w.r.t. ML-based best alternatives
+ literature applying DL to Internet TC (i.e., not focusing on
+and shallow architectures (to justify the need for complex
+ the mobile context). These three groups of related work are
+hierarchically-arranged features), and highlight open issues
+ categorized in Table II, so as to sum up their main aspects and
+for real-time and accurate mobile TC via DL. Up to our
+ highlight their limitations in comparison to the present study.
+knowledge, no similar systematic approach and experimental investigation have been performed in the mobile scenario
+to date. The outcomes of this work underline the deficien- A. Classification of Mobile Encrypted Traffic
+cies of current DL-based traffic classifiers and the need for: A user fingerprinting scheme for devices that learns
+(i) unbiased, informative, and heterogeneous inputs extrap- their traffic patterns by analyzing background activities
+olated from traffic data, (ii) sophisticated DL architectures, (quantified as 70% of smartphone traffic) is developed
+and (iii) a rigorous and multifaceted performance evalua- by Stöber et al. [25]. Based on 3G transmissions, bursts of
+tion. This study represents a first attempt to address (i) data are leveraged to extract statistical features which are used,
+and (ii) issues, being also a “safe” groundwork for paving via ML-based classifiers, to infer the specific user generatthe way to the design of accurate DL-based classifiers cop- ing them. Differently, Wang et al. [26] propose a ML-based
+ing with highly-diverse mobile traffic, whereas it provides framework for app-usage classification considering Wi-Fi ET.
+designers with a fine-level performance evaluation work- Traffic frames are collected by running different iOS apps
+bench (iii). (among 8 categories) for 5 minutes. Results show an unexpected behavior of some apps with the increase of the training
+ 2 Preliminary results in the same framework of this study have been time, highlighting the lack of an accurate ground-truth labelpublished as a conference publication [18]. ing that affects classification performance. AppScanner is a
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 447
+
+ TABLE II
+ S UMMARY OF P REVIOUS W ORKS . F IRST G ROUP A DOPTED ML, S ECOND AND T HIRD O NES E MPLOYED DL. S TARRED W ORKS A IM AT WF
+
+framework for fingerprinting and identification of mobile apps the best classifier) is observed when the OS/vendor is different.
+developed by Taylor et al. [13]. An SVC and an RF are Aging of training data caused by app updates is also taken into
+trained/tested with statistical (and raw) features extracted from account. Recently, a novel multi-classification approach enjoythe vector of the sizes of packets grouped based on timing and ing the fusion of state-of-the-art classifiers devised for mobile
+destination IP address/port aggregation criteria (service burst). and encrypted TC is proposed in [16]. Four classes of combi-
+App fingerprints are obtained by automatically running the 110 nation techniques varying in accepted classifiers’ outputs (i.e.,
+most popular apps from Google Play Store and preprocessing soft or hard), training requirements, and learning philosophy
+the traces to remove background traffic and TCP retransmis- are compared. Based on a dataset of real users’ activity (as
+sions and errors. Experimental results, other than satisfactory opposed to [10], [13], [29], and [30], employing bot-generated
+TC performance (shown in Table II), show an average 99% mobile traffic), combination results present a performance gain
+accuracy in single app identification. A comparison with state- according to all considered metrics.
+of-the-art alternatives devised for the (conceptually-)similar
+WF task [31], [32] is also done, showing that AppScanner is
+able to significantly outperform them. More extensive analyses B. Website Fingerprinting Using Deep Learning
+(on a larger dataset) of AppScanner are conducted in [10], to Henceforth, we first discuss the applications of DL
+assess classification performance degradation due to apps’ fin- to the (conceptually-similar) problem of (encrypted) WF.
+gerprint variation/aging because of different used device/app Oh et al. [24] study the usage of DL for WF and also prove
+versions. Remarkable applications of decision trees are also its effectiveness on feature extraction (via AE) for state-offound in [27] and [28] for the encrypted TC problem, whereas the-art ML algorithms. Results underline that DL architectures
+the RF (with features obtained starting from a hierarchical successfully detect which website the user visited among 100
+clustering approach) is also employed in [29] for action fin- websites against 100k background websites. A novel DL-based
+gerprinting of a certain app. The WF methods described in method to deanonymize Tor traffic is proposed in [33] and
+[31] and [32] are also employed by Alan and Kaur [30] to tested on a very-large WF dataset made of ≥ 3 · 106 network
+check out whether Android apps can be identified from their traces. Results highlight that performance achieved via DL is
+launch-time traffic using only TCP/IP header information. In comparable to state-of-the-art deanonymization attacks, with
+the best case considered, i.e., when training and test samples the best-performing DL model being +2% accurate. Finally,
+are collected on the same device, apps can be identified with Sirinam et al. [34] develop a WF attack against Tor which
+88% accuracy. Differently, a significant drop (up to 26% for is evaluated against state-of-the-art defenses (i.e., WTF-PAD
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+448 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+and Walkie-Talkie). Performance evaluation in an open-world
+setting shows that the attack is effective against undefended
+traffic, while still relevant (95/70% of precision/recall) in case
+WTF-PAD defense is employed.
+
+C. Standard Traffic Classification Using Deep Learning
+ Herein we complete our review of related literature by
+discussing recent DL proposals to standard TC. Wang [19]
+ Fig. 1. Framework for comparison and tuning of DL architectures for TC.
+suggests a first DL approach (based on SAE), applied to clear
+traffic identification (but adaptable to ET), and compares it to
+standard neural networks on a dataset made of 300k records Deep Packet is compared to state-of-the-art ML classifiers on
+stripped of duplication and HTTP traffic. Results show that the same dataset, showing to outperform the latter in both
+SAE outperforms the latter and achieves high performance in application identification (K-Nearest Neighbors) and traffic
+protocol identification (taken from 58 different typologies) and characterization (C4.5).
+a class prediction probability ≥ 80% (resp. ≥ 90%) on 6.7k Different DL architectures for encrypted TC, based on
+(resp. 5.5k) out of 10k traffic samples unrecognizable via deep hybrid compositions of Long Short-Term Memory (LSTM)
+packet inspection. The SAE (trained on manually-designed and 2D-CNN layers, are proposed in [23]. The best-performing
+features) is also recently applied to TC in [35], showing that of these variants (named “CNN+RNN-2A” therein) attains
+it outperforms a SVC and achieves a high F-measure on a ≥ 95% metrics on a dataset captured on Spanish academic
+real-world traffic dataset. A novel malware TC, based on 2D backbone network ‘RedIRIS’ and made of 266k biflows
+Convolutional Neural Networks (CNNs) and explicitly devised from 108 distinct services. The analysis also highlights (i)
+for ET, is proposed in [20]. The approach is tested on a dataset a performance drop by including inter-arrival times in the
+(≈ 752k instances) consisting of (i) 10 malware traffic types input and (ii) that 5 ÷ 15 packets are enough for satisfying
+from public websites and (ii) 10 normal traffic types, in two results. In [38] a novel feature optimization approach, based
+different tasks: (i) malware vs. normal (binary) and (ii) traffic- on deep belief networks and ML-based feature selection techtype (20 classes) classification. Also, two different choices niques is devised to improve TC performance, by overcoming
+of raw “traffic images” (named “ALL” and “L7”) dependent the negative impacts of multi-class imbalance and concept
+on the protocol layers considered to extract the input data, drift. Experiments on real traffic show that the approach outare used to feed the classifier, showing that (biflow-based) performs existing ML classifiers and a deep belief network
+TC with “ALL” is the most informative and reaches elevate without feature selection. Another application of DL to TC
+performance for all the metrics considered. In [21] the same with imbalanced network data is found in [39], where an
+authors propose a similar approach for encrypted TC based auxiliary-classifier generative adversarial network is used to
+on a 1D-CNN. Experiments, conducted on a selection of the generate synthesized samples (in the form of a set of hand-
+“ISCX VPN-nonVPN” dataset [41], consist of four different crafted features) for training set balancing, to be used by ML
+setups: (i) VPN/nonVPN (binary) classification, (ii) encrypted classifiers. The method, tested on NIMS dataset, outperforms
+TC (6 classes), (iii) TC of VPN-encapsulated data (6 classes), a counterpart based on the synthetic minority over-sampling
+and (iv) encrypted TC (12 classes). Consistently with [20], technique.
+the configuration “Biflow + ALL” performs the best and To the best of our knowledge, the sole application of DL
+the configuration-optimized 1D-CNN always achieves higher to mobile TC, other than our preliminary work [18], seems to
+accuracy than a 2D-CNN counterpart (being both however be [40], where a DL classifier, based on variational AE and
+≥ 80%) in all the setups, and (almost) always outperforms the input data taken from the reconstructed HTTP session (i.e.,
+C4.5 classifier originally designed by Draper-Gil et al. [41]. designed only for clear traffic) is proposed and tested on a
+ More recently, in [36] the problem of handling multiple self-generated dataset.
+TC problems (i.e., malware detection, recognition of VPNencapsulation, and Trojan classification) at once via a single
+2D-CNN DL architecture is tackled. The 2D-CNN is tested on III. F RAMEWORK FOR C OMPARISON AND T UNING OF
+a merge of “CTU-13” (malware) and “ISCX VPN-nonVPN” D EEP L EARNING –BASED T RAFFIC C LASSIFICATION
+traffic datasets, and shown to outperform each element of This section dissects the state-of-the-art of DL in TC, by
+comparison for each task considered. Another study on DL- focusing on the following viewpoints: (A) the traffic object
+based TC of malware is represented by [37], dealing with (i.e., the type of traffic aggregate, also known as traffic
+issues of an imbalanced dataset via “weighted” backpropaga- view [1]), (B) the types of input data extracted to feed the
+tion and a hierarchical approach exploiting both raw data and DL architectures, (C) the DL architectures employed, and (D)
+handcrafted features. Experimental results on a self-generated the performance evaluation measures used. Based on these
+dataset show that the proposed approach outperforms stan- points, Fig. 1 sketches out the framework devised for the sysdard ML/DL alternatives. The same dataset is also used to tematic comparison of DL-based traffic classifiers. It is worth
+test Deep Packet [22], a DL-based (namely 1D-CNN and pointing out that all the DL classifiers proposed for TC have
+SAE) framework for encrypted TC working at packet-level. been carefully analyzed and reproduced, e.g., by setting the
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 449
+
+hyperparameter values suggested in their respective works or in [20] and [21]. Then, since the considered data are typperforming a basic tuning procedure when the latter are not ically captured at data-link layer, the payload from frames
+reported. Specifically, we leveraged DL models provided by of layer 2 is extracted. However, the traffic provided in this
+Keras [42] (Python) API running on top of TensorFlow to case is always in the form of PCAP files, containing informaimplement and test the approaches described in the following. tion that could introduce a bias in the classification results.4
+ Specifically, in [20] and [21] only the first 784 bytes of each
+ TC object are employed.
+A. Traffic Object
+ Finally, the third type of input data is represented by
+ Different traffic objects have been considered in the TC liter- selected protocol fields (not pertaining to the explicit inspecature. The definition of a specific traffic object determines how tion of encrypted payload) of the first Np packets. For
+raw traffic is segmented into multiple discrete traffic units [1]. example, Lopez-Martin et al. [23] consider only the first 20
+It is worth noticing that all the works approaching the TC packets exchanged into a TC object (a biflow), and, for each
+using DL [19]–[21], [23] considered either flows or biflows as packet, the following 6 fields are extracted (thus a 20 × 6
+the relevant objects of classification, with the sole exception matrix is obtained for each TC object): source and destiof [22]. More specifically, a flow is defined as all the packets nation ports, number of bytes in transport layer payload,
+having the same 5-tuple (i.e., source IP, source port, destina- TCP window size,5 inter-arrival time, and packet direction
+tion IP, destination port, and transport-level protocol) taking (∈ {0, 1}). We highlight that the (binary-valued) sequence of
+into account their directions. Differently, a biflow includes both packets/messages directions has been also recently employed
+directions of traffic sharing a given tuple (i.e., the source and in DL-based WF [24], [33].
+the destination are interchangeable). Finally, in [22] the object Finally, we conclude the discussion mentioning that in all
+of classification is the single packet (i.e., the classification is the above cases, there may be instances longer or shorter
+performed at packet level), corresponding to the finest granu- than the considered fixed-length data inputs. In such cases,
+larity for a TC problem (and virtually representing the hardest longer instances are truncated to the designed length of bytes
+setup for the corresponding classification task). or packets, in the case of first/second or third type of data,
+ respectively, whereas in the case of shorter instances, padding
+B. Types of Input Data with zeros is always applied in all the discussed works.
+ The type of data being fed to the surveyed DL architectures
+may be roughly categorized within three types: C. Deep Learning–Based Classification Architectures
+ I the first N bytes of payload of TC object [19]–[21]; Herein we review the architectures employed for DL-based
+ II the first N bytes of raw data pertaining to the PCAP file TC. For convenience, we define the m th instance of the trainrelated to the TC object [20], [21]; ing set (made of M samples) as x (m) while the corresponding
+ III informative data fields of first Np packets [23]. label with (m) , belonging to one among L different classes
+ Based on the aforementioned categorization, it is worth (i.e., (m) ∈ {1, . . . , L}). All the considered DL classifiers are
+noticing that all the types of input data considered for DL trained to minimize the categorical cross-entropy [17]:
+are naturally suited for “early” TC [43]. M
+  L 
+  
+ In the first case, the data being fed to the DL architecture L(·)  − tl,(m) log pl,(m) (1)
+is represented by payload only, with input data in binary for- m=1 l=1
+mat. In all these works, the payload is arranged in a byte-wise In the above equation, the one-hot representation of the label
+fashion and normalized so as to constrain it within [0, 1].  T
+ p (m)  p1,(m) · · · pL,(m) and of the corresponding pre-
+The choice is always justified as a means to reduce the input  T
+size for the DL architecture. On the other hand, the layer dicted vector t (m)  t1,(m) · · · tL,(m) are employed.
+and size of the payload being chosen depend on the specific The minimization of the loss L(·) is achieved by means of
+work. For example, in [19] these correspond to the first 1000 standard (first-order) local optimizers (e.g., stochastic gradibytes of TCP payload. A similar choice is made in [20] and ent descent, adaptive moment estimation, etc.), resorting to
+[21] for the input labeled as “L7”, where 784 bytes from the the usual back-propagation for gradients evaluation.
+application layer in TCP/IP model are considered. Differently, SAE: The SAE (Fig. 2(a)) relies on the basic AutoEncoder
+Lotfollahi et al. [22] consider the first 1500 payload bytes at (AE), commonly employed for (unsupervised) feature learnlayer 2, i.e., the IP header and the first 1480 bytes of each IP ing, and whose aim is to (ideally) set the output y (m) ≈ x (m) ,
+payload which results in a 1500 bytes input vector.3 ∀m = 1, . . . , M , by learning a compressed data representa-
+ The second type of input data attempts to gather infor- tion. Specifically, the first AE block (i.e., the encoder) provides
+mation from all protocol layers (denoted with “ALL” layers a lower-dimensional data representation (via a hidden layer of
+in [20] and [21]) as in some relevant cases the data from levels neurons), whereas the second block (i.e., the decoder) tries to
+lower than layer 7 also contain some useful traffic informa- reconstruct the data from the compressed representation.
+tion (such as transport-layer ports or flags), as pointed out 4 We underline that extraction of “ALL” layers input includes PCAP metadata besides raw packet data (from MAC layer, included). In detail, PCAP
+ 3 Additionally, the authors apply also a pre-processing step to cope with global header is of 24 bytes and each packet is also prepended with a 16-byte
+unequal transport-layer header lengths, by padding with zeros the end of the header, including a timestamp at μs granularity and packet size information.
+UDP-datagram headers up to TCP-segment headers length. 5 The TCP window size is set to zero for UDP packets.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+450 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+Fig. 2. DL architectures for TC: SAE (a), CNN (b), LSTM (c).
+
+ In practice, to obtain improved performance, a more com- LSTM: An LSTM (Fig. 2 (c)) is a popular (easier to
+plex (hierarchical) architecture, namely the SAE, has been train) variant of recurrent neural networks (having unit conproposed [17]. This scheme employs unsupervised greedy nections forming a directed cycle), able to model dynamic
+layer-wise pre-training (top part of Fig. 2 (a)) which stacks temporal behaviors with “long-term dependencies” [17]. A
+up several AEs so that the lower-dimensional representation neural network made of LSTM units is often called an LSTM
+obtained from j th AE is used as the input of (j + 1)th AE network.
+(i.e., each layer of network is trained by keeping the weights An LSTM unit is in charge of “remembering” values (via
+of lower layers frozen). After training greedily AE layers, a a state vector h[t]) over arbitrary time intervals and is comfinal softmax layer is added and supervised fine-tuning (i.e., posed of a cell, input, output, and forget gates, while having
+a refinement of all layers’ weights) of the whole network as input a vector sequence of length T : x [1], . . . , x [T ] (i.e.,
+(bottom part of Fig. 2 (a)) for the classification task is per- each training instance is a matrix). The final hidden state
+formed (i.e., using x (1) , . . . , x (M ) along with (1) , . . . , (M ) ). h[T] corresponds to the output of LSTM unit. A standard
+A relevant application of SAE to TC is found in [22], con- LSTM network for classification is usually terminated with a
+sisting of five stacked layers—with {400, 300, 200, 100, 50} few fully-connected layers, with last having a softmax actineurons and 25% dropout-probability [17] after each layer vation. On the other hand, when several LSTM layers are
+(to mitigate over-fitting)—all employing rectified linear unit stacked, they expose as output (except for the last one) the
+activations. finer-grained time-evolution of the state vs. the input sequence,
+ CNN: The CNNs (Fig. 2 (b)) are widely-used DL mod- h[1], . . . , h[T ] (modeling a “return-sequences” behavior),
+els, inspired by visual mechanism of living organisms, and forming the input to the higher LSTM layer.6 For example
+made of chained convolutional layers, each comprising a set of in [23] a standard LSTM ending with two fully-connected
+translation-invariant filters (conceived in either 1D or 2D form, layers of 100 and 108 nodes (the latter being the number of
+depending on the specific input nature) with a limited extent services to discriminate from) is considered. Interestingly, a
+(the “receptive field”) which are convolved with the input with stack of LSTM layers is also proposed in [23] in the context
+the aim of extracting features of a certain input region. Another of hybrid architectures, as described henceforth.
+important CNN component is the pooling layer, typically fol- Hybrid DL Architectures: The discussed elementary learnlowing a convolutional layer and whose function is to perform ing layers can be also jointly employed within a single
+down-sampling (max- and average-pooling are the most com- DL architecture. For example, architectures based on the
+mon) of intermediate representations, aiming at complexity combination of 2D convolutional and LSTM layers may be
+reduction and overfitting mitigation. The higher CNN layers conceived [23], where the output tensor of the convolutional
+are usually a few fully-connected (similar to AE compressing layer is reshaped into a matrix fed as input to an LSTM unit.
+stage) layers, with the last having the essential softmax activation. For example, the architecture in [21] is made of two D. Performance Evaluation Workbench
+1D convolutional layers (with 32 and 64 filters, respectively),
+ The proposed comparison framework includes the following
+each followed by a 1D max-pooling, and terminated with two
+ common performance measures [1]: accuracy (the fraction of
+fully-connected layers.
+ correctly classified instances), precision (prec, i.e., the propor-
+ Similarly, the CNN in [20] is obtained by replacing 1D with
+ tion of classifier decisions for a given class which are actually
+2D (pooling/convolutional) layers and interpreting the input as
+ correct), recall (rec, i.e., the class-conditional accuracy), and
+a “traffic image”. A similar 2D-CNN is also considered in [23],
+ specificity (spec, i.e., the proportion of actual negatives of
+where batch normalization [17] is also applied after each maxa class that are correctly identified as such). Since the latpooling layer. Differently, in [22] a 1D-CNN consisting of two
+ ter three are defined on a per-app basis, we consider the
+1D convolutional layers (200 and 80 filters, respectively, with
+ F-measure F  (2 · prec · rec)/(prec + rec) and the G-mean
+1D average-pooling) and seven fully-connected layers (with √
+ G  rec · spec so as to account for their effects concisely,
+{600, 500, 400, 300, 200, 100, 50} neurons), all having rectified linear unit activations, is considered. Additionally, to 6 We highlight that for successive LSTM layers, the temporal-dimension of
+avoid the over-fitting, 25% dropout after pooling layer and data input does not change, whereas the vector-size of the successive inputs
+early stopping technique are adopted [17]. does, being function of the size of the hidden state.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 451
+
+and employ their arithmetically averaged (viz. macro) ver- - Jan. ’17 (resp. Sept. ’14 - Jan. ’17), generated by users with
+sions. Moreover, the concept of Top-K accuracy (recently used different devices and OS/app versions, and provided already
+in WF [24]) is employed, defining a correct classification event anonymized and cleaned from background traffic. In detail,
+if the true app is within the top K predicted labels (K < L is a ≈ 89% (resp. ≈ 85%) of Android (resp. iOS) traces has been
+free parameter)7 and allowing to investigate the soft-output of captured in ’16. As a whole, the dataset is made up of 607
+a DL classifier. Finally, we consider also confusion matrices (resp. 419) traffic traces, with mean duration of 282 (resp. 296)
+with the aim of identifying the most frequent misclassification seconds and 1 ÷ 60 (resp. 1 ÷ 48) traces per app in Android
+patterns. (resp. iOS), leading to a non-negligible class imbalance. Such
+ To provide a complete performance picture, classifiers are realistic setup justifies the need for a complete evaluation
+also tested when they are enriched with a “reject option” framework of DL-based classifiers, as proposed in Section III.
+(i.e., the classification is performed only if the highest class Finally, after biflow segmentation, 77.3k (resp. 44.1k) labeled
+prediction probability exceeds a threshold γ and “unsure” instances compose the Android (resp. iOS) dataset, with
+classifications are then censored), whose adoption has been 73.8k (resp. 41.8k) TCP and 3.5k (resp. 2.3k) UDP
+justified in the mobile context [10]. Indeed, since apps typ- biflows.
+ically send multiple flows where used, there remains high FB/FBM Binary Dataset: The third (binary) dataset has
+chance to identify them from their more distinctive flows, been collected in ARCLAB laboratory at the University of
+without the need to classify all the instances (i.e., the classi- Napoli “Federico II”, during several sessions within May ’17
+fier does not reach a verdict when the highest class prediction - Mar. ’18 timespan. More specifically, the captures pertain
+probability is below γ). Hence, tuning γ can be effective to to either Facebook (FB) or Facebook Messenger (FBM) trafimprove classification performance while incurring negligible fic data, and run on a Xiaomi Mi5 with Android Operating
+drawback, i.e., a decreased ratio of classified instances (CR). System 6.0.1 (CyanogenMod 13.0 distribution). This choice
+ For completeness, as a preliminary investigation of the com- derives from the peculiar nature of these two apps, both
+putational complexity of DL-architectures training phase, we devoted to interactive usage of the Facebook platform (author
+report their training time, given the specificity of such phase in of both). This suggests a high possibility of shared developmobile TC, due to apps’ fingerprint aging because of their (and ment framework and overlapping services usage, hampering
+OS) updates. Precisely, since training is performed on multiple the discrimination of the respective traffic (as suggested by
+epochs [17], we report such info in a terse (normalized) way, the same provider and also confirmed experimentally in next
+by providing the Run-Time Per-Epoch (RTPE). section) needed for key management tasks, e.g., for billing
+ Finally, for each considered analysis, our evaluation is based differentiation. More than 100 users have been involved in
+on a (stratified) ten-fold cross-validation, representing a stable its construction on a voluntary basis for sittings lasting less
+performance evaluation setup. Accordingly, we report both the than 2 hours, being required to perform different activities
+mean and the variance of each performance measure as a result for both the apps (to explore their diversity), in union with
+of the evaluation on the ten different folds. login/registration/logged-in use cases. Each traffic-capture session lasted 5 ÷ 10 minutes, with > 1100 traffic traces
+ IV. E XPERIMENTAL E VALUATION collected. As a whole, the dataset contains > 34k instances,
+ The present section investigates and compares performance with 15.0k (resp. 19.2k) biflows generated by FBM (resp. FB)
+of considered DL classifiers, according to Section III-D, based app, with a 44% / 56% share. Precisely, FBM (resp. FB) trafon the three mobile traffic datasets described next. fic consists of 13.2k (resp. 18.7k) TCP and 1.8k (resp. 0.5k)
+ UDP biflows, respectively.9
+ It is worth noting that depending on the particular clas-
+A. Datasets Description
+ sification approach and input data considered, preprocessing
+ The three datasets considered in this work have been all operations could have been carried out on the datasets (both
+collected by human users (instead of relying on automatically- multi-class and binary), varying the actual number of biflows.
+generated traffic, as done in related works). Also, the ground
+truth has been obtained by labeling each trace with the generating app (since they have been run separately, thus limiting B. Baselines Considered and Classification Results
+the presence of background traffic) and, for the sake of a con- We now provide a systematic comparison of the considsistent comparison among all DL-based TC works published ered DL architectures so as to draw out key guidelines (later
+so far (except for [22]), we have chosen to operate at the biflow elaborated in Section V). For completeness, two baseline
+level when referring to the traffic view. approaches are also included in our analysis of classifica-
+ Multi-Class Datasets: The first two (multi-class) datasets, tion efficacy: (i) the RF developed in [13], i.e., the current
+obtained from a global mobile solutions provider and gener- state-of-the-art mobile-traffic classifier, taking as input 40
+ated from 49 (resp. 45) apps on Android (resp. iOS) devices, carefully handcrafted flow-based features and thus applicaare considered for prioritization purposes.8 The corresponding ble only in “post-mortem” TC (as opposed to inputs used in
+Android (resp. iOS) traces have been collected during Apr. ’15 DL classifiers, suited for “early” TC), and (ii) a MLP with
+ 7 Of course K = 1 coincides with the standard accuracy. 9 The current dataset constitutes a larger version w.r.t. that considered
+ 8 Due to NDA with the provider we can not report its name, details of its in [18], in terms of both depth and diversity, while improving also the balance
+network, detailed information on the data set, nor release the data set. between FB/FBM samples (i.e., 44% / 56% vs. 38% / 62% share of [18]).
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+452 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+ TABLE III
+ACCURACY, F-M EASURE , AND G-M EAN [%] OF DL-BASED AND BASELINE T RAFFIC C LASSIFIERS . R ESULTS R EFER TO THE M ULTI -C LASS DATASETS
+ AND A RE IN THE F ORMAT avg. (± std.) O BTAINED OVER 10-F OLDS . R ESULTS W ITH D IAMOND (3) AND S TAR () M ARKERS R EFER TO Biased
+ I NPUTS AND I NPUTS Including TCP/UDP Ports, R ESPECTIVELY. B EST-P ERFORMING DL-BASED AND S HALLOW C LASSIFIERS F ED
+ W ITH Unbiased I NPUTS A RE H IGHLIGHTED FOR B OTH DATASETS
+
+ TABLE IV
+only one hidden layer (with 100 nodes), denoted as MLP-1, ACCURACY, F-M EASURE , AND G-M EAN [%] OF DL-BASED AND
+trained on the same inputs as DL architectures, so as to stress BASELINE T RAFFIC C LASSIFIERS . R ESULTS R EFER TO FB/FBM DATASET
+ AND A RE IN THE F ORMAT avg. (± std.) O BTAINED OVER 10-F OLDS .
+the performance achievable by shallow learning in the same
+ R ESULTS W ITH D IAMONDS (3) AND S TARS () R EFER TO Biased I NPUTS
+scenario. AND I NPUTS including TCP/UDP Ports, R ESPECTIVELY.
+ Hereinafter, we refer to Type I (resp. Type II, see B EST-P ERFORMING DL-BASED AND S HALLOW C LASSIFIERS F ED
+Section III-B) input data corresponding to the first N bytes of W ITH Unbiased I NPUTS A RE H IGHLIGHTED
+payload (resp. raw) data as “L7-N” (resp. “ALL-N”) [19]–[21].
+Differently, the 20 × 4 (resp. 20 × 6, when ports are included,
+highlighted through a “” marker) input matrix obtained following [23] (Type III) is denoted with “MAT”, with the general
+notation “MAT-Np ” when a varying number of packets is considered. Finally, for consistency, the first Np packet directions
+(Type III) are referred to as “DIR-Np ” [24].
+ Biased vs Unbiased Inputs: First, in Tables III and IV
+we report the results of state-of-the art DL-based (and baseline) approaches fed with inputs (and features) extracted from
+multi-class Android and iOS datasets, and binary FM/FBM
+dataset, respectively. We highlight that performance of classifiers marked with diamond markers (3) represents results
+from biased inputs (see Section III-B) and, therefore, they
+should not be considered as meaningful elements of comparison. From the inspection of results it is apparent that, referring
+to multi-class datasets (see Table III), DL approaches are
+able to provide improved performance w.r.t. shallow classifiers similar performance to 2D-CNN (L7-784). This result conwith analogous unbiased inputs, i.e., MLP-1 (L7-1000/L7- firms the intuition that discriminative information from traffic
+784/MAT), and even outperform flow-based state-of-the-art should be extracted by naturally considering data as one-
+RF. This is attributed to DL ability to learn implicitly very dimensional (viz. time-series). A similar reasoning applies to
+complex features able to distinguish (seemingly) similar traf- iOS case, where LSTM performs the best in terms of the
+fic generated from different apps. Indeed, in Android setup, three considered metrics, but only when port information is
+85.46% accuracy, 78.78% F-measure, and 86.92% G-mean taken into account (i.e., with “MAT ” input). Differently, a
+are achieved by 2D-CNN (L7-784), as opposed to 84.78%, significant performance drop is observed for each DL classi-
+75.49%, and 83.86%, respectively, obtained by the RF. We fier with “MAT” input compared to its counterpart including
+notice that, in both datasets, 1D-CNN (L7-784) achieves very both source and destination TCP/UDP ports in the input
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 453
+
+ TABLE V
+ T OP -K ACCURACY [%] OF DL-BASED AND BASELINE T RAFFIC C LASSIFIERS . R ESULTS R EFER TO THE M ULTI -C LASS DATASETS AND A RE IN THE
+ F ORMAT avg. (± std.) O BTAINED OVER 10-F OLDS . O NLY THE C LASSIFIERS F ED W ITH Unbiased I NPUTS A RE S HOWN .
+ B EST-P ERFORMING DL-BASED AND S HALLOW C LASSIFIERS A RE H IGHLIGHTED FOR B OTH DATASETS
+
+(“” marker). For example, up to −19.68% in F-measure is conceptually-similar task to WF, it shows higher requirements
+observed for multi-class datasets, with the worst drop affect- w.r.t. the former, since the sole directions are usually suffiing LSTM in the iOS case. Finally, referring to the FB/FBM cient for training of high-performing WF classifiers [24], [33].
+dataset (see Table IV), only the 2D-CNN (L7-784) is able Finally, the (flow-based) RF classifier provides a slightly betto outperform the shallow classifiers MLP-1 (L7-1000/L7- ter global behavior than the best DL classifier on the Android
+784) in terms of all the metrics analyzed. Nonetheless, in dataset, reaching 91.69% (resp. 93.89%) Top-3 (resp. Top-5)
+the binary dataset neither the best DL classifier is able to accuracy.
+achieve performance comparable with biflow-based RF. This Confusion Matrices: Turning to the details of classifiers
+may be attributed to the need of a more informative type of behavior, Fig. 3 shows the confusion matrices of bestinput, providing a higher discriminative power in the case of performing DL-approaches in the three datasets, so as to
+very similar apps, like FB and FBM. Finally, focusing on the investigate noteworthy error-patterns.11 From inspection of
+DL approaches with “MAT” input, results highlight a different the results, the 1D-CNN (L7-784) (in Android and FB/FBM
+trend w.r.t. the multi-class datasets, with FB/FBM classifica- datasets) and 2D-CNN (L7-784) (in iOS dataset) achieve
+tion task almost being port-independent, showing even a slight almost-uniform error patterns. The FB/FBM matrix contrasts,
+performance gain (e.g., +1.51% accuracy with a 2D-CNN only at a first look, the earlier result shown in [18], referring to
+(MAT)) when ports are removed. This may be the consequence an older (smaller and class-imbalanced) version of the dataset.
+of high port randomization or/and (likely) use of overlapping However, the results on the current (balanced) dataset are not
+port sets (e.g., corresponding to common services). significantly better, implying that the main error source on
+ Top-K Accuracy: Delving into performance of DL-based FB/FBM arises from the inadequacy of the considered pairs
+classifiers, in Tab. V we report their Top-K accuracy (K ∈ of input and DL architecture, as well as the traffic similarity
+{1, 3, 5}) on the multi-class datasets. From now on we exclude, of the two apps.
+for brevity, the results of DL classifiers based on biased Training Complexity of DL Architectures: To investigate
+inputs. By looking at these fine-grained results, we observe the training complexity of the considered DL classifiers, in
+that, other than the highest DL accuracy, 1D-CNN (resp. 2D- Fig. 4 we report their RTPE obtained in the three datasets.12
+CNN) (L7-784) reports also the highest global (soft-output) Results highlight a natural RTPE decrease of each classifier
+behavior on the Android (resp. iOS) dataset, e.g., 91.51% when the size of the classification problem is reduced (i.e.,
+and 93.45% (resp. 91.02% and 93.32%) accuracy when the moving from the Android dataset, to the iOS and FB/FBM
+Top-3 and Top-5 predicted apps are considered, respectively.10 datasets). Additionally, the two classifiers reaching the highest
+Also, although shallow (baseline) classifiers present an accu- performance are those having the highest RTPE (i.e., 2D-CNN
+racy increase due to a larger pool of predicted apps taken into (L7-784) and 1D-CNN (L7-784)), highlighting a reasonable
+consideration, they are never able to approach the same score performance-complexity tradeoff. Referring to the aforemenas the best DL classifiers, confirming also an improved global tioned two classifiers, we remark that 1D-CNN (L7-784)
+behavior of the latter (viz. learning of the TC task as a whole). experiences a higher RTPE than 2D-CNN (L7-784) because of
+Such “global” performance gap is even more apparent for lower size of the pooling layers (i.e., lower down-sampling)
+DL classifiers resorting to packet directions, whose best Top-
+5 accuracy is only 68.29% (resp. 64.40%) in Android (resp. 11 Since 1D-CNN (L7-784) and 2D-CNN (L7-784) perform about on par
+
+iOS) case. Hence, although mobile TC can be conceived as a on the multi-class dataset, we have chosen the one with the highest accuracy.
+ 12 The times refer to the same hardware architecture (8 × Intel Core i7-
+ 4710MQ CPU @ 2.50GHz with Ubuntu 16.04 (64 bit)) in the same load
+ 10 Still, 1D-CNN (L7-784) performs almost on par on iOS dataset. conditions (i.e., the DL classifier is the sole CPU-intensive running process).
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+454 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+Fig. 3. Confusion matrices of the best DL-based classifier for the (a) Android, (b) iOS, and (c) FB/FBM datasets. Note that the log scale is used to evidence
+small errors (except for FB/FBM). Categorical class-labels are reported for the (d) Android and (e) iOS datasets.
+
+Fig. 4. Run-time per epoch (RTPE) of DL-based traffic classifiers. Results are in the format avg. (± std.) obtained over 10-folds. Only the classifiers fed
+with unbiased inputs are shown.
+
+in its implementation [20], [21]. On the other hand, all DL Performance vs. Input Size: Focusing our investigation
+classifiers based on “MAT” input present a significantly lower toward the choice of the most discriminative forms of input
+complexity, being this a direct consequence of the lower- types, in Fig. 5 we report accuracy, F-measure, and G-mean for
+dimension input set (20 × 6 = 120 as opposed to 784). the best DL classifier based on two types14 of (unbiased) input
+Analogous considerations apply to DL classifiers based on data considered herein (i.e., “MAT-Np ” and “L7-N”) vs. the
+“DIR-784” input, having a lower complexity than those based number of packets Np and payload bytes N, respectively. To
+on “L7-784”, because the former are binary valued, with the highlight the relevant input size-complexity trade-off, we also
+2D-CNN (DIR-784) having a higher complexity w.r.t. MLP-2 report the RTPE measure vs. the size of the considered input
+(DIR-784), because of its more complex architecture. Finally data. From the inspection of results, it is apparent that, in the
+we highlight that Fig. 4 reports, for the SAE, only the RTPE case of Np input (Fig. 5 (a-c)), there is a unimodal behavior
+score corresponding to the fine-tuning phase (i.e., in which the and 16−20 packets are usually enough to achieve the highest
+SAE is trained in a supervised fashion as a “deep” MLP) and performance (denoting a higher requirement w.r.t. the results
+thus neglects its pre-training stage, which contributes addi- shown in [23]), whereas, in the payload size case (Fig. 5 (d-f)),
+tively to RTPE with a linear growth in the number of AE such trend is less obvious (although N = 784 is observed to
+layers (since it is done in a layer-wise fashion).13 be the best choice among the different sizes considered). On
+
+ 13 For example, in our scenario, the observed RTPE for the pre-training 14 We omit, for brevity, the performance with “DIR-N ” input, as it has
+ p
+phase (of five AE layers) equals 16.97 (± 0.27) s in Android, 11.35 (± 0.08) s been shown to be unable to reach satisfactory performance and its behavior
+in iOS, and 9.21 (± 0.15) s in FB/FBM case. with varying Np can be qualitatively inferred from “MAT-Np ” results.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 455
+
+Fig. 5. Performance of the best DL-based classifier fed with “MAT-Np ” input (top row) and “L7-N” input (bottom row): Accuracy [%], F-measure [%],
+G-mean [%] (left axis), and RTPE [s] (right axis) vs. first Np packets (top row) and first N bytes (bottom row), for the Android (a, d), iOS (b, e), and
+FB/FBM (c, f) datasets. Average on 10-folds and corresponding ±3σ confidence interval are shown.
+
+the other hand, in both cases an almost-linear increase of the the same CR. Unluckily, in the FB/FBM case, achieving the
+RTPE with the input size is apparent. The only exception is same target performance would require ≥ 40% biflows to be
+given by Np = 4: the reason is that, so as to implement the censored. This result again underlines the DL framework limsame DL architecture with a very small input, we had to resort itations in tackling an “overlapped-apps” classification task
+to a different padding choice, implying additional complexity. with the present input/architecture choices.
+ Performance vs. Reject Option: As a complementary analysis, Fig. 6 shows the accuracy, F-measure, and G-mean (first,
+second, and third row of plots, respectively) of both the best V. L ESSONS L EARNED AND C HALLENGES
+DL approach and shallow classifier vs. the censoring thresh- We tackled TC of mobile (encrypted) traffic via a DL
+old γ on the three considered datasets. All the plots include, approach for the first time in the literature. Our work profor a complete comparison, the CR vs. γ. This analysis delves vided not only a wide experimental analysis based on a
+into the possibility for DL architectures to classify apps more newly-developed framework for comprehensive evaluation and
+accurately only from reliably-labeled biflows. We notice that comparison (Fig. 1) obtained by dissecting existing DL works
+a threshold value implying different performance w.r.t unclas- in standard TC, but also the vital groundwork for sound
+sified samples can be theoretically observed only if γ ≥ 1/L advances on the general encrypted TC topic. Precisely, this
+(recall that L denotes the number of classes). This corresponds analysis has enabled the surfacing of a list of guidelines and
+to ≈ 0.02 in the case of Android and iOS datasets, whereas this sparks, and highlights caveats of traffic analysis domain, so
+value equals 0.5 for the FB/FBM dataset. Results show that as to avoid pitfalls in the design and evaluation of DL-based
+all the methods globally benefit from increasing γ at the price (mobile) traffic classifiers and be the springboard of realof a decreasing ratio of classified instances. However, only world implementations [44]. Hereinafter we summarize our
+in the multi-class dataset it is evident a relevant performance conclusions as lessons learned, each with corresponding open
+improvement with a negligible ratio of unclassified samples, challenges.
+whereas for the FB/FBM (binary) dataset this trend is sharper Comprehensive Performance Evaluation Framework: The
+and less advantageous (although the best DL classifier tends presence of several DL architectures highlights the need for
+to be “less wrong” than its shallow counterpart, while having a rigorous performance evaluation framework in (mobile) TC.
+almost the same CR vs. γ profile). Since the marginal gain of This work provided a first attempt to its formalization. Recent
+DL classifiers w.r.t. shallow counterparts can be observed over literature has ascertained that a naïve accuracy comparison
+all the γ range, we can infer that more sophisticated DL archi- is not sufficient, and measures reflecting a per-app behavior
+tectures (and more informative inputs) would be needed for an (F-measure, G-mean, confusion matrices, etc.) are increasingly
+accurate classification. Specifically, by rejecting the classifica- considered [10], [16], given the high app number potentially
+tion of only 10% of instances, in the case of Android dataset, involved in the classification task. Going further, we investhe 1D-CNN (L7-784) is able to achieve ≥ 90% accuracy, tigated DL architectures output at a finer detail by means of
+≥ 85% F-measure, and ≥ 90% G-Mean. Similarly, for the iOS Top-K accuracy and by providing a performance analysis with
+dataset, the 2D-CNN (L7-784) achieves 84 ÷ 88%, scores with a reject option, being essential in highly multi-instance and
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+456 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+Fig. 6. Accuracy (a-c), F-measure (d-f), G-mean (g-i), and ratio of classified samples (CR) [%] vs. censoring threshold γ of the best DL-based classifier,
+fed with “L7-784” input, for the Android (a, d, g), iOS (b, c, h), and FB/FBM (c, f, i) datasets. Average on 10-folds and corresponding ±3σ confidence
+interval are shown.
+
+multi-class classification tasks, respectively, such as the mobile significant and up-to-date datasets is hindered by both the
+one [10]. highest privacy concerns and fast-paced evolution of traffic
+ This analysis was also enriched with a training-phase com- mix. Hence, an agreed-upon and comprehensive approach to
+plexity evaluation of DL architectures (via the defined RTPE). comparison is vital to the progress of knowledge in this field.
+Indeed, although test complexity is directly associated to With this work we highlight this challenge, and provide a first
+the classifier at run-time, training complexity equally repre- response to it.
+sents a key aspect in mobile TC, where frequent re-training Unbiased and Informative Input: Mobile TC presents its
+of a classifier is required, due to aging of training data own peculiarities, which hinder the straightforward applicabecause of apps/OS updates [10], [30]. For completeness, the tion of DL classifiers originated from other domains (e.g.,
+framework included a baseline “shallow” network to assess image/speech processing), as clearly shown in this work.
+DL (classification) performance gain and a state-of-the-art Indeed, a DL classifier fed with all the data contained in
+ML-based classifier [13], using handcrafted and flow-based a packet (or in a set of packets) likely leads to misleading
+features. performance results. One relevant case is [20] and [21], adopt-
+ The lack of a comprehensive and principled approach to ing the “ALL layers” input, and thus overlooking the presence
+DL-based classifiers applied to TC has been the main moti- of PCAP metadata. Similarly, the input proposed in [23]
+vation to this work. This challenge is specifically important includes port numbers, yielding DL statistical port-based archiin research on TC as it is affected by the lack of up-to- tectures. Furthermore, whether destination port may be useful
+date human-generated public datasets. This can be mainly in some “static” contexts, this is never the case for the source
+attributed to the difficulty of anonymizing traffic traces in port, which is subject to a choice depending on sequential
+ways that both do not significantly affect the information numbering or, in a more sophisticated fashion, to randomizauseful for classification, and preserve users privacy in the tion. On the other hand, the directions of packets belonging
+face of future de-anonymization attacks. This issue is further to a biflow (albeit representing an unbiased input type) were
+worsened for mobile traffic, where the possibility of sharing shown to be not informative enough as in the case of WF [24],
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+ACETO et al.: MOBILE ENCRYPTED TC USING DL: EXPERIMENTAL EVALUATION, LESSONS LEARNED, AND CHALLENGES 457
+
+[33], [34]. Therefore, a key outcome of this study was to skim design, this further process can be as complex and resourceinformative and unbiased information from traffic data to be demanding as feature design. On the plus side, differently
+used as DL classifiers’ input. Finally, since the complexity from feature design this process can be automated, as it is
+of DL-based traffic classifiers directly depends on the size less domain-driven.
+of the input data, we preliminary investigated the “minimum Further challenges posed by DL in the field of TC pertain
+required” size for each type of input for an accurate classifi- to the training dataset. Indeed, although a key issue of DL
+cation. Results have shown that, whether the fields of the first is the high requirement on training data (to allow the “sur-
+16 to 20 packets are usually sufficient to reach the highest facing” of deep representations), in the supervised context of
+performance reported with “MAT-Np ” input, a clear trend is mobile TC, the aspect of the purity of labeled samples used
+not evident for payload input “L7-N”. Accordingly, this moti- for training (i.e., the ground-truth quality) is equally important,
+vates a deeper investigation, also in terms of a more effective with (coarse) trace-level labeling probably not representing the
+representation of payload (i.e., byte-based or at a higher/lower “purest” strategy (i.e., including some non-app instances).
+resolution). We conclude confirming that DL algorithms applied to
+ Associated with this lesson learned, we surface the chal- mobile TC indeed constitute a promising approach, but the
+lenge of carefully analyzing and selecting the input of DL current state of research on this application has yet to
+algorithms. Unluckily an elaborated input selection process reach the maturity level of DL in other fields. In this work
+contrasts one of the main promises of DL approaches, i.e., we have systematically explored this aspect and provided
+the reduced need of domain expertise. Indeed, this process guidelines and directions to face the challenges that we
+potentially limits the generality of the obtained solution. surfaced.
+In the case of DL-based classifiers, this issue is worsened by the black-box nature of most algorithms, as the R EFERENCES
+performance impact of specific inputs is barely or not-at-all
+ [1] A. Dainotti, A. Pescapè, and K. C. Claffy, “Issues and future direcpredictable. Hence, striking the right balance between naive tions in traffic classification,” IEEE Netw., vol. 26, no. 1, pp. 35–40,
+application and expertise-driven effort constitutes a still open Jan./Feb. 2012.
+challenge. [2] N. Heuveldop et al., “Ericsson mobility report,” Technol. Emerg. Bus.,
+ Ericsson AB, Stockholm, Sweden, Rep. EAB-17 5964, 2017.
+ Choice of TC Object: This work, for brevity and consistency [3] D. Rajashekar, A. N. Zincir-Heywood, and M. I. Heywood, “Smart
+with surveyed DL-based traffic classifiers, only considered phone user behaviour characterization based on autoencoders and self
+biflow-based TC, given the higher performance experienced organizing maps,” in Proc. IEEE 16th Int. Conf. Data Min. Workshops
+ (ICDMW), 2016, pp. 319–326.
+w.r.t. its flow-based counterpart [20], [21]. However, recent [4] Y. Fu, J. Liu, X. Li, and H. Xiong, “A multi-label multi-view learning
+mobile TC literature has shown the appeal of TC objects framework for in-app service usage analysis,” ACM Trans. Intell. Syst.
+exploiting the bursty traffic nature (namely, the “service Technol., vol. 9, no. 4, p. 40, 2018.
+ [5] Global Internet Phenomena Spotlight: Encrypted Internet Traffic,
+burst”) [10], [13], [16], [25]. Although appealing, a defini- Sandvine, Waterloo, ON, Canada, 2016.
+tion of reasonable (and effective) input data for the latter TC [6] A. Razaghpanah et al., “Studying TLS usage in Android apps,” in
+object is not as straightforward as in the case of (bi)flows Proc. 13th ACM CoNEXT, 2017, pp. 350–362.
+ [7] G. Aceto, A. Dainotti, W. De Donato, and A. Pescapè, “PortLoad: Taking
+given the presence of a varying number of biflows toward the best of two worlds in traffic classification,” in Proc. IEEE Conf.
+the same destination IP/port. Moreover, while there is long- Comput. Commun. (INFOCOM) Workshops, 2010, pp. 1–5.
+standing practical experience and mature technology working [8] H. Yao, G. Ranjan, A. Tongaonkar, Y. Liao, and Z. M. Mao, “SAMPLES:
+ Self adaptive mining of persistent lexical snippets for classifying mobile
+with biflows, using classification results from service bursts application traffic,” in Proc. ACM 21st Int. Conf. Mobile Comput. Netw.
+becomes hard to translate into actionable and sensible reac- (MobiCom), 2015, pp. 439–451.
+tions. Therefore, this aspect deserves further attention and [9] B. Saltaformaggio et al., “Eavesdropping on fine-grained user activities within smartphone apps over encrypted network traffic,” in Proc.
+research in our opinion. USENIX Workshop Offensive Technol. (WOOT), 2016, pp. 69–78.
+ Fine-Grained Design of DL Traffic Classifiers: Results in [10] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smart-
+Section IV-B, based on SAE, CNN, LSTM, and hybrid archi- phone app identification via encrypted network traffic analysis,” IEEE
+tectures, highlighted that there is no “killer” DL architecture Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018.
+ [11] V. Carela-Español et al., “K-dimensional trees for continuous traffic
+for mobile TC. Indeed, the most the DL model fits the nature classification,” in Proc. TMA, Zürich, Switzerland, 2010, pp. 141–154.
+of the input data, the better it is expected to perform (one rel- [Online]. Available: https://doi.org/10.1007/978-3-642-12365-8_11
+evant example is the comparison of 1D- and 2D-CNN based [12] Y.-D. Lin, C.-N. Lu, Y.-C. Lai, W.-H. Peng, and P.-C. Lin, “Application
+ classification using packet size distribution and port association,” J.
+on payload data which is, by definition, one-dimensional). Netw. Comput. Appl., vol. 32, no. 5, pp. 1023–1030, 2009.
+Moreover, from our analysis of the literature we found that the [13] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “AppScanner:
+tuning of hyper-parameters of DL algorithms is substantially Automatic fingerprinting of smartphone apps from encrypted network
+ traffic,” in Proc. IEEE Eur. Symp. Security Privacy (EuroS&P), 2016,
+overlooked (just tentative values are provided, if at all). pp. 439–454.
+ From these observations we derive that, given the hetero- [14] A. Hajjar, J. Khalife, and J. Díaz-Verdejo, “Network traffic application
+geneous information available from traffic data, the need for identification based on message size analysis,” J. Netw. Comput. Appl.,
+ vol. 58, pp. 130–143, Dec. 2015.
+advanced hybrid DL architectures arises. Also, though DL [15] A. Dainotti, F. Gargiulo, L. I. Kuncheva, A. Pescapé, and C. Sansone,
+architectures relieve the designer from the feature design issue, “Identification of traffic flows hiding behind TCP port 80,” in Proc.
+they come with many hyper-parameters to be tuned (e.g., the IEEE Int. Conf. Commun., May 2010, pp. 1–6.
+ [16] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “Multi-classification
+optimizer, the number of layers/hidden nodes, the regulariz- approaches for classifying mobile app traffic,” J. Netw. Comput. Appl.,
+ers). To explore the performance gain brought by fine-grained vol. 103, pp. 131–145, Feb. 2018.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.
+458 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 16, NO. 2, JUNE 2019
+
+[17] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge, [41] G. Draper-Gil, A. H. Lashkari, M. Mamun, and A. A. Ghorbani,
+ MA, USA: MIT Press, 2016. “Characterization of encrypted and VPN traffic using time-related
+[18] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “Mobile encrypted features,” in Proc. 2nd Int. Conf. Inf. Syst. Security Privacy, 2016,
+ traffic classification using deep learning,” in Proc. IEEE/ACM Netw. pp. 407–414.
+ Traffic Meas. Anal. Conf. (TMA), 2018, pp. 569–574. [42] F. Chollet et al. (2015). Keras. [Online]. Available: https://keras.io
+[19] Z. Wang, “The applications of deep learning on traffic identification,” [43] L. Bernaille, R. Teixeira, and K. Salamatian, “Early application identiin Proc. Black Hat USA, Las Vegas, NV, USA, 2015. fication,” in Proc. ACM CoNEXT, 2006, p. 6.
+[20] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic classi- [44] W. De Donato, A. Pescapé, and A. Dainotti, “Traffic identification
+ fication using convolutional neural network for representation learning,” engine: An open platform for traffic classification,” IEEE Netw., vol. 28,
+ in Proc. IEEE Int. Conf. Inf. Netw., 2017, pp. 712–717. no. 2, pp. 56–64, Mar./Apr. 2014.
+[21] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+ encrypted traffic classification with one-dimensional convolution neural networks,” in Proc. IEEE Int. Conf. Intell. Security Inf. (ISI), 2017,
+ pp. 43–48.
+[22] M. Lotfollahi, R. Shirali, M. J. Siavoshani, and M. Saberian, “Deep
+ packet: A novel approach for encrypted traffic classification using deep
+ learning,” arXiv preprint arXiv:1709.02656, 2017. Giuseppe Aceto received the Ph.D. degree in
+[23] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, and J. Lloret, telecommunication engineering from the University
+ “Network traffic classifier with convolutional and recurrent neural of Napoli Federico II, where he is an Assistant
+ networks for Internet of Things,” IEEE Access, vol. 5, pp. 18042–18050, Professor. His work falls in monitoring of network
+ 2017. performance and security (focusing on censorship)
+[24] S. E. Oh, S. Sunkam, and N. Hopper, “p-FP: Extraction, classification, both in traditional and SDN network environments.
+ and prediction of website fingerprints with deep learning,” arXiv preprint He is also researching on bioinformatics and ICTs
+ arXiv:1711.03656, 2017. applied to health. He was a recipient of the Best
+[25] T. Stöber, M. Frank, J. Schmitt, and I. Martinovic, “Who do you sync Paper Award at IEEE ISCC 2010 and the 2018 Best
+ you are? Smartphone fingerprinting via application behaviour,” in Proc. Journal Paper Award by IEEE CSIM.
+ ACM WISEC, 2013, pp. 7–12.
+[26] Q. Wang, A. Yahyavi, B. Kemme, and W. He, “I know what you did
+ on your smartphone: Inferring app usage over encrypted data traffic,” in
+ Proc. IEEE Conf. Commun. Netw. Security (CNS), 2015, pp. 433–441.
+[27] J. Kampeas, A. Cohen, and O. Gurewitz, “Traffic classification based on
+ zero-length packets,” IEEE Trans. Netw. Service Manag., vol. 15, no. 3,
+ pp. 1049–1062, Sep. 2018.
+ Domenico Ciuonzo (S’11–M’14–SM’16) received
+[28] K. Shahbar and A. N. Zincir-Heywood, “Packet momentum for identifi- the Ph.D. degree in electronic engineering from the
+ cation of anonymity networks,” J. Cyber Security Mobility, vol. 6, no. 1, University of Campania “L. Vanvitelli,” Italy. He
+ pp. 27–56, 2017. is an Assistant Professor with the University of
+[29] M. Conti, L. V. Mancini, R. Spolaor, and N. V. Verde, “Analyzing Napoli Federico II, Italy. In 2011, he held sev-
+ Android encrypted network traffic to identify user actions,” IEEE Trans. eral visiting researcher appointments. His research
+ Inf. Forensics Security, vol. 11, no. 1, pp. 114–125, Jan. 2016. interests include data fusion, statistical signal pro-
+[30] H. F. Alan and J. Kaur, “Can Android applications be identified using cessing, wireless sensor networks, traffic analysis,
+ only TCP/IP headers of their launch time traffic?” in Proc. 9th ACM and machine learning. Since 2014, he has been an
+ Conf. Security Privacy Wireless Mobile Netw. (WiSec), 2016, pp. 61–66. editor of several IEEE, IET, and Elsevier journals.
+[31] D. Herrmann, R. Wendolsky, and H. Federrath, “Website fingerprinting:
+ Attacking popular privacy enhancing technologies with the multinomial Naïve-Bayes classifier,” in Proc. ACM Workshop Cloud Comput.
+ Security, 2009, pp. 31–42.
+[32] M. Liberatore and B. N. Levine, “Inferring the source of encrypted
+ HTTP connections,” in Proc. ACM 13th Conf. Comput. Commun.
+ Security (CCS), 2006, pp. 255–263.
+ Antonio Montieri (GS’18) received the M.S. degree
+[33] V. Rimmer, D. Preuveneers, M. Juarez, T. Van Goethem, and W. Joosen,
+ from the University of Napoli Federico II in 2015,
+ “Automated website fingerprinting through deep learning,” in Proc.
+ where he is currently pursuing the Ph.D. degree
+ Symp. Netw. Distrib. Syst. Security (NDSS), 2018.
+ with the Department of Electrical Engineering and
+[34] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprint- Information Technology. His work is focused on
+ ing: Undermining website fingerprinting defenses with deep learning,” network measurements, (encrypted and mobile) trafin Proc. ACM SIGSAC Conf. Comput. Commun. Security (CCS), 2018, fic classification, and monitoring of cloud network
+ pp. 1928–1943. performance. He has co-authored 15 papers and
+[35] C. Zhang, X. Wang, F. Li, Q. He, and M. Huang, “Deep learning–based 5 posters accepted for publication in international
+ network application classification for SDN,” Trans. Emerg. Telecommun. journals and conference proceedings.
+ Technol., vol. 29, no. 5, pp. 1–18, 2018.
+[36] H. Huang, H. Deng, J. Chen, L. Han, and W. Wang, “Automatic multitask learning system for abnormal network traffic detection,” Int. J.
+ Emerg. Technol. Learn., vol. 13, no. 4, pp. 4–20, 2018.
+[37] Y.-C. Chen, Y.-J. Li, A. Tseng, and T. Lin, “Deep learning for malicious
+ flow detection,” in Proc. IEEE 28th Int. Symp. Pers. Indoor Mobile Radio
+ Commun. (PIMRC), 2017, pp. 1–7.
+[38] H. Shi, H. Li, D. Zhang, C. Cheng, and X. Cao, “An efficient feature Antonio Pescapé (SM’09) is a Full Professor of
+ generation approach based on deep learning and feature selection tech- computer engineering with the University of Napoli
+ niques for traffic classification,” Comput. Netw., vol. 132, pp. 81–98, Federico II. His work focuses on Internet technolo-
+ Feb. 2018. gies and specifically on measurement, monitoring,
+[39] L. Vu, C. T. Bui, and Q. U. Nguyen, “A deep learning based method for and analysis of the Internet. He has co-authored
+ handling imbalanced problem in network traffic classification,” in Proc. over 200 papers. He was a recipient of a number of
+ ACM SoICT, 2017, pp. 333–339. awards. He is involved in several research projects
+ on Internet technologies. He is a reviewer and
+[40] D. Li, Y. Zhu, and W. Lin, “Traffic identification of mobile apps based on
+ an evaluator of research projects for international
+ variational autoencoder network,” in Proc. 13th IEEE Int. Conf. Comput.
+ agencies, governments, and the EU Commission.
+ Intell. Security (CIS), 2017, pp. 287–291.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 08:51:22 UTC from IEEE Xplore. Restrictions apply.

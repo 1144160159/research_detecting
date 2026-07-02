@@ -1,0 +1,145 @@
+18172                                         IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+
+
+
+    ARISE: Graph Anomaly Detection on Attributed
+        Networks via Substructure Awareness
+        Jingcan Duan , Bin Xiao , Siwei Wang , Haifang Zhou, and Xinwang Liu , Senior Member, IEEE
+
+
+
+   Abstract— Recently, graph anomaly detection on attributed                   X ∈ Rn×d            Attribute matrix of G.
+networks has attracted growing attention in data mining                        xi ∈ R1×d           Attribute vector of vi .
+and machine learning communities. Apart from attribute
+                                                                               H(ℓ) ∈ Rn×d
+                                                                                           ′
+                                                                                                   Hidden subgraph representation of the ℓth
+anomalies, graph anomaly detection also aims at suspicious
+topological-abnormal nodes that exhibit collective anomalous                                       layer.
+                                                                               h(ℓ) ∈ R1×d
+                                                                                             ′
+behavior. Closely connected uncorrelated node groups form                                          Node hidden representation of the ℓth layer.
+                                                                               W(ℓ) ∈ Rd ×d
+                                                                                         ′  ′
+uncommonly dense substructures in the network. However,                                            Network parameters of the ℓth layer.
+existing methods overlook that the topology anomaly detection                  R t
+                                                                                                   Number of topology anomaly detection
+performance can be improved by recognizing such a collec-
+tive pattern. To this end, we propose a new graph anomaly                                          round.
+detection framework on attributed networks via substructure                    Ra                  Number of attribute anomaly detection
+awareness (ARISE). Unlike previous algorithms, we focus on the                                     round.
+substructures in the graph to discern abnormalities. Specifically,             yi ∈ {0, 1}         Ground-truth label of a instance pair.
+we establish a region proposal module to discover high-density                 score(vi )          Final anomaly score of vi .
+substructures in the network as suspicious regions. The average
+node-pair similarity can be regarded as the topology anomaly
+degree of nodes within substructures. Generally, the lower the                                         I. I NTRODUCTION
+similarity, the higher the probability that internal nodes are topol-
+ogy anomalies. To distill better embeddings of node attributes,
+we further introduce a graph contrastive learning scheme, which
+observes attribute anomalies in the meantime. In this way, ARISE
+                                                                             A     TTRIBUTED networks have the powerful capability of
+                                                                                   modeling and analyzing numerous complex scenarios in
+                                                                             the real world. In recent years, researches [1] on attributed net-
+can detect both topology and attribute anomalies. Ultimately,
+extensive experiments on benchmark datasets show that ARISE
+                                                                             works tasks are becoming an increasingly appealing direction
+greatly improves detection performance (up to 7.30% AUC and                  for academia and industry. In particular, anomaly detection
+17.46% AUPRC gains) compared to state-of-the-art attributed                  has been a vital topic in attributed networks [2], which has
+networks anomaly detection (ANAD) algorithms.                                ubiquitous applications in many fields, such as financial fraud
+  Index Terms— Attributed networks, graph anomaly detection,                 detection [3], social spam detection [4], network intrusion
+graph neural networks (GNNs), network substructure.                          detection [5], and information system error detection [6].
+                                                                                Attributed networks anomaly detection (ANAD) intends
+                                                                             to discern anomalous nodes that diverge from frequent pat-
+                         N OMENCLATURE                                       terns [2]. Unlike the raw data widely applied in other
+ Notations       Definitions                                                 fields [7], [8], [9], attributed networks include both network
+ G               Attributed network.                                         topology and node attribute information. According to the
+ Cj              Substructure in the network.                                previous literature [10], [11], [12], [13], the mismatch between
+ vi              ith node of G.                                              the above two types of information will cause two typical
+ A ∈ Rn×n        Adjacency matrix of G.                                      kinds of anomalies in attributed networks, i.e., the topology
+ D ∈ Rn×n        Degree matrix of A.                                         anomalies and attribute anomalies. As illustrated in Fig. 1,
+                                                                             the topology anomaly has normal attribute values at a glance,
+  Manuscript received 23 September 2022; revised 28 March 2023 and 14 July   while it densely links to the uncorrelated nodes [14]; on the
+2023; accepted 31 August 2023. Date of publication 22 September 2023; date   contrary, the attribute counterpart has a normal neighborhood
+of current version 3 December 2024. This work was supported in part by the
+National Key Research and Development Program of China under Project         connectivity relationship, while its attribute values may be con-
+2020AAA0107100 and in part by the National Natural Science Foundation        taminated by noise and are not similar to the neighborhoods.
+of China under Project 62325604 and Project 62276271. (Corresponding         Further analysis demonstrates that the pattern of topology
+authors: Bin Xiao; Xinwang Liu.)
+  Jingcan Duan, Haifang Zhou, and Xinwang Liu are with the College           anomalies is the collective behavior of a group of anomalous
+of Computer Science and Technology, National University of Defense           nodes, which form uncommonly dense substructures in the
+Technology, Changsha 410073, China (e-mail: jingcan_duan@163.com;            networks.
+haifang_zhou@nudt.edu.cn; xinwangliu@nudt.edu.cn).
+  Bin Xiao is with the Department of Computer Science and Technology,           Early shallow methods [15], [16], [17], [18], [19] primarily
+Chongqing University of Posts and Telecommunications, Chongqing 400065,      focus on feature engineering or pattern recognition methods
+China (e-mail: xiaobin@cqupt.edu.cn).                                        to detect the anomalous behaviors of nodes. Such models
+  Siwei Wang is with the Intelligent Game and Decision Laboratory, Beijing
+100071, China (e-mail: wangsiwei13@nudt.edu.cn).                             rely on specific domain knowledge of researchers to improve
+  Digital Object Identifier 10.1109/TNNLS.2023.3312655                       detection performance. Besides, they cannot effectively dig
+                      2162-237X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+DUAN et al.: ARISE                                                                                                                         18173
+
+
+
+                                                                                under such a strategy. Therefore, a new algorithm that can
+                                                                                effectively detect topology anomalies and cooperate well with
+                                                                                attribute anomaly detection needs to be explored.
+                                                                                   In this article, we make a new attempt to remedy the
+                                                                                mentioned defects in ANAD. To this end, we propose a novel
+                                                                                graph Anomaly detection framework on attRIbuted networks
+                                                                                via Substructure awarEness (ARISE), which both detects
+                                                                                the topology and attribute anomalies concurrently. Topology
+                                                                                anomalies are groups of uncorrelated nodes with dense links
+                                                                                between them. Such a group of anomalous nodes viewed as
+                                                                                a whole will form an uncommonly dense substructure in the
+                                                                                networks. It is the anomalous behavior manifested by nodes
+                                                                                combined together. However, existing works are unaware that
+                                                                                the key to topology anomaly detection is discerning such a
+                                                                                collective pattern from the network topology. To overcome this
+                                                                                challenge, we elaborate a new topology detection scheme from
+                                                                                a substructure-based perspective, which can detect their col-
+                                                                                lective anomalous behaviors. To be specific, we first leverage a
+Fig. 1. Toy example contains two typical anomalous nodes in attributed
+networks: 1) Topology anomaly: uncorrelated nodes with dense links in the
+                                                                                density-based algorithm in the region proposal module to dis-
+red circle. 2) Attribute anomaly: nodes with dissimilar attribute values from   cover high-density substructures as suspicious regions. Then,
+neighborhoods.                                                                  the anomalous degrees of the internal nodes are measured
+                                                                                by their attribute similarities. On the other hand, we adopt
+                                                                                a graph contrastive network for attribute anomaly detection.
+deep nonlinear information from the topology structure and                      It can distill better node embeddings for similarity mea-
+the node attributes. The above reasons hinder them from                         sures in topology anomaly detection simultaneously. Finally,
+discriminating abnormal nodes effectively.                                      a well-designed aggregator is utilized to fuse the topology
+   Recently, the graph neural network (GNN) has made                            and attribute anomalous information. Extensive evaluations
+remarkable advances in many fields, e.g., natural language pro-                 and comprehensive metrics on benchmarks show ARISE’s
+cessing [20], traffic systems [21], recommender systems [22],                   astonishing effectiveness compared to strong competitors.
+and chemistry [23]. Therefore, GNN has become a natural                            In general, the main contributions of this work are summa-
+choice for the ANAD task and can solve the problems faced by                    rized below.
+traditional methods better. DOMINANT [24] designs a graph                          1) We redesign a new principle to detect the topology
+convolution network (GCN)-based autoencoder, which regards                             anomalies. Specifically, it perceives their collective
+the reconstruction errors of structure and attribute matrices as                       anomalous behaviors from the perspective of network
+the anomalous degrees. AnomalyDAE [25] replaces GCN with                               substructures.
+graph attention network (GAT). ResGCN [26] improves GAT                            2) We propose a new integrated anomaly detection frame-
+by adding residual information. Differently, [27] combines                             work (ARISE) in attributed networks, which experts in
+multiple graph filters and solves the anomalous information                            detecting topology anomalies and attribute anomalies
+smoothing of nodes caused by GCN’s low-pass filter. To avoid                           simultaneously.
+the labor-intensive and time-consuming cost of collecting node                     3) Experiments demonstrate the remarkable advantage of
+labels, CoLA first introduces the graph contrastive learning                           ARISE against current ANAD methods.
+paradigm into ANAD. [28], [29], [30] boost the detection per-
+formance with the addition of node-level contrastive network,
+generative loss, and graph multiview contrastive paradigm.                                           II. R ELATED W ORK
+   Although existing works have achieved impressive results                       In this section, we will review the related work in terms of
+in the detection performance, there is still a relative lack                    1) ANAD and 2) graph contrastive learning.
+of research on effectively detecting topology anomalies.
+The common practice of most contrastive-based previous
+approaches is the comparison of attributes between the target                   A. Attributed Networks Anomaly Detection
+node and its neighbors. Besides, reconstruction-based methods                      An attributed network is a structured network with multidi-
+compare the original attribute and topology information of the                  mensional attribute information. Many traditional algorithms
+target node with the one reconstructed from its neighbors.                      have been proposed in ANAD. They are based on the nondeep
+It is obvious that such a strategy is effective in detecting                    anomaly detection way, which captures anomalous patterns
+the anomalous behaviors of attribute anomalies. An attribute                    from either topology or node attributes of the network.
+anomalous node can be easily captured if it is dissimilar from                  LOF [15] and Radar [18] find the differences in attributes
+its neighbors. However, the topology anomaly has normal                         between the target node and the context or most of the
+attribute values but more complex connectivity relationships                    nodes. Among the methods based on topology information,
+with other topology anomalies. It is difficult to discern them                  SCAN [16] is one of the most well-known works. AMEN [17]
+18174                 

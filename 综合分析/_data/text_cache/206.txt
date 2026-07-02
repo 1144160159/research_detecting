@@ -1,0 +1,161 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024                                                                           3249
+
+
+
+
+                  Detecting Cloud Anomaly via Broad
+                 Network-Based Contrastive Autoencoder
+                         Guoxiang Zhong , Fagui Liu , Member, IEEE, Jun Jiang , Member, IEEE,
+                                Bin Wang , Xi Yao, and C. L. Philip Chen , Fellow, IEEE
+
+
+
+   Abstract—Anomaly detection is indispensable for achieving
+higher availability and reliability in the cloud computing. The
+traditional autoencoder-based method only models the historical
+normal samples and then identifies the current online anomaly
+samples by the fixed threshold of anomaly score. Although more
+advances have been made in recent years, two main challenges
+remain: (i) ignoring the historical anomaly samples, (ii) poor
+self-adaptive ability for online detection. To address the above
+challenges, we propose a unified detector, namely BroadCAE,
+which integrates autoencoder with contrastive learning and broad
+network. Specifically, the reconstruction loss is first replaced
+by contrastive loss, which equally formulates both normal and
+anomaly samples. These samples belonging to the same class
+become closer in a lower-dimensional space. Conversely, different
+classes of samples are far away from each other. Next, we apply
+the anomaly-score-based pseudo thresholds to train the dynamic
+threshold selection, which generates the threshold according to
+the coming sample. The broad network in dynamic threshold
+selection takes the place of the deep network, which overcomes
+catastrophic forgetting and adapts to new online samples.
+Finally, validation experiments are conducted on four benchmark
+                                                                                Fig. 1. Faults of the server cluster in SMD benchmark dataset. The red
+datasets. Our BroadCAE outperforms the comparative baseline                     metric curves in blue boxes indicate the faults. These faults are described as
+methods by averaging over 4% of the f1-score.                                   anomalies of 9-th, 13-th, 14-th, and 15-th metrics, which also are referred to
+  Index Terms—Anomaly detection, contrastive learning, broad                    as root causes.
+network, cloud computing.
+
+
+                          I. I NTRODUCTION                                      system must continuously improve the availability and reli-
+        ITH the wide application of cloud computing, the                        ability of cloud services [1], [2]. However, accidental faults,
+W       scales of cloud services and their users are dramatically
+increasing. For a better user experience, the cloud operation
+                                                                                such as network delay [3], [4] and resource hog [5], [6],
+                                                                                frequently pose a substantial threat to the system running.
+                                                                                These faults cause the anomalous behaviors of the related
+   Manuscript received 16 August 2023; revised 22 December 2023; accepted       monitoring metrics [7], [8], which is shown in Fig. 1. The
+10 January 2024. Date of publication 15 January 2024; date of current version
+12 July 2024. This work was supported in part by the Guangdong Major            operation system always discovers the faults by detecting
+Project of Basic and Applied Basic Research under Grant 2019B030302002, in      the anomaly of running data and then starts the correspond-
+part by the Science and Technology Major Project of Guangzhou under Grant       ing fault tolerance solutions [9], [10], [11]. In other words,
+202007030006, in part by the Science and Technology Project of Guangdong
+Province under Grant 2021B1111600001, and in part by the Major Key Project      anomaly detection is the first step to actively removing the
+of PCL, China under Grant PCL2023A09. The associate editor coordinating         faults [12], [13]. The powerful detection result maintains
+the review of this article and approving it for publication was H. Lutfiyya.    a solid foundation of higher availability and reliability in
+(Corresponding authors: Fagui Liu; Jun Jiang.)
+   Guoxiang Zhong, Xi Yao, and C. L. Philip Chen are with the School of         cloud [14], [15].
+Computer Science and Engineering, South China University of Technology,            The autoencoder-based anomaly detection algorithm com-
+Guangzhou 510006, China (e-mail: cszhongguoxiang111@mail.scut.edu.cn;           bines the robust neural network to mine the intrinsic patterns,
+201930330247@mail.scut.edu.cn; philip.chen@ieee.org).
+   Fagui Liu is with the School of Computer Science and Engineering, South      which has significantly been concerned [16], [17], [18], [19].
+China University of Technology, Guangzhou 510006, China, and also with          More recent literature has also demonstrated that the encoder-
+the Department of New Networks, Peng Cheng Laboratory, Shenzhen 518000,         decoder architecture outperforms traditional methods by a
+China (e-mail: fgliu@scut.edu.cn).
+   Jun Jiang is with the College of Information Science and Technology,         large margin, such as Bagel [20] and USAD [21]. The
+Nanjing Forestry University, Nanjing 210037, China (e-mail: junjiang@           autoencoder-based method adopts the historical normal data
+ieee.org).                                                                      to train the representation network. The reconstruction error
+   Bin Wang is with the Department of New Networks, Peng Cheng
+Laboratory, Shenzhen 518000, China (e-mail: wangb02@pcl.ac.cn).                 provided by this representation is regarded as an anomaly
+   Digital Object Identifier 10.1109/TNSM.2024.3353772                          score. The online testing data with a larger anomaly score
+                      1932-4537 
+                                c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+3250                                                 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+
+
+indicates the presented anomaly. More proposed works focus               to empower the representation of cloud anomaly
+on optimizing the above-mentioned procedures [22], [23].                 detection.
+However, there still exist two main challenges, which are in          • The BroadCAE adopts the broad network without deep
+the following:                                                           structure to dynamically generate thresholds in the light
+   • The first challenge is related to feature representation,           of the coming samples, which provides a different per-
+      which ignores the historical anomaly samples. For uni-             spective to refine the anomaly detection system.
+      versal anomaly detection applications, normal samples           • In validation experiments, our BroadCAE outperforms
+      constitute the majority of the training sample owing to the        other comparative algorithms, which demonstrates the
+      higher overhead of labeling scarce anomaly samples. The            applicability of BroadCAE for cloud anomaly identifica-
+      feature representation rebuilds the normal sample, which           tion. The open-source codes1 will continue to motivate
+      only formulates the intra-class features. Both intra-class         the research in cloud anomaly detection.
+      features of anomalies and inter-class features between           The rest of the paper is organized as follows. Section II
+      two kinds of samples are absent. The anomaly detection        reviews the BroadCAE’s related work. The design details of
+      in the cloud is a special case with complete running doc-     BroadCAE are discussed in Section III, containing problem
+      uments [11], [24], [25]. The recorded anomalous events        formulation, BroadCAE’s overview, contrastive autoencoder,
+      are abundant, which can provide feature representation        broad network-based dynamic threshold selection, and
+      with adequate and cheap labeled anomaly samples.              BroadCAE’s pseudo code. The experiment in Section IV
+   • The second challenge comes from poor self-adaptive             validates the effectiveness of BroadCAE by answering three
+      ability in online detection. Cloud resource utilization is    research questions. Finally, the conclusion is presented in
+      in a constant state of change due to various practical        Section V.
+      requirements. For example, if the computing-intensive
+      task is uploaded, more computing nodes are in need. The                              II. R ELATED W ORK
+      CPU available percentage becomes lower. Subsequently,
+                                                                    A. Background of Cloud Anomaly
+      the cloud user deploys network-intensive tasks. The
+      network byte sent rate will be higher. In the meanwhile,         The anomaly in the cloud is a running behavior that deviates
+      the metrics about computing return to normal. Without         from the normal system setting on account of fault. According
+      the self-adaptive ability, anomaly detection identifies the   to different fault locations, cloud anomaly can be divided into
+      lower CPU available percentage and higher network byte        internal and external behavior. The external factor caused by
+      sent rate as anomaly behaviors.                               other services leads to an external anomaly. For example, the
+   In this paper, we overcome these limitations and propose         cloud SaaS application downloads a large file, which brings
+an improved autoencoder framework BroadCAE, which inte-             about network congestion [26]. Besides, cyber attack [27] is
+grates contrastive learning and broad network. For the first        the most common external fault. Internal processes induce
+challenge, contrastive loss is introduced to formulate the          internal anomalies, such as authentication failure and network
+latent variable in the autoencoder. The anomaly samples in          packet loss. The operation system uses several reactive and
+an embedding space are closer to each other as possible,            proactive fault tolerance methods, such as auto-scaling [5],
+which is the same operation for normal samples. Inversely,          to remove the presented fault [28], which avoids further
+the training samples from different classes are separated. The      affecting the regular cloud services. Before that, the operation
+feature representation extracts both intra-class and inter-class    system still needs to consider identifying the fault through
+features, which further optimizes the margin between normal         the anomaly. They always analyze the anomaly state by
+and anomaly samples. To tackle the second challenge, the            monitoring metric, log, and trace. Particularly, the monitoring
+BroadCAE incorporates the broad network module to develop           metric is easier to embed and reveal the most comprehensive
+dynamic threshold selection. We first apply the anomaly scores      data pattern. In this paper, we focus on the monitoring-metric-
+to calculate the pseudo thresholds. Specifically, the anomaly       based anomaly detection algorithm.
+bias shrinks the anomaly scores of anomalies as their pseudo
+thresholds, while the normal bias amplifies the anomaly scores      B. Cloud Anomaly Detection Algorithm
+of normal samples to develop the normal-sample thresholds.             In the early stage, the cloud operation system primarily
+Thus, the violation of the actual label would be minimal.           adopts keyword-based [29] and statistics-based [30] anomaly
+Then we attain the threshold pattern by feeding the pseudo          detection methods. The keyword-based method identifies the
+thresholds and initial samples into the broad network. In the       anomaly recorded in the log by matching the related words,
+online testing stage, this trained broad learning model outputs     such as ERROR and FAILURE [31]. The statistics-based
+the individual threshold according to the coming sample. A          methods focus on several key performance indicators [32].
+portion of the network weight is updated while the actual label     If their values exceed a certain setting threshold, an alert is
+of the testing sample is acquired, which fits the need for the      triggered. The keyword-based and statistics-based methods are
+new detection setting.                                              only suitable for anomalies with relatively simple patterns.
+   The major contributions of our proposed BroadCAE are:               With the development of artificial intelligence operations in
+   • The BroadCAE innovates anomaly samples into the                the cloud, more machine-learning-based anomaly detections
+      traditional normal-only encoder-decoder framework,
+      which develops both inter-class and intra-class features        1 https://github.com/zhongguoxiang/BroadCAE
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER                                         3251
+
+
+                             TABLE I
+  T HE C OMPARISON OF R ELATED A LGORITHMS AND O UR B ROAD CAE     C. Broad Network
+                                                                      The broad network [45] is an improved single-layer feed-
+                                                                   forward neuron model. Without the deep architecture, the
+                                                                   broad network still has universal approximation properties [46]
+                                                                   and is much faster with credible classification accuracy. The
+                                                                   weight in the broad network is solved by the pseudoinverse
+                                                                   rather than gradient-descent-based methods used in deep
+                                                                   networks. The generalization ability of the broad network is
+                                                                   improved through the broad expansion. More broad network
+                                                                   variants are proposed. For example, fuzzy broad learning
+                                                                   system [47] introduces the Takagi-Sugeno fuzzy approach
+                                                                   into the feature node. Stacked broad learning system [48]
+                                                                   develops the incremental flatted framework to deep network,
+                                                                   which outperforms the deep residual network in experimental
+                                                                   comparison. Although the broad network is still in the early
+are deployed [31], [33], [34], [35]. They always depend            developing stage, some application researches continuously
+on the distribution divergence between normal and anomaly          model this novel network. The broad network combines the
+samples. For instance, the local outliers factor (LOF) [36]        graph neural network to achieve the emotion recognition [49].
+believes that the distribution density of normal is higher         The semi-supervised broad network is built for spammer
+than the anomaly sample’s. The one-class support vector            detectio

@@ -1,0 +1,1269 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+3564212
+
+MSFE-AD: Multiscale Feature-Enhanced Early
+Satellite Sensor Data Anomaly Detection
+Based on Rare Boundary Samples
+Lin Yang , Xiyuan Peng , Kai Guo , Student Member, IEEE, and Datong Liu , Senior Member, IEEE
+
+Abstract—With the increasing number of satellites being
+launched, in-orbit health monitoring has garnered significant
+attention. Analyzing operational data collected by spaceborne
+sensors enables the early detection of anomalies, thereby helping
+to prevent critical failures. However, due to the high morphological similarity between early fault data and normal data, achieving
+high detection rates while maintaining low false alarm rates
+remains a challenge. To address this issue, we propose a novel
+anomaly detection method that leverages rare boundary samples
+to guide key feature selection for feature augmentation, thereby
+constructing a highly discriminative feature space. The deep
+model incorporates a multifeature anomaly detection strategy
+to accurately identify abnormal data. By jointly extracting features from multiple domains and employing an adaptive weight
+allocation mechanism, the model enhances generalization across
+diverse data distributions. Experiments on real satellite sensor
+datasets demonstrate excellent detection performance, achieving
+a recall of 0.826, a precision of 0.938, and an F1-score of 0.878,
+indicating strong detection capability and robustness. Ablation
+studies confirm the effectiveness of integrating multiple feature
+augmentation strategies in balancing detection sensitivity and
+precision. These results highlight the proposed method’s superior
+ability to detect early anomalies in satellite systems.
+Index Terms—Anomaly detection, early anomalies, feature
+enhancement, satellite telemetry, sensor data.
+
+I. I NTRODUCTION
+
+A
+
+RTIFICIAL satellites are widely used in navigation,
+communications, weather forecasting, resource exploration, and other fields. Their long-term stable and reliable
+operation is crucial. Satellite sensor data, commonly referred
+to as telemetry data, are collected by spaceborne sensors to
+monitor satellite health. A large number of sensors are used
+to measure the working conditions of various engineering
+subsystems, such as satellite attitude, internal temperature,
+
+Received 22 April 2025; revised 13 September 2025; accepted 30 September 2025. Date of publication 30 October 2025; date of current version
+7 November 2025. This work was supported in part by the National Natural
+Science Foundation of China under Grant 62201177 and Grant 62371168;
+and in part by the Key Laboratory of Intelligent Space TTC&O (Space
+Engineering University), Ministry of Education, under Grant CYK2024-0205. The Associate Editor coordinating the review process was Dr. Loredana
+Cristaldi. (Corresponding author: Datong Liu.)
+Lin Yang is with the School of Electronics and Information Engineering,
+Harbin Institute of Technology, Harbin 150080, China, and also with Tonghua
+Normal University, Tonghua 134002, China (e-mail: hit yanglin@hit.edu.cn).
+Xiyuan Peng, Kai Guo, and Datong Liu are with the School of Electronics
+and Information Engineering, Harbin Institute of Technology, Harbin 150080,
+China (e-mail: pxy@hit.edu.cn; guok@hit.edu.cn; liudatong@hit.edu.cn).
+Digital Object Identifier 10.1109/TIM.2025.3626968
+
+pressure, voltage, and current. The collected data are transmitted to ground stations via radio technology for analysis by
+researchers. As the sole source of information for ground personnel to assess satellite status, these data must be accurately
+interpreted to ensure that operators can promptly and precisely
+understand the satellites operational condition [1].
+During prolonged operation in space, satellite components
+may degrade and eventually fail due to aging. Before an
+actual malfunction occurs, sensor data often exhibit early
+signs of failure. Anomaly detection aims to identify these
+precursor signals, enabling engineers to take timely intervention measures and effectively prevent major spacecraft
+failures. Data-driven anomaly detection methods are now
+widely adopted. Researchers have employed a variety of
+machine learning and deep learning algorithms to detect
+anomalies in satellite sensor data [2]. Failures caused by
+gradual equipment degradation typically follow a progressive
+process, during which the severity of anomalies in sensor data
+increases incrementally. The earlier an anomaly is detected, the
+more beneficial it is for restoring normal satellite operation
+and extending its service life. Therefore, studying anomaly
+detection in the early stages of satellite sensor data holds
+significant practical value.
+In the industrial field, scholars have conducted extensive
+studies on early anomaly detection in sensor data. Early
+anomaly and fault detection have become critical for ensuring
+operational safety and reducing maintenance costs [3]. Since
+early faults manifest as weak signal characteristics and high
+noise levels, numerous studies have focused on improving
+weak fault detection by suppressing broadband noise and
+periodic components in the signals [4], [5]. Traditional vibration analysis and statistical process control methods often fail
+to capture early faults [6]. Studies in [7] and [8] improve
+the signal-to-noise ratio through feature extraction methods,
+combined with deep learning models to detect anomalies.
+These methods offer high interpretability and computational
+efficiency; however, their ability to handle complex nonlinear
+features is limited.
+Several recent studies have attempted to address these challenges by designing frameworks with high detection sensitivity
+[9]. For example, [10] proposed an unsupervised deep tensor
+framework with adaptive rule updates, which does not require
+labeled data and can adapt to device degradation in real time.
+Similarly, [11] incorporates an adversarial learning approach
+
+1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 1. Illustration of early anomaly data distribution.
+
+with an autonomous model update mechanism to dynamically
+adjust the detection threshold. However, these approaches
+still have limitations in dealing with unbalanced data. Parallel convolutional neural network (CNN) architectures [12]
+enhance multimodal data processing capabilities, albeit with
+high computational overhead, while LSTM-based predictors
+[13] struggle to address error accumulation in long-term prediction. Such methods may improve anomaly detection but can
+also increase the false alarm rate. In addition, generalization
+ability may remain a challenge.
+Early anomaly detection is challenging due to the high similarity between anomalous sensor data and normal data. Some
+anomalous data overlap with normal data and are difficult
+to distinguish (see Fig. 1); when there are no representative
+boundary samples, the model cannot learn to distinguish
+between normal and anomalous classes, and the samples near
+the decision boundary can be misclassified. In spacecraft
+anomaly detection systems, boundary information can lead to
+overly conservative thresholds or overly sensitive thresholds.
+It is worth noting that during satellite operation and maintenance, engineers typically perform regular manual inspections
+of sensor data. Boundary samples are often manually identified
+by experts and are indicative of weak faults. However, these
+samples are often discarded due to the difficulty of incorporating them into anomaly detection models. Due to the diversity
+of anomaly patterns, anomaly detection is often approached
+as a semisupervised learning task. This approach enables the
+model to detect a wide range of anomalies, but it neglects
+boundary samples that contain valuable prior knowledge. In
+our ongoing observations of in-orbit satellite sensor data, we
+have found that some anomalous data missed by the detector
+exhibit similarities to boundary samples previously labeled by
+experts. Therefore, we propose to leverage these previously
+discarded boundary samples to enhance the performance of
+the anomaly detector. These samples are distributed near the
+decision boundary between the normal and anomalous classes
+in the feature space, but they occur infrequently and are
+commonly referred to as rare boundary samples.
+Boundary samples play an important role in classification
+tasks, as they may influence the positioning of decision boundaries [14]. In particular, boundary oversampling techniques can
+enhance overall performance in imbalanced classification tasks
+[15]. These methods employ data augmentation techniques to
+
+mitigate category imbalance and enhance the classifiers ability
+to recognize boundary samples [16]. However, several challenges remain with existing methods. The generated samples
+may be overly concentrated in certain regions, causing the
+model to rely excessively on localized features and resulting
+in overfitting. In addition, these methods are ineffective in
+handling the classification of multidimensional, multiclass,
+imbalanced data. Moreover, data augmentation techniques
+designed for time-series classification may not be directly
+applicable to time-series anomaly detection tasks [17].
+To address the aforementioned challenges, we propose the
+MSFE-AD model, which fully leverages the prior knowledge
+contained in expert-labeled boundary samples during training.
+The proposed method effectively captures subtle anomalies
+induced by incipient faults.
+The main contributions of this article are summarized as
+follows.
+1) This article presents the first attempt to improve anomaly
+detection performance using rare boundary samples.
+A feature engineering method is introduced to significantly enhance data characterization by mining potential
+features from original data and selecting the most discriminative subset.
+2) A multiscale anomaly detection strategy is proposed,
+employing parallel processing of heterogeneous detection models to improve detection precision and generalization ability. A learnable influence factor is introduced
+to adaptively adjust the contribution weights of different
+detection strategies, maintaining model stability in complex environments. This approach effectively balances
+the tradeoff between detection sensitivity and robustness,
+providing an interpretable and adaptable solution for
+early satellite anomaly detection.
+The remainder of this article is organized as follows. Section II
+presents the methods of model reconstruction and feature
+enhancement for time-series anomaly detection. Section III
+describes the proposed framework and its implementation.
+Section IV presents experiments conducted on satellite sensor
+data, where the proposed method is compared with existing approaches. Section V discusses the experimental results
+and provides further analysis of the framework. Section VI
+concludes this article.
+II. IR ELEVANT M ETHODOLOGIES
+Sensor data are a form of time-series data. Timeseries anomaly detection methods are generally categorized
+into prediction- and reconstruction-based approaches [18].
+Prediction-based methods are sensitive to short-term fluctuations and are well-suited for real-time anomaly detection. In
+contrast, reconstruction-based methods are more effective in
+capturing trend deviations in time-series data. In this work,
+we adopt a reconstruction-based anomaly detection approach.
+Among various reconstruction models, autoencoders (AEs)
+and their variants have been widely adopted for this task.
+A. Anomaly Detection Methods Based on Reconstruction
+AEs are a class of neural networks designed for data
+compression and reconstruction tasks. They are designed to
+
+YANG et al.: MSFE-AD: MULTISCALE FEATURE-ENHANCED EARLY SATELLITE SENSOR DATA ANOMALY DETECTION
+
+replicate input data through learned internal representations.
+An AE typically consists of an encoder and a decoder. The
+encoder maps the input into a latent representation, commonly
+referred to as the encoding, while the decoder reconstructs the
+input data from this latent space, referred to as the decoding.
+When trained on normal data, AEs typically exhibit large
+reconstruction errors when presented with anomalous inputs,
+making them well-suited for time-series anomaly detection.
+For example, Kim et al. [19] proposed a Bayesian
+auto-optimization approach for AE hyperparameters, which
+enhances anomaly detection performance for boiler tube
+leakages by optimizing latent dimensionality. Rani et al.
+[20] introduced a probabilistic wavelet neural operator AE
+(PWNOAE) for anomaly detection in industrial process data.
+In this model, wavelets were employed for time–frequency
+localization of time-series data, while deep models were used
+to learn complex features from the data.
+Variational AEs (VAEs) are generative models that combine
+the strengths of AEs and variational inference. Compared with
+traditional AEs, VAEs offer enhanced generative capabilities,
+more flexible latent representations, and improved probabilistic
+modeling. Li et al. [21] incorporated recurrent neural network
+(RNN) and gated recurrent unit (GRU) structures to model
+temporal dependencies and uncertainty in time series and
+employed a VAE to compute reconstruction loss, followed by
+a density-based detector for anomaly identification. To address
+the nonlinearity, dynamics, and non-Gaussian characteristics of
+industrial process data, Zhang et al. [22] proposed a recurrent
+Kalman VAE (RK-VAE), which integrates Kalman filtering for
+noise suppression.
+Long short-term memory (LSTM) networks possess powerful nonlinear modeling capabilities and effectively capture
+temporal dependencies in sequential data. When combined
+with AEs or VAEs, the resulting models leverage the strengths
+of both structures, thereby improving their suitability for
+time-series anomaly detection. Han et al. [23] introduced an
+LSTM-based VAE (LSTM-VAE) with reconstruction probability for fault detection in ship components. Guha et al. [24]
+proposed an anomaly detection mechanism that first applies
+wavelet decomposition to extract high- and mid-frequency
+signals, thereby mitigating the impact of rare anomalies in
+the training data, and then uses a VAE-LSTM model for
+reconstruction-based detection in power grid data.
+B. Feature Enhancement Methods
+In time-series analysis, feature enhancement can significantly improve model performance by emphasizing
+salient characteristics of the original data. Frequency-domain
+enhancement techniques improve the models capacity to capture periodicity and trends by extracting spectral features from
+time-series data. Frequency-enhanced channel attention mechanisms [25], which apply frequency-domain transformations to
+improve feature extraction in time-series prediction, emphasize
+the importance of multiscale frequency information. Dualfrequency augmented attention networks [26], which combine
+high- and low-frequency components to predict the remaining
+useful life of aircraft engines, demonstrate superior performance by capturing distinct frequency decay modes.
+
+3564212
+
+Self-supervised learning leverages the data itself to automatically generate labels, thereby improving the models ability to
+discriminate time-series features. TimesURL [27] introduces
+a self-supervised contrastive learning framework to improve
+both the quantity and quality of negative samples. Hu et al.
+[28] proposed a generalized representation model based on
+contrastive learning, employing recurrent generative adversarial networks (R-GANs) to generate positive and negative
+samples.
+The multiscale fusion technique enhances model learning
+for complex time series by integrating features across different
+scales. Zhang et al. [29] introduced a hierarchical transformer
+structure to capture frequency-domain features at multiple time
+scales, enhancing multivariate time-series prediction through
+multiscale feature fusion. Zhong et al. [30] employed the
+discrete wavelet transform (DWT) to obtain multiscale timeseries features, combined with an energy-based multiscale
+weighting strategy to improve the models transferability. These
+methods emphasize the importance of multiscale modeling in
+addressing complex time-series analysis tasks.
+These research efforts provide a solid theoretical foundation
+for this work. The following section elaborates on the novel
+feature enhancement framework proposed herein.
+III. P ROPOSED M ETHOD
+In this section, the framework of MSFE-AD is introduced,
+including three components: feature engineering, reconstruction modeling, and detection strategy, as illustrated in Fig. 2. In
+the feature engineering module, both global and local features
+are extracted, and the most representative features are selected
+and reinforced in the data. The reconstruction model is implemented using a VAE, with LSTM networks employed for both
+the encoder and the decoder to reconstruct the input time
+series. The detection strategy employs two complementary
+methods at different time scales to enhance anomaly detection
+performance. An influence factor is introduced to adaptively
+weight the contribution of each detection strategy, maintaining
+a balance between them.
+A. Feature Engineering
+Early satellite anomalies are challenging to detect due to
+their subtle and inconspicuous characteristics. In this article,
+we propose a feature enhancement method for time-series
+data, which enhances raw signals to amplify subtle anomalies,
+making them more distinguishable to the detection model.
+1) Feature Extraction: Statistical, spectral-domain, and
+time-domain features are extracted to characterize the time
+series. These representative features effectively capture the
+underlying characteristics of the time series and possess clear
+physical interpretability. A detailed description of these three
+types of features is provided in Table I. These features are
+extracted at two different time scales: global features, which
+are computed over the entire time series and represented as
+single numerical values; and local features, which are obtained
+using a sliding window, resulting in a sequence of feature
+vectors.
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 2. MSFE-AD algorithmic framework.
+
+TABLE I
+D ETAILED I NFORMATION ON THE T HREE T YPES OF F EATURES
+
+the index of the data sample
+8
+9
+f1,1 , f1,2 , . . . , f1,n >
+ˆ
+ˆ
+>
+ˆ
+< f2,1 , f2,2 , . . . , f2,n >
+=
+FG =
+..
+ˆ
+>
+.
+ˆ
+>
+ˆ
+>
+:
+;
+fk,1 , fk,2 , . . . , fk,n
+
+(1)
+
+where F L represents the set of local features for all data and
+0
+fk,n
+are features in the form of time series
+8 0
+9
+0
+0
+f1,1 , f1,2
+, . . . , f1,n
+ˆ
+>
+ˆ
+ˆ f0 , f0 , ..., f0 >
+>
+<
+=
+2,1
+2,2
+2,n
+FL =
+.
+(2)
+..
+ˆ
+>
+.
+ˆ
+>
+ˆ
+>
+: 0
+0
+0 ;
+fk,1 , fk,2
+, . . . , fk,n
+
+2) Feature Selection: In the preceding step, global and
+local features were extracted from the time-series data. The
+extracted global features are represented as a set of discrete
+values.
+Let FG denote the collection of global features for all data,
+where k ∈ [1, 21] indicates the type of feature and n represents
+
+Subsequently, the discriminative value of these features
+needs to be evaluated. At this stage, boundary samples are
+taken into account to guide feature selection. Typical representative features are identified based on their ability to separate
+anomalous data from normal data. The Euclidean distance
+is used for evaluation, and the feature with the maximum
+distance is selected as the optimal global feature. The extracted
+local features form a multivariate time series. To identify
+the most informative local features, a modified Mahalanobis
+distance [31] is employed for evaluation. The Mahalanobis
+
+YANG et al.: MSFE-AD: MULTISCALE FEATURE-ENHANCED EARLY SATELLITE SENSOR DATA ANOMALY DETECTION
+
+distances computed over the time series also form a new time
+series.
+3) Feature Enhancement: Feature enhancement is performed on the original data using the optimal global and local
+features, resulting in a new sequence with improved discriminative capability. Specifically, the optimal global features are
+used to enhance the original data. The resulting enhanced
+feature sequence can be expressed as
+d̃G = d + λ (α fG − fo ) d
+
+(3)
+
+where fG represents the optimal global feature values from
+normal data, fo denotes the corresponding feature values from
+boundary samples, α is the enhancement factor (α > 1), and λ
+is a tunable parameter that controls the enhancement strength.
+Furthermore, feature enhancement is applied to the original
+data using the optimal local features. The corresponding
+enhanced sequence is denoted as
+d̃L = d + λαAT I + λAAT
+
+−1
+
+( fL − Ad)
+
+(4)
+
+where fL represents the optimal local feature values from
+normal data, A denotes the local feature extraction matrix,
+I is the identity matrix, and α and λ retain their previous
+definitions.
+
+B. Reconstruction Model
+Reconstruction-based anomaly detection methods require
+training a model that effectively captures the distribution
+of normal data. In this work, a VAE-LSTM architecture is
+adopted as the baseline model. A VAE is a generative model
+in which the encoder maps input data to a latent distribution, and the decoder reconstructs the original data from this
+representation. A well-known limitation of traditional AE is
+its tendency to overfit during training. To address this, the
+VAE encodes inputs as probability distributions—typically
+Gaussian—rather than deterministic points in the latent space.
+This stochastic formulation introduces beneficial randomness
+and serves as an implicit regularization mechanism, thereby
+enhancing model generalization. Given that satellite sensor
+data are time series in nature, employing LSTM as the
+underlying network enables the model to capture temporal
+dependencies and latent features more effectively. A twolayer LSTM architecture offers stronger nonlinear modeling
+capacity compared to a single-layer network. However, deeper
+architectures often yield diminishing performance gains while
+increasing computational overhead. Thus, a two-layer structure
+is adopted as a practical tradeoff.
+VAE-LSTM is a fusion of VAE and LSTM. The VAE-LSTM
+model integrates the temporal modeling capability of LSTM
+with the probabilistic representation learning of VAE. This
+combination enables effective capture of complex temporal
+dependencies and latent distributions, making it particularly
+suitable for detecting subtle, evolving, or early-stage anomalies
+in time-series data. The encoder and the decoder of the VAE
+are constructed using LSTM networks. The deep model utilizes both the divergence loss and reconstruction loss to jointly
+
+3564212
+
+regularize the latent variable Z. The overall loss function of
+the deep model is defined as follows:
+N
+ X
+Loss = DKL qφ (z|x) ||pθ (z) +
+mse (xt , x̂t ).
+
+(5)
+
+t=1
+
+The first term represents the Kullback–Leibler (KL) scatter
+between the latent variable distribution q(z|x) and the prior
+distribution p(z), measuring how well q(z|x) represents the
+prior distribution p(z). The second term computes the mean
+squared error between the model’s inputs and the original data
+series, representing the model’s reconstruction error.
+The probability density function and KL divergence of a
+Gaussian distribution can be computed analytically, which
+greatly simplifies the optimization in variational inference.
+Therefore, the approximate posterior q(z|x) is typically
+assumed to follow a Gaussian distribution. When the complex
+distribution of x is mapped to the latent space through a neural
+network, the Gaussian assumption provides sufficient expressiveness to fit most application scenarios while significantly
+reducing computational cost.
+We can map the input data x to a mean vector µ and a
+variance vector σ via an encoder network, and then sample
+the latent variable z from the distributions of the mean and
+variance. Specifically, we can express it as follows:
+µ = fµ (x)
+
+(6)
+
+σ = fσ (x)
+
+(7)
+
+z=µ+ε
+
+exp (σ/2) .
+
+(8)
+
+In the equation, ε ∼ N(0, 1) represents a noise vector.
+To train the deep model, a backpropagation algorithm is
+employed. This algorithm iteratively updates the network
+parameters to minimize the defined loss function [32].
+The Appendix presents a formal proof establishing the convergence of the VAE-LSTM reconstruction error for normal
+time-series data.
+C. Anomaly Detection Strategy
+The globally enhanced data are reconstructed by the deep
+model to compute the reconstruction loss for each time point.
+The reconstruction loss quantifies the discrepancy between the
+original input and the reconstructed output at each time step.
+Reconstruction-based anomaly detection relies on this loss to
+determine whether an anomaly exists in the observed data. Two
+types of enhanced data—global and local—are passed through
+the reconstruction model, resulting in corresponding reconstruction losses. Accordingly, two different anomaly detection
+strategies are employed.
+1) Global-Scale Detection: The formula for calculating the
+reconstruction loss is shown in (9). It is the arithmetic sum of
+the difference between the original data and the predicted data
+at each point
+n
+X
+
+u=
+d (ti ) − d̂ (ti ) .
+(9)
+i=1
+
+A larger sum of residuals reflects a greater overall discrepancy between the original data and the reconstructed
+data. Therefore, data with larger residual sums have a higher
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+probability of being anomalous. The maximum residual sum
+observed in normal data is used as the threshold for anomaly
+detection in that measurement.
+2) Local Feature Detection: The global detection strategy
+is widely used but has inherent limitations. It can be viewed as
+projecting the entire time series at time t onto a single point,
+which inevitably results in some information loss. Therefore,
+we retain the entire residual sequence for each data point, as
+shown in the following equation:
+D (ti ) = d (ti ) − d̂ (ti ) .
+
+(10)
+
+The length of this sequence is the same as the test data, and
+if the whole residual sequence is tested directly, the redundant
+information in it will cause the results to be distorted. Therefore, we use 1-D average pooling to compress the residual
+sequence as in (10)
+ks+h
+
+v=
+
+1X
+D (t)
+h
+
+(11)
+
+t=ks
+
+where s represents the step size, while h signifies the width.
+Following the compression of the new data, we utilize support
+vector domain description (SVDD) as a means to differentiate
+between normal and abnormal data. The optimization objective
+of SVDD is to identify a minimum sphere characterized by a
+center α and radius R, satisfying (12). Subsequently, we can
+utilize R as the threshold value for this detection measurement
+(xi − α)T (xi − α) ≤ R2 + ξi
+
+ξi ≥ 0.
+
+(12)
+
+3) Anomaly Scores: The anomaly scores derived from
+normal data by each detection method are transformed into
+anomaly scores within the range of [0, 1]. Among them,
+l1 denotes the anomaly score generated by global feature
+detection, l2 represents the anomaly score yielded by local
+feature detection, and l3 signifies the anomaly score originating
+from the original data acquired through the deep model.
+Their proportion of the anomaly score is determined by the
+characteristic scale factor θ, whose value is calculated by the
+following equation:
+n
+
+θ=
+
+1X
+n
+t=1
+
+= 0.5
+
+min min |y (t) − xi (t)| + ρ max max |y (t) − xi (t)|
+i
+
+t
+
+i
+
+t
+
+|y (t) − xi (t)| + ρ max max |y (t) − xi (t)|
+i
+
+ρ
+
+t
+
+(13)
+
+where y(t) represents the known boundary sample and xi (t)
+is the data to be detected. The factor is calculated by the
+gray correlation analysis method and indicates the degree of
+similarity between the data to be detected and the boundary
+sample. The anomaly score is calculated as in (14). The
+detected data are recognized as anomalous when their anomaly
+score exceeds 1
+(l1 + l2 ) l3
+L=
+L ≤ 1, normal.
+(14)
+(1 − θ) (l1 + l2 ) + 2θl3
+The proposed framework consists of three independently
+structured deep submodels, each targeting a distinct feature
+perspective—global, local, and original. By applying a feature
+ratio-based weighting scheme to their outputs, the framework
+dynamically balances the contribution of each perspective and
+
+reduces the risk of overfitting caused by the high concentration
+of boundary samples in any single feature space.
+D. Model Update Mechanism
+This study designs three model update strategies to enhance
+the adaptability and robustness of the model during long-term
+spacecraft operation. The first is a periodic update strategy,
+where the model is retrained at fixed time intervals using
+all newly collected data, allowing it to continuously adapt to
+changes in system status. The second is an event-triggered
+update strategy. When the system receives newly labeled
+boundary samples from domain experts, the model update is
+immediately triggered to enhance its capability in recognizing
+early anomalies. The third is an incremental update strategy.
+When the system detects concept drift in the data, only the
+global feature modeling component and the original data
+modeling component are incrementally updated, while the
+local feature detection component remains unchanged. This
+ensures local stability while improving the overall adaptability
+of the model.
+In addition, this study proposes a method for the detection
+and early warning of concept drift. In practical deployment, telemetry parameters with limited variation ranges are
+first filtered out by engineers, allowing the system to focus
+on dynamic parameters that are more susceptible to drift.
+For these parameters, we continuously monitor the trend of
+anomaly scores. If a sustained deviation in the anomaly score
+is observed, concept drift is considered likely to have occurred,
+and the model update mechanism is subsequently triggered.
+All the above update strategies enable timely correction
+of model parameters and dynamic adjustment of decision
+thresholds, thereby allowing adaptive tuning of the decision
+boundary and improving the models responsiveness to changes
+in system behavior.
+E. Deployment
+The proposed anomaly detection algorithm is primarily
+deployed at the ground control center to monitor and identify
+early anomalies during satellite operations. At fixed time
+intervals, the algorithm automatically retrieves specified key
+spaceborne sensor data from the ground-based data reception
+and processing system. Before being input into the model,
+the retrieved data undergo a series of preprocessing steps to
+improve data quality and enhance model robustness.
+During the training phase, the anomaly detection framework supports the manual injection of boundary samples to
+strengthen the models ability to perceive early faults. Once
+trained, the model can automatically perform anomaly detection tasks, producing an anomaly label and a corresponding
+anomaly score for each data segment. When a potential
+anomaly is detected, the system immediately alerts operation
+and control personnel to assist in further analysis and intervention.
+In addition, the framework also supports deployment on
+the satellite side to meet the real-time detection needs of
+certain critical sensor parameters. In such cases, the model
+can be trained on the ground and the updated parameters
+
+YANG et al.: MSFE-AD: MULTISCALE FEATURE-ENHANCED EARLY SATELLITE SENSOR DATA ANOMALY DETECTION
+
+3564212
+
+uploaded to the spaceborne system via telemetry channels.
+The satellite-side system only performs lightweight inference,
+thereby balancing detection precision and system resource
+constraints and enhancing the satellites in-orbit autonomous
+anomaly recognition capability.
+IV. E VALUATION OF THE E XPERIMENT AND
+A NALYSIS OF THE R ESULTS
+The experimental data were obtained from an in-orbit satellite. Over six months of continuous operation, voltage and
+current data from multiple channels were recorded by sensors
+monitoring the atomic clocks operational status. The data were
+sampled at 0.1 Hz. During in-orbit operation, several boundary
+samples that fell below the alarm threshold were identified by
+experts from the Chinese Space Agency. These samples serve
+as critical empirical evidence supporting this study.
+The dataset contains 1894 time-series segments, among
+which 92 are labeled as anomalous samples. These annotations are based on engineering ground event logs and expert
+manual inspections, ensuring a high level of reliability. In the
+experimental setup, the first 300 normal segments are selected
+as the training set, and another 300 normal segments are used
+as the validation set. In addition, two rare boundary samples,
+identified by engineering experts, are included. The remaining
+data constitute the test set, which includes 1200 normal
+segments and the aforementioned 92 anomalous segments.
+The anomalous samples cover three major types: point
+anomalies, contextual anomalies, and gradually evolving
+anomalies. These types collectively represent a wide range
+of abnormal behaviors that may occur during in-orbit satellite operations. Before being fed into the model, the raw
+spaceborne sensor data undergo several preprocessing steps,
+including data decoding, removal of transient outliers caused
+by single-event upsets, and interpolation for estimating missing values, in order to improve data continuity and usability.
+A. Evaluation Metrics
+The anomaly detection task in this study constitutes a typical
+imbalanced classification problem. Accordingly, the evaluation
+metrics used are recall, precision, and F1-score. Recall directly
+reflects the models ability to identify anomalous instances. In
+highly imbalanced datasets, precision more effectively reflects
+the impact of false positives on overall detection performance
+than the false positive rate (FPR). The F1-score provides a
+balanced measure of the models performance by combining
+precision and recall.
+The definitions of these three metrics are given as follows:
+TP
+TP + FN
+TP
+Precision =
+TP + FP
+2 × Precision × Recall
+F1 − score =
+.
+Precision + Recall
+Recall =
+
+(15)
+(16)
+(17)
+
+B. Feature Extraction
+We extracted 21 features for the training data. As can be
+seen in Fig. 3, the 13th feature has the highest discriminatory
+
+Fig. 3. Optimal global features.
+
+Fig. 4. Optimal local features.
+
+degree, so this feature, i.e., the spectral median frequency
+(SMF) of the time series, is chosen as the best global feature.
+For localized features, we use the Mahalanobis distance to
+measure the differentiation of different types of features. As
+can be seen in Fig. 4, two features, the spectral distance and
+the peak-to-peak distance, have greater differentiation as the
+best local features.
+C. Comparative Experiment
+To validate the effectiveness of the proposed MSFE-AD
+model, it is compared with four categories of anomaly detection approaches, including data enhancement, early anomaly
+detection, feature enhancement, and reconstruction-based
+approaches. A total of nine baseline methods, corresponding
+to representative studies in the literature, are selected for
+comparison.
+The hyperparameters of all methods were individually tuned
+on the validation set using grid search. The hyperparameters
+for the proposed model were set as follows: number of LSTM
+units = 128, number of LSTM layers = 2, latent space
+dimension = 64, and KL divergence weight β = 1.0. To
+mitigate overfitting, dropout regularization was applied during
+training, along with an early stopping strategy based on the
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+TABLE II
+R ESULTS OF P ERFORMANCE C OMPARISON ON
+I N -O RBIT T ELEMETRY DATASETS
+
+TABLE III
+R ESULTS OF A BLATION E XPERIMENTS E VALUATION I NDICATORS
+Fig. 5. Comparison of the feature-enhanced LSTM-VAE with the proposed
+method on three key evaluation metrics.
+TABLE IV
+AVERAGE R ESULTS OF E ACH T YPE OF M ETHOD
+
+validation loss. This enhances the models generalization ability. The final configuration was selected by balancing detection
+precision and computational efficiency. In addition, NumPy,
+scikit-learn, and Pandas libraries are used. The final result
+of each anomaly detection algorithm is the average score of
+ten repeated runs. Table II shows the recall, precision, and
+F1-score results of the ten experiments on real satellite data.
+
+V. D ISCUSSION
+
+D. Ablation Studies
+
+A. Analysis and Exploration
+
+To further analyze the effectiveness of the proposed model,
+ablation experiments are conducted. Different combinations
+of model components are evaluated to observe their impact
+on anomaly detection performance. Each configuration is
+integrated with the VAE-LSTM deep reconstruction model.
+First, global feature enhancement is applied in conjunction
+with global-scale anomaly detection. Second, local feature
+enhancement is combined with local-scale detection. Third,
+both combinations are employed simultaneously; if either
+strategy detects an anomaly, the data are classified as
+anomalous.
+The corresponding results are presented in Table III.
+Our observations indicate that, compared to the baseline
+model, all three methods improve recall. The third combination
+achieves comparable recall performance to the MSFE-AD
+model. However, its precision and F1-score are substantially
+lower than those of the MSFE-AD model. This result is
+illustrated in Fig. 5.
+These findings demonstrate that the use of feature enhancement methods along with their corresponding detection
+strategies can effectively enhance the detectors capability
+to identify anomalous data. The anomaly score evaluation
+mechanism helps eliminate false positives and improves the
+models robustness. This validates that each component of our
+approach is indispensable.
+
+In the experimental results, we observe that some baseline
+methods exhibited lower precision. This is because there is
+a significant class imbalance, with many more normal samples than abnormal ones. Consequently, when some normal
+samples are misclassified as anomalies, precision deteriorates. Nine anomaly detection methods, categorized into four
+types, were used for comparison. Table IV presents the
+average results for each category. Results indicate that feature enhancement and reconstruction-based methods achieved
+comparatively superior performance. Building upon this, the
+methods proposed in this article further improve anomaly
+detection capability. This result is illustrated in Fig. 6.
+The ablation experiments demonstrate that feature enhancement significantly improves the models ability to detect
+anomalous data, as evidenced by an increased recall. This indicates that the proposed feature enhancement method utilizing
+boundary samples is more sensitive to anomalies. However,
+this comes at the cost of increased false positives, leading
+to reduced precision and F1-score. To address this issue,
+a learnable scaling factor is introduced within the anomaly
+detection framework to balance the contributions of different
+components. While this adjustment slightly reduced recall, it
+yielded the best precision and F1-score.
+These results clearly demonstrate that the application
+of appropriate feature engineering techniques and anomaly
+
+YANG et al.: MSFE-AD: MULTISCALE FEATURE-ENHANCED EARLY SATELLITE SENSOR DATA ANOMALY DETECTION
+
+3564212
+
+further ensures the local stability of the fusion process and,
+thus, avoids erratic fluctuations in the final anomaly score and
+decision boundaries.
+C. Selection and Evaluation of Deep Models
+
+Fig. 6. Average results of each type of method.
+
+detection strategies, including the anomaly score evaluation
+mechanism, has a substantial impact on detection performance.
+B. Stability Analysis of the Multiscale Detection Score
+Fusion Method
+To ensure the reliability of the multiscale detection score
+fusion results, it is necessary to analyze the stability of the
+fusion (14). On the one hand, such analysis prevents the
+output from diverging or exhibiting abnormal fluctuations
+when the inputs remain within a reasonable range, thereby
+avoiding misjudgments in anomaly detection. On the other
+hand, demonstrating that the output variations remain bounded
+under small input perturbations improves the overall robustness of the system, ensuring that the proposed fusion method
+possesses practical applicability in real-world scenarios.
+First, the input to the fusion formula is a bounded set
+composed of detection scores from different time scales.
+Accordingly, the input parameters are bounded. Since the
+denominator D(θ) remains strictly positive within the interval θ ∈ [0, 1], inequality-based derivations confirm that the
+output L(θ) is also bounded. This demonstrates that the
+fusion function satisfies the bounded-input bounded-output
+(BIBO) stability condition, implying that the fusion output
+does not diverge when the input scores are confined to a finite
+range, thereby preventing abnormal fluctuations during the
+decision-making process.
+Furthermore, in terms of system convergence, if the detection scores of the subdetectors converge, the limit of the fusion
+output L necessarily exists due to the commutativity of limits
+for continuous functions. This establishes that the overall
+system exhibits asymptotic stability. From the perspective of
+local robustness, algebraic simplification and upper bound
+estimation of the partial derivatives of the fusion function
+indicate that the function satisfies Lipschitz continuity on
+a specific compact set. Consequently, small perturbations in
+the input (e.g., those caused by significant variance across
+time scales) lead to bounded variations in the output—this
+
+The proposed anomaly detection framework adopts a
+modular design, in which key components such as feature
+augmentation, time-series modeling, and anomaly scoring are
+decoupled. This allows flexible replacement and optimization
+of submodules while maintaining the overall structural stability. Currently, time-series modeling is implemented using a
+VAE-LSTM model. In extensive comparative experiments, this
+model demonstrated outstanding performance in several key
+metrics, including precision, recall, and F1-score, and was,
+therefore, selected as the default modeling component in the
+framework.
+However, we also acknowledge that model selection based
+solely on performance metrics typically relies on known
+anomalous samples, which introduces certain limitations.
+Specifically, a “best-performing model” selected based on
+existing anomaly types may perform poorly when encountering previously unseen anomalies. This evaluation strategy
+is essentially conducted under the closed-world assumption,
+which may fail to fully reflect the model’s robustness and
+generalization ability in real-world open environments.
+To address this issue, we plan to explore more generalpurpose model evaluation mechanisms in the future, with the
+aim of enhancing the reliability and practical guidance value
+of the model in real-world applications.
+D. Interpretability Analysis
+The interpretability of deep learning methods has long been
+a major challenge in practical applications. In the proposed
+framework, feature engineering is applied before training the
+deep learning model to extract a series of features with
+clear physical meanings from the raw telemetry data. These
+features capture the variation patterns and statistical properties of telemetry signals across different dimensions. This
+domain knowledge-driven feature construction enhances the
+interpretability of detection results, making the model outputs
+easier for experts to understand and verify.
+E. Computational Efficiency and Deployment Feasibility
+Although the proposed model achieves promising performance in anomaly detection tasks, its computational efficiency
+is also an important consideration. On a computer configured with an Intel i5-12400 CPU, 16 GB of RAM, and
+an NVIDIA GeForce RTX 3060 Ti GPU, the model takes
+approximately 85 s to complete inference on the entire dataset.
+Compared with LSTM-based models, the inference time is
+slightly longer; however, it demonstrates a significant advantage in computational efficiency over models based on GAN
+or transformer architectures. This advantage becomes more
+pronounced as the input sequence length increases.
+Similar to other deep learning-based anomaly detection
+methods, the computational cost of this model during training
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+is substantially higher than during inference. Fortunately,
+ground-based management systems typically have sufficient
+computing resources to support the training of complex models. In contrast, due to limited resources on the satellite side,
+only the inference model and necessary detection modules are
+usually deployed. With the help of model compression techniques, such as quantization and pruning, the computational
+and storage cost of deploying the model in spaceborne systems
+can be further reduced. In addition, for models with parallel
+structures, a rotational working mechanism can be adopted to
+reduce continuous computational load, at the expense of some
+real-time performance.
+F. Applicability and Limitations
+The proposed method focuses on detecting early faults in
+satellites, which is of great significance for enhancing mission
+safety and extending satellite service life. The framework
+adopts a multiscale parallel heterogeneous model along with
+a corresponding anomaly scoring scheme, aiming to ensure
+applicability beyond a single scenario. Our experimental
+dataset includes point anomalies, contextual anomalies, and
+gradually evolving anomalies. The results demonstrate that the
+proposed method exhibits strong competitiveness under the
+current experimental setting.
+However, for more complex anomaly patterns (e.g.,
+semantic anomalies), the discriminative ability of the existing framework may be limited in the absence of sufficient domain knowledge. For certain satellites with high
+maneuverability—such as military reconnaissance satellites or
+technology demonstration satellites—their sensor data may
+exhibit significant nonstationarity and complex variations due
+to frequent trajectory changes and dynamic task adjustments. In such cases, the framework may face performance
+constraints.
+In addition, mislabeled anomalies in the training data,
+insufficient training samples, or a lack of awareness of abrupt
+changes in mission conditions may result in biased modeling
+and degraded detection performance.
+VI. C ONCLUSION
+During spacecraft operation and maintenance, a very small
+number of boundary samples labeled manually by domain
+experts exist. These samples cannot be detected by existing
+anomaly detection methods. Such boundary samples lie near
+the classification decision boundary and are highly similar
+to both normal and anomalous data. This article proposes
+an anomaly detection framework that constructs a highly
+discriminative feature space using boundary samples. The
+method significantly enhances the separability of normal and
+anomalous samples in the feature distribution, thereby effectively reducing the learning difficulty of neural networks in
+early anomaly detection tasks and improving classification
+precision.
+By introducing feature weighting factors to dynamically
+fuse the outputs of multiscale parallel heterogeneous submodels, the framework achieves a dynamic balance across
+different feature perspectives. This effectively mitigates the
+
+overfitting risk caused by clustering of boundary samples. On
+a real satellite sensor dataset, the proposed method achieves
+excellent detection performance: a recall rate of 0.826, reflecting strong recognition of anomalous events; a precision of
+0.938, indicating overall reliable judgment; and an F1-score
+of 0.878, demonstrating a balanced tradeoff between precision
+and recall. Compared with other state-of-the-art methods, the
+proposed anomaly detection framework attains the best results.
+The proposed anomaly detection model addresses specific engineering application scenarios. The validation data
+were collected from spacecraft payloads experiencing gradual
+degradation. Such data collection is challenging and requires
+manual annotation by domain experts. More data are needed in
+the future to further validate the model. The proposed method
+has a clear underlying principle. As a general framework,
+its deep learning model component can be replaced. Future
+work will focus on improving evaluation mechanisms, exploring more robust and generalizable deep models, and further
+strengthening the collaborative design between deep models
+and anomaly detection strategies to enhance overall detection
+performance and application reliability.
+A PPENDIX
+In order to validate the convergence of the reconstruction
+error of the VAE-LSTM model on normal time-series data, the
+derivation is divided into the following three key steps.
+A. Step 1: Proof of Monotonic Nonincreasing Property
+Based on the Nonnegativity of KL Divergence
+The total loss of VAE-LSTM is defined as
+Ltotal = Lrec + β · KL (q||p)
+
+(18)
+
+where β = 1, and q and p denote the posterior and prior
+distributions of the latent variable z. According to the fundamental property of KL divergence, namely, for any probability
+distributions q and p, KL(q||p) ≥ 0, it follows that Lrec ≤ Ltotal .
+During training, the Adam optimizer minimizes the total
+loss via gradient descent. Thus, for any adjacent iterations n
+and n + 1, it holds that Ltotal (n + 1) ≤ Ltotal (n). Combining the
+inequalities, we obtain
+Lrec (n + 1) ≤ Ltotal (n + 1) ≤ Ltotal (n)
+Lrec (n) ≤ Ltotal (n) .
+
+(19)
+(20)
+
+The regularization term is nondecreasing during training;
+therefore, Lrec (n + 1) ≤ Lrec (n), which demonstrates that
+the reconstruction error exhibits a monotonic nonincreasing
+property.
+B. Step 2: Proof of Lower Bound Existence Based on the
+ELBO of VAE
+For normal time-series data x, its log-likelihood log p(x)
+is constant since the distribution of normal data is fixed. It
+satisfies the evidence lower bound (ELBO) inequality
+
+
+log p (x) ≥ Eq log p (x|z) − KL (q||p)
+(21)
+where Eq [log p(x|z)] denotes the expected log-likelihood of
+x generated from the latent variable z, which is negatively
+
+YANG et al.: MSFE-AD: MULTISCALE FEATURE-ENHANCED EARLY SATELLITE SENSOR DATA ANOMALY DETECTION
+
+correlated with the reconstruction error Lrec . Rearranging the
+inequality yields
+
+Lrec ≥ − log p (x) + KL∗
+(22)
+where KL∗ is the stabilized value of the KL divergence at the
+later stage of training. Let
+
+C = − log p (x) + KL∗ > 0
+(23)
+constrained by inherent noise in time series. Therefore, Lrec ≥
+C, indicating that the reconstruction error has a valid lower
+bound.
+C. Step 3: Proof of Asymptotic Stability Based on Gradient
+Descent Convergence
+The derivation is based on the following two assumptions.
+1) The total loss Ltotal satisfies Lipschitz continuity—this
+is ensured by the bounded spectral norm of LSTM
+weight matrices and the Lipschitz property of the ReLU
+activation function.
+2) The gating mechanism of LSTM effectively alleviates
+the vanishing gradient problem, ensuring that gradients
+can be propagated back through time-series data.
+The learning rate ηn of the Adam optimizer
+satisfies the
+P
+Robbins–Monro convergence
+conditions:
+η
+=
+∞
+(divergent
+n
+P 2
+sum of step sizes) and
+ηn < ∞ (convergent sum of squared
+step sizes). Hence, the total loss converges to a local minimum,
+i.e.,
+lim Ltotal (n) = L∗total .
+(24)
+n→∞
+
+Combining the monotonic nonincreasing property and the
+existence of a lower bound of the reconstruction error, the
+monotone convergence theorem further implies that
+lim Lrec (n) = L∗rec
+
+n→∞
+
+(25)
+
+where L∗rec denotes the stable limit of the reconstruction error,
+which proves the asymptotic stability of reconstruction error
+convergence.
+R EFERENCES
+[1]
+
+[2]
+
+[3]
+[4]
+
+[5]
+
+[6]
+
+J. Pang, G. Zhao, D. Liu, and X. Peng, “Discrete features enhancement based online anomaly detection for satellite telemetry series,”
+IEEE Trans. Instrum. Meas., vol. 72, pp. 1–14, 2023, doi: 10.1109/
+TIM.2023.3326232.
+J. He, Z. Cheng, and B. Guo, “Anomaly detection in telemetry data
+using a jointly optimal one-class support vector machine with dictionary
+learning,” Rel. Eng. Syst. Saf., vol. 242, Feb. 2024, Art. no. 109717, doi:
+10.1016/j.ress.2023.109717.
+Z. Wang et al., “Early anomaly detection of wind turbine gearbox based
+on SLFormer neural network,” Ocean Eng., vol. 311, Nov. 2024, Art.
+no. 118925, doi: 10.1016/j.oceaneng.2024.118925.
+D. Gao, Y. Zhu, Z. Ren, K. Yan, and W. Kang, “A novel weak fault
+diagnosis method for rolling bearings based on LSTM considering quasiperiodicity,” Knowl.-Based Syst., vol. 231, Nov. 2021, Art. no. 107413,
+doi: 10.1016/j.knosys.2021.107413.
+W. Zhang et al., “A novel adaptive weak fault diagnosis method
+based on modulation periodic stochastic pooling networks,” Chaos,
+Solitons Fractals, vol. 173, Aug. 2023, Art. no. 113588, doi: 10.1016/
+j.chaos.2023.113588.
+S. Zhao et al., “Identifying early stator fault severity in DFIGs based on
+adaptive feature mode decomposition and multiscale complex component current trajectories,” IEEE Trans. Instrum. Meas., vol. 73, pp. 1–16,
+2024, doi: 10.1109/TIM.2024.3443347.
+
+[7]
+
+3564212
+
+Y. Liu, Y. Wang, Z. Wang, S. Xue, and Y. Wang, “Early fault diagnosis of
+transformers based on relative deterioration analysis,” Expert Syst. Appl.,
+vol. 279, Jun. 2025, Art. no. 127437, doi: 10.1016/j.eswa.2025.127437.
+[8] J. Ding, Y. Wang, Y. Qin, and B. Tang, “Multi-objective optimal deep
+deconvolution and its application to early fault signal enhancement of
+rotating machineries,” Mech. Syst. Signal Process., vol. 221, Dec. 2024,
+Art. no. 111722, doi: 10.1016/j.ymssp.2024.111722.
+[9] H. Zhao, S. Qiu, J. Yang, J. Guo, M. Liu, and X. Cao, “Satellite
+early anomaly detection using an advanced transformer architecture for
+non-stationary telemetry data,” IEEE Trans. Consum. Electron., vol. 70,
+no. 1, pp. 4213–4225, Feb. 2024, doi: 10.1109/TCE.2024.3357881.
+[10] H. Shi, W. Mao, Y. Zhang, and X. Liang, “Unsupervised deep tensor
+multitask anomaly detection with rule adaptation for online early fault
+evaluation,” IEEE Sensors J., vol. 23, no. 8, pp. 8665–8679, Apr. 2023,
+doi: 10.1109/JSEN.2023.3256039.
+[11] Y. Wang, Q. Wang, S. Bernat, and A. Vinogradov, “Early fault
+detection with health stage division: An adversarial learning method
+with model update mechanism for condition monitoring,” Eng. Appl.
+Artif. Intell., vol. 144, Mar. 2025, Art. no. 110015, doi: 10.1016/
+j.engappai.2025.110015.
+[12] Q. Lu, W. Ye, and L. Yin, “Parallel multiple CNNs with temporal
+predictions for wind turbine blade cracking early fault detection,”
+IEEE Trans. Instrum. Meas., vol. 73, pp. 1–11, 2024, doi: 10.1109/
+TIM.2024.3370786.
+[13] T.-E. Chao, Y. Huang, H. Dai, G. G. Yen, and V. S. Tseng, “Early
+time series anomaly prediction with multi-objective optimization,” IEEE
+Trans. Emerg. Topics Comput. Intell., vol. 9, no. 1, pp. 972–987, Feb.
+2025, doi: 10.1109/TETCI.2024.3423472.
+[14] J. Li et al., “SMOTE-NaN-DE: Addressing the noisy and borderline
+examples problem in imbalanced classification by natural neighbors and
+differential evolution,” Knowl.-Based Syst., vol. 223, Jul. 2021, Art. no.
+107056, doi: 10.1016/j.knosys.2021.107056.
+[15] Z. Teng, P. Cao, M. Huang, Z. Gao, and X. Wang, “Multi-label
+borderline oversampling technique,” Pattern Recognit., vol. 145, Jan.
+2024, Art. no. 109953, doi: 10.1016/j.patcog.2023.109953.
+[16] A. Dixit and A. Mani, “Sampling technique for noisy and borderline
+examples problem in imbalanced classification,” Appl. Soft Comput.,
+vol. 142, Jul. 2023, Art. no. 110361, doi: 10.1016/j.asoc.2023.110361.
+[17] Q. Wen et al., “Time series data augmentation for deep learning: A
+survey,” 2020, arXiv:2002.12478.
+[18] Z. Zamanzadeh Darban, G. I. Webb, S. Pan, C. C. Aggarwal, and
+M. Salehi, “Deep learning for time series anomaly detection: A survey,”
+2022, arXiv:2211.05244.
+[19] H. Kim et al., “Opt-TCAE: Optimal temporal convolutional auto-encoder
+for boiler tube leakage detection in a thermal power plant using multisensor data,” Expert Syst. Appl., vol. 215, Apr. 2023, Art. no. 119377,
+doi: 10.1016/j.eswa.2022.119377.
+[20] J. Rani, T. Tripura, H. Kodamana, S. Chakraborty, and P. K. Tamboli,
+“Fault detection and isolation using probabilistic wavelet neural operator
+auto-encoder with application to dynamic processes,” Process Saf.
+Environ. Protection, vol. 173, pp. 215–228, May 2023, doi: 10.1016/
+j.psep.2023.02.078.
+[21] L. Li, J. Yan, Q. Wen, Y. Jin, and X. Yang, “Learning robust deep
+state space for unsupervised anomaly detection in contaminated timeseries,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 6, pp. 6058–6072,
+Jun. 2023, doi: 10.1109/TKDE.2022.3171562.
+[22] Z. Zhang, J. Zhu, S. Zhang, and F. Gao, “Process monitoring using
+recurrent Kalman variational auto-encoder for general complex dynamic
+processes,” Eng. Appl. Artif. Intell., vol. 123, Aug. 2023, Art. no.
+106424, doi: 10.1016/j.engappai.2023.106424.
+[23] P. Han, A. L. Ellefsen, G. Li, F. T. Holmeset, and H. Zhang,
+“Fault detection with LSTM-based variational autoencoder for maritime
+components,” IEEE Sensors J., vol. 21, no. 19, pp. 21903–21912, Oct.
+2021, doi: 10.1109/JSEN.2021.3105226.
+[24] D. Guha, R. Chatterjee, and B. Sikdar, “Anomaly detection using LSTMbased variational autoencoder in unsupervised data in power grid,”
+IEEE Syst. J., vol. 17, no. 3, pp. 4313–4323, Sep. 2023, doi: 10.1109/
+JSYST.2023.3266554.
+[25] M. Jiang, P. Zeng, K. Wang, H. Liu, W. Chen, and H. Liu, “FECAM:
+Frequency enhanced channel attention mechanism for time series
+forecasting,” Adv. Eng. Informat., vol. 58, Oct. 2023, Art. no. 102158,
+doi: 10.1016/j.aei.2023.102158.
+[26] Q. Yang, B. Tang, Q. Li, X. Liu, and L. Bao, “Dual-frequency
+enhanced attention network for aircraft engine remaining useful life
+prediction,” ISA Trans., vol. 141, pp. 167–183, Oct. 2023, doi: 10.1016/
+j.isatra.2023.06.020.
+
+3564212
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+[27] J. Liu and S. Chen, “TimesURL: Self-supervised contrastive learning for
+universal time series representation learning,” in Proc. AAAI Conf. Artif.
+Intell., vol. 38, Mar. 2023, pp. 1–16, doi: 10.48550/arxiv.2312.15709.
+[28] J. Hu, Z. Hu, T. Li, and S. Du, “A contrastive learning based universal
+representation for time series forecasting,” Inf. Sci., vol. 635, pp. 86–98,
+Jul. 2023, doi: 10.1016/j.ins.2023.03.143.
+[29] Y. Zhang, R. Wu, S. M. Dascalu, and F. C. Harris, “Multiscale transformer pyramid networks for multivariate time series
+forecasting,” IEEE Access, vol. 12, pp. 14731–14741, 2024, doi:
+10.1109/ACCESS.2024.3357693.
+[30] Y. Zhong, W. Zhou, and L. Tao, “Source-free time series domain
+adaptation with wavelet-based multi-scale temporal imputation,” Neural Netw., vol. 188, Aug. 2025, Art. no. 107428, doi: 10.1016/
+j.neunet.2025.107428.
+[31] J. Pang, D. Liu, Y. Peng, and X. Peng, “Temporal dependence
+Mahalanobis distance for anomaly detection in multivariate spacecraft
+telemetry series,” ISA Trans., vol. 140, pp. 354–367, Sep. 2023, doi:
+10.1016/j.isatra.2023.06.002.
+[32] J. Fan et al., “LUAD: A lightweight unsupervised anomaly detection
+scheme for multivariate time series data,” Neurocomputing, vol. 557,
+Nov. 2023, Art. no. 126644, doi: 10.1016/j.neucom.2023.126644.
+
+Xiyuan Peng received the B.S., M.S., and Ph.D.
+degrees from Harbin Institute of Technology (HIT),
+Harbin, China, in 1984, 1987, and 1992, respectively.
+He is currently a Full Professor of the School of
+Electronics and Information Engineering, HIT. His
+current research interests include automatic tests and
+advanced fault diagnostics technology.
+
+Lin Yang received the B.S. degree from Rocket
+Force University of Engineering, Xi’an, China, in
+2004, and the M.S. degree from Harbin Institute of
+Technology (HIT), Harbin, China, in 2010, where
+he is currently pursuing the Ph.D. degree with the
+School of Electronics and Information Engineering.
+His research focuses on spacecraft health management, with specific interests in anomaly detection,
+condition monitoring, and trend prediction.
+
+Datong Liu (Senior Member, IEEE) received the
+Ph.D. degree in instrumentation science and technology from Harbin Institute of Technology (HIT),
+Harbin, China, in 2010.
+He is currently a Full Professor with the School of
+Electronics and Information Engineering, HIT. His
+research interests include automatic test and simulation, condition monitoring, system diagnostics,
+and prognostics, industrial big data and industrial
+intelligence, and lithium-ion battery management.
+
+Kai Guo (Student Member, IEEE) received the B.S.
+degree from Beihang University, Beijing, China, in
+2013, and the M.S. degree from the Civil Aviation
+University of China, Tianjin, China, in 2017. He is
+currently pursuing the Ph.D. degree with the School
+of Electronics and Information Engineering, HIT,
+Harbin, China.
+His research interests include UAV modeling
+and simulation, condition monitoring, and modeling
+uncertainty evaluation.

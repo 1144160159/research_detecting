@@ -1,0 +1,134 @@
+7448                                                                            IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+
+
+
+           Evolving Intelligent Network Attack Classifier
+                  Under Label Distribution Shift
+                               Miru Kim , Mugon Joe , and Minhae Kwon , Senior Member, IEEE
+
+
+   Abstract—The next-generation internet is being reshaped by                      connectivity simultaneously introduces the frequency of net-
+the growing intelligence and connectivity of artificial intelligence               work intrusions [1]. When successful, these intrusions can result
+of things (AIoT) devices. This evolution emphasizes the impor-                     in significant privacy breaches and substantial financial losses.
+tance of AI-enabled network intrusion detection systems (NIDS)
+in intelligent network environments. Two major technical chal-                     To preserve network security, the development of intelligent
+lenges in developing such systems are addressing class imbalance                   NIDS capable of accurately classifying attack types is critical
+and adapting to label distribution shifts after deployment. Class                  to secure highly connected environments [2], [3], [4], [5], [6],
+imbalance, caused by the dominance of normal traffic and the                       [7]. Consequently, attack type classification models have gained
+scarcity and uneven distribution of attack types, often results                    considerable attention, and extensive research has focused on
+in low performance for minority attack type classes. In addi-
+tion, evolving attack patterns necessitate efficient and continuous                improving their effectiveness for intrusion detection [8], [9],
+model post-training, despite the limited and unlabeled data avail-                 [10], [11], [12], [13], [14]. Despite these efforts, three key
+able in the post-deployment phase. This study proposes a unified                   challenges continue to impede the performance of these models.
+training framework consisting of a two-step pre-training scheme                       The first challenge arises during the pre-training phase before
+and an adaptive post-training scheme. In Step I of pre-training,                   the model is deployed, where the dataset often exhibits a signif-
+balanced contrastive pair selection is performed to account for
+class imbalance, while Step II refines the representations of hard-                icant class imbalance. In such cases, some major classes have
+to-distinguish samples located near decision boundaries using                      exceedingly more samples than other minor classes, leading to
+latent features. In the post-training phase, the framework lever-                  a skewed data distribution [15]. This imbalance causes models
+ages both model outputs and latent representations to generate                     to become biased toward the majority class, resulting in poor
+reliable pseudo-labels for learning. A key insight of this work is                 detection rates for the minority classes, which are often criti-
+that a well-structured latent representation space enables reliable
+pseudo-labeling during post-training. Extensive simulations across                 cal intrusion types. Consequently, many studies have explored
+eight online label shift scenarios with three datasets demonstrate                 methods for improving the representation of minority classes
+that the proposed method achieves up to an 8.6% improvement                        in the latent space [16], [17], which focus on enhancing the
+in accuracy and F1-score over eight state-of-the-art approaches,                   learning process for these underrepresented classes, e.g., syn-
+along with a significant reduction in post-training complexity.                    thetic minority oversampling technique (SMOTE) [18] and con-
+  Index Terms—Contrastive learning, label shift, online learning,                  trastive learning. However, existing approaches mainly balance
+imbalanced dataset, low-rank adaptation, network intrusion                         sample distributions without explicitly addressing intrinsically
+detection systems.                                                                 hard-to-distinguish samples, which limits their effectiveness in
+                                                                                   improving fundamental discrimination performance. In contrast,
+                                                                                   our method directly tackles this limitation by focusing on per-
+                            I. INTRODUCTION
+                                                                                   formance enhancement for such challenging samples.
+      HE rapid evolution of AIoT networks has profoundly im-
+T     pacted industries by integrating a diverse array of devices,
+leading to enhanced efficiency in areas such as automation,
+                                                                                      Even with well-trained models, dynamic real-world networks
+                                                                                   present the second challenge: online label shift. As the label
+                                                                                   distribution of traffic types changes over time, it may diverge
+real-time monitoring, and management. However, this increased                      from the training data, potentially causing significant drops in the
+                                                                                   model performance [19]. While model post-training has become
+                                                                                   necessary, the lack of labeled data in real-time environments
+   Received 1 November 2025; revised 4 January 2026; accepted 28 January
+2026. Date of publication 3 March 2026; date of current version 19 March           poses a considerable obstacle [20]. Recent studies have explored
+2026. This work was supported by the National Research Foundation of Korea         the post-training of models without true labels using techniques
+funded by the Korean Government (MSIT) under Grant RS-2025-02214082 and            such as pseudo-labeling, in which the model generates labels
+Grant RS-2023-00278812. Recommended for acceptance by Dr. Weiting Zhang.
+(Miru Kim and Mugon Joe are co-first authors.) (Corresponding author: Minhae       based on predictions from a pre-trained model [21], [22]. How-
+Kwon.)                                                                             ever, without proper validation, incorrect pseudo-labels may
+   Miru Kim and Minhae Kwon are with the Department of Electrical and              degrade the model performance during additional training. This
+Computer Engineering, Sungkyunkwan University, Suwon 16419, Republic of
+Korea (e-mail: miru.kim@skku.edu; minhae.kwon@skku.edu).                           highlights the need for confidence measures to assess their
+   Mugon Joe is with the Department of Intelligent Semiconductors, Soongsil        reliability, ensuring that only dependable pseudo-labels are used
+University, Seoul 06978, Republic of Korea (e-mail: mugon@soongsil.ac.kr).         for post-training.
+   This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNSE.2026.3669948, provided by the authors.                   While ensuring pseudo-label reliability is essential, efficiency
+   Digital Object Identifier 10.1109/TNSE.2026.3669948                             during the post-training phase is also critical. To minimize the
+
+      2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT                                                          7449
+
+
+
+                                                                                        balanced contrastive learning pairs and the use of Maha-
+                                                                                        lanobis distance in the latent space.
+                                                                                     r We design an efficient and lightweight LoRA-based post-
+                                                                                        training mechanism that adaptively triggers model updates
+                                                                                        only when both high uncertainty and significant label shift
+                                                                                        are observed. We also propose a pseudo-labeling method
+                                                                                        based on entropy and distance-based confidence.
+                                                                                     r We conduct extensive simulations on three popular NIDS
+                                                                                        datasets, covering four online label shift scenarios, five
+                                                                                        ablation studies, and performance comparisons against
+                                                                                        eight state-of-the-art algorithms. Additionally, we analyze
+                                                                                        parameter sensitivity, robustness to the imbalance factor,
+                                                                                        and the impact of the number of post-training samples.
+                                                                                     The remainder of this paper is organized as follows. Section II
+                                                                                  reviews related works, and Section III presents the system setup
+                                                                                  for NIDS in a label shift environment. Section IV details the
+                                                                                  proposed pre-training methods, and Section V describes the
+                                                                                  post-training methods. Section VI presents the simulation setup,
+                                                                                  and Section VII, and Section VIII provide simulation results for
+Fig. 1. Overview of the proposed AIoT network attack classification system.       pre-training and post-training, respectively. Finally, Section IX
+The diagram illustrates the processes to address the class imbalance problem in   concludes the paper.
+pre-training and efficient post-training with a small amount of unlabeled data
+over an online label shift environment.
+                                                                                                        II. RELATED WORKS
+                                                                                     In this section, we review existing literature on the three key
+                                                                                  areas relevant to our study. Table I summarizes the comparison
+computational burden, additional training must be performed
+                                                                                  between our proposed method and existing approaches, outlin-
+only when necessary [23]. Moreover, with limited data available
+                                                                                  ing the key challenges and techniques employed in each work.
+in the post-training phase, the training must also be sample-
+efficient. To achieve this, we employ LoRA [24],which reduces
+                                                                                  A. Network Attack Classification
+the number of training parameters such that the model can be
+optimized with minimal and enhances sample efficiency without                        Network attack classification is an essential step in building a
+fully updating the model. Nevertheless, conventional LoRA-                        NIDS because identifying intrusion types can lead to an appro-
+based methods still perform updates at every time step, leading                   priate response. A challenge arises from the varying amount
+to unnecessary overhead. In contrast, our scheme adaptively                       of data collected for each intrusion type, resulting in class
+triggers post-training only when the cosine similarity between                    imbalance. This imbalance can bias models toward majority
+consecutive outputs indicates substantial changes in distribution,                classes, making it difficult to classify minority classes [25], [26].
+thereby enabling more efficient adaptation without sacrificing                       Traditional methods for addressing class imbalance typically
+accuracy.                                                                         involve oversampling methods. Random oversampling increases
+   To address these challenges, this study proposes a                             the number of minority class samples to balance the dataset but
+novel framework that jointly integrates three contributions:                      often leads to overfitting by replicating data without introducing
+i) contrastive learning designed to improve performance on                        variability [27], [28]. SMOTE generates synthetic samples in
+hard-to-distinguish samples for class imbalance, ii) reliable                     the minority class, thereby rebalancing the data distribution to
+pseudo-label generation using latent representations for online                   mitigate the dominance of majority classes [18]. Borderline-
+label shift, and iii) adaptive LoRA-based post-training triggered                 SMOTE refines this approach by creating synthetic samples
+by distributional change for efficient adaptation. Together, these                near decision boundaries where the classification uncertainty
+components provide a unified solution for robust and efficient                    is higher [29]. Another approach is focal loss [30], which
+model adaptation in dynamic network environments. Fig. 1                          modifies the standard cross-entropy loss function to reduce the
+illustrates an overview of this system.                                           impact of easily classified samples. Despite their widespread
+   Our contributions are summarized as follows.                                   use in network intrusion classification, these methods often fail
+    r We propose a two-stage framework explicitly designed to                     to yield meaningful diversity in the latent space, resulting in
+      handle real-world AIoT challenges, including the perfor-                    insufficiently discriminative embeddings.
+      mance enhancement of minor-but-critical attack classes                         To address these challenges, contrastive learning has emerged
+      and evolving label distributions after deployment.                          as an effective method for constructing well-defined latent
+    r To tackle class imbalance in the training dataset, we in-                   spaces for class imbalance. Using label information, the model
+      troduce a novel borde

@@ -1,0 +1,152 @@
+7454                                                        IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+
+
+
+   Anomaly Detection for In-Vehicle Network Using
+    Self-Supervised Learning With Vehicle-Cloud
+                Collaboration Update
+        Jinhui Cao , Student Member, IEEE, Xiaoqiang Di , Member, IEEE, Xu Liu, Jinqing Li , Zhi Li ,
+                Liang Zhao , Member, IEEE, Ammar Hawbani, and Mohsen Guizani , Fellow, IEEE
+
+
+
+   Abstract— With the increasing communications between the                     hacking dataset, resulting to an F1-score average and average
+In-Vehicle Networks (IVNs) and external networks, security has                  false positive rates of IVNSL being 2.282% higher and 1.595%
+become a stringent problem. In addition, the controller area                    lower than the best baseline method. The average detection speed
+network bus in IVN lacks security mechanisms by design, which                   of each message is as fast as 0.1075 ms.
+is vulnerable to various attacks. Thus, it is important to detect
+IVN anomalies for complete vehicular security. However, current                   Index Terms— In-vehicle network, controller area net-
+studies are constrained by either requiring labeled data or failing             work, anomaly detection, self-supervised learning, transformers,
+to accurately detect message-level anomalies without labeled data.              vehicle-cloud collaboration.
+In addition, the concept drift of existing methods has become a
+challenge over time. To address these problems, this paper pro-
+                                                                                                        I. I NTRODUCTION
+poses an IVN anomaly detection method based on Self-supervised
+Learning (IVNSL), which is capable of detecting message-level
+anomalies without labels. The essential idea of IVNSL is to
+make the message prediction model learn the distribution of
+                                                                                I   N RECENT years, there have been tremendous advances in
+                                                                                    automotive technology [1]. Intelligent Connected Vehicles
+                                                                                (ICVs) can not only connect to infrastructures such as cloud
+normal messages in sequences using message sequences with
+noise. Furthermore, to accurately detect anomalies, a Message                   platforms and Road Side Units (RSUs) through Vehicle-to-
+Prediction Model based on Hierarchical transformers (MPMHit)                    Infrastructure (V2I) technologies but also share information
+is proposed, which captures the spatial features of the message                 with passing vehicles through Vehicle-to-Vehicle (V2V) tech-
+and the dependencies between messages. Meanwhile, to solve the                  nologies [2]. Despite improving the driving experience with
+concept drift over time, this paper proposes an online update
+                                                                                Vehicle-to-Everything (V2X) technologies, the attacked sur-
+mechanism for MPMHit based on vehicle-cloud collaboration.
+We conduct an extensive experimental evaluation on the car                      face of the In-Vehicle Network (IVN) in ICVs is increasing,
+                                                                                resulting in IVN being more prone to anomalies and even
+   Manuscript received 24 March 2023; revised 8 October 2023; accepted          imperiling the life safety of drivers [3], [4], [5], [6]. In addi-
+2 January 2024. Date of publication 27 March 2024; date of current version
+2 July 2024. This work was supported in part by the Jilin Science and
+                                                                                tion, Electronic Control Units (ECUs) in an IVN perform
+Technology Development Plan Project of China under Grant 20230508096RC,         different specific functions in the control system, such as
+in part by the Jilin Education Department Project of China under Grant          controlling speed and steering, which communicate through
+JJKH20220773KJ, in part by the Chongqing Municipal Bureau of Science
+and Technology Project of China under Grant CSTB2022NSCQ-MSX1434,
+                                                                                the Controller Area Network (CAN) bus protocol. However,
+in part by the National Natural Science Foundation of China under Grant         the security of the CAN bus was not considered in the
+62372310, in part by the Liaoning Province Applied Basic Research Program       design [7], [8], [9]. Hence, it is vulnerable for the CAN in
+under Grant 2023JH2/101300194, and in part by the Liaoning Revitalization
+Talents Program under Grant XLYC2203151. The Associate Editor for this          IVNs to be attacked [10]. For example, in 2015, Charlie Miller
+article was S. Garg. (Corresponding author: Xiaoqiang Di.)                      and Chris Valasek exploited a vulnerability of the Uconnect
+   Jinhui Cao, Xu Liu, Jinqing Li, and Zhi Li are with the School of Computer   system in the Chrysler automobile [11]. They remotely sent
+Science and Technology, Changchun University of Science and Technology,
+Changchun 130022, China, and also with the Jilin Province Key Laboratory        messages to the CAN bus and started a dangerous event of
+of Network and Information Security, Changchun University of Science            various functions on the vehicle, leading Chrysler to recall
+and Technology, Changchun 130022, China (e-mail: cjh@mails.cust.edu.cn;         more than 1.4 million vehicles for an upgrade. Anomaly
+liuxu@cust.edu.cn; lijinqing@cust.edu.cn; 2021101099@mails.cust.edu.cn).
+   Xiaoqiang Di is with the School of Computer Science and Technology,          detection can proactively help detect and predict anomalies
+Changchun University of Science and Technology, Changchun 130022, China,        in advance, thus it has become one of the essential tools for
+also with the Jilin Province Key Laboratory of Network and Information          securing IVNs [12].
+Security, Changchun University of Science and Technology, Changchun
+130022, China, and also with the Information Center, Changchun University          There are a number of available methods that have the
+of Science and Technology, Changchun 130022, China (e-mail: dixiaoqiang@        ability to detect anomalies for IVNs, including traditional and
+cust.edu.cn).                                                                   deep learning-based methods [13]. Traditional methods usually
+   Liang Zhao and Ammar Hawbani are with the School of Computer
+Science, Shenyang Aerospace University, Shenyang 110136, China (e-mail:         use IVN characteristics for anomaly detection, such as system
+lzhao@sau.edu.cn; anmande@mail.ustc.edu.cn).                                    specification of the IVN [14], [15], physical attributes of the
+   Mohsen Guizani is with the Department of Machine Learning, Mohamed           ECU [16], [17], parameters of the IVN [18], [19], and the
+bin Zayed University of Artificial Intelligence (MBZUAI), Abu Dhabi, United
+Arab Emirates (e-mail: mguizani@ieee.org).                                      information entropy of the network traffic [20], [21]. Nev-
+   Digital Object Identifier 10.1109/TITS.2024.3351438                          ertheless, these traditional methods need manually to extract
+                       1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING                                                            7455
+
+
+
+the IVN features and ignore the internal information of the             self-supervised mode. The proposed method does not
+CAN messages, resulting in the inability to detect message              require labeling massive CAN data and can detect
+tampering attacks and the low accuracy of detection [12].               message-level anomalies.
+To address such limitations, deep learning techniques have            • Further, we propose a message prediction model based
+been introduced into IVN anomaly detection in recent years.             on hierarchical transformers, which is used to learn the
+These methods focus on training deep detection models,                  distribution of normal messages in sequences. Since the
+including supervised and unsupervised. The IVN anomaly                  proposed model fuses the spatial features of the ID and
+detection methods based on supervised deep learning demand              payload of the message and captures the dependencies
+the labeling of a large number of CAN data [22], [23],                  between messages, it can accurately predict normal mes-
+[24]. However, it is difficult to attain sufficient labeled data        sages and improves the accuracy of detecting anomalies.
+because of the private security and support from experts.             • To adapt to the distribution of normal messages in the
+Moreover, these methods need to update themselves to cope               sequence over time, an online update mechanism of
+with new anomalies by collecting new labeled data. Despite              the message prediction model based on vehicle-cloud
+avoiding labeling massive amounts of CAN data, most of                  collaboration is proposed. We conduct an extensive
+the available methods based on unsupervised deep learning               experimental evaluation on the car hacking dataset.
+can only detect whether a time window is anomalous or                   Experiments show that the average F1-score and average
+only consider the partial features, resulting in low accuracy           false positive rate of our anomaly detection method are
+in detecting message-level anomalies [25], [26], [27], [28].            2.282% higher and 1.595% lower than those of the best
+Additionally, the phenomenon of concept drift, defined as the           baseline method, respectively. The detection of every
+unpredictable changes over time in the distribution of data             message can be accomplished in 0.1075 milliseconds.
+learning by the model or features of the target predicted by          The rest of this paper is organized as follows. Section II
+the model, precipitates a decline in detection performance in      reviews the work related to IVN anomaly detection. Section III
+the future. Therefore, this research aims to develop a scheme      presents the knowledge about the CAN bus. Section IV gives
+capable of accurately detecting IVN message-level anomalies        the specific design details of our detection approach, and
+without labels and an online updating mechanism that can           Section V introduces the online update mechanism of the
+address concept drift without affecting the running of the         model. Section VI gives the performance evaluation. Finally,
+detection method.                                                  Section VII draws our conclusions.
+   To overcome the above problems, we propose an IVN
+anomaly detection method based on Self-supervised Learn-
+ing (IVNSL) so that the method can detect message-level                                 II. R ELATED W ORK
+anomalies without labeling data. IVNSL models anomaly                 Currently, IVN anomaly detection methods mainly contain
+detection as a message prediction task, that is, a message         traditional and deep learning-based methods [13].
+that is correctly predicted according to its context is normal,       Traditional methods usually use characteristics of IVN for
+otherwise it is abnormal. Furthermore, to accurately detect        anomaly detection. According to the characteristics used,
+abnormalities, we propose a Message Prediction Model based         these methods can be broadly divided into specification-based,
+on Hierarchical transformers (MPMHit), which captures the          fingerprint-based, parameter monitoring-based, and informa-
+spatial features of each message and the dependencies between      tion theory-based [12]. The main purpose of methods based
+messages by using two layers of transformer block encoders         on specification is to detect abnormal behaviors that do not
+to encode the physical signal sequence of messages and the         match system specifications such as protocol and frame for-
+message sequence, respectively. Meanwhile, to avoid MPMHit         mat [15]. Muter et al. [14] detect attacks by checking the
+concept drift degrading the performance of IVNSL, we design        behavior specifications of sensors. Olufowobi et al. [15] pro-
+an online update mechanism for MPMHit, which uses new              posed SAIDuCANT, which is a real-time specification-based
+data to retrain the old model on the cloud and replace the         intrusion detection system. However, since these methods
+old model with the new one on the vehicle. The vehicle             depend on the specification, they are not able to identify the
+also judges whether the MPMHit occurs concept drift based          attack that an attacker sends the well-modified CAN message
+on information entropy of the probability distribution of the      following the system specification. Because different ECUs
+MPMHit output. If the information entropy exceeds the given        in IVN usually have unique hardware fingerprint information,
+threshold, the vehicle will request the cloud to update the        methods based on fingerprint use the fingerprint information
+model, which makes the model always match the distribution         of ECUs to discover anomalies. Cho and Shin [16] proposed a
+of data. We conduct an extensive evaluation of IVNSL on the        clock-based intrusion detection system, which analyzed ECUs
+car hacking dataset, which confirms the effectiveness of our       using the deviation between real and reference clock frequen-
+anomaly detection method.                                          cies. Choi et al. [17] used the electrical signal characteristics
+   In summary, the main contributions of this paper can be         of each ECU as the fingerprint to perform anomaly detection.
+listed as follows:                                                 However, these methods require that all ECUs of the vehicle
+   • Since the appearance of the CAN message depends on its        must be profiled beforehand, and the ECU and CAN ID affil-
+      context, an IVN anomaly detection method is proposed,        iation information is not publicly available, resulting in poor
+      which models anomaly detection as a message predic-          generalizability of the detection. Methods based on parameter
+      tion task and trains the prediction message model in a       monitoring can identify anomalies by comparing parameters
+7456                                              IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+
+
+such as data transmission frequency, message transmission
+period, and time interval of IVN. Young et al. [18] pro-
+posed a frequency-based intrusion detection system using the
+frequency characteristics of CAN messages. Lee et al. [19]         Fig. 1.   The structure of the CAN bus data frame.
+proposed an intrusion detection method based on the offset rate
+between request and response messages in the CAN and time
+intervals. Intrusion detection systems based on information        accuracy of the model rapidly decline in the future. Thus,
+theory can determine anomalous according to network fluctua-       to detect message-level anomalies and avoid labeling massive
+tion. Müter and Asaj [20] identified attacks through the entropy   data, this paper proposes an IVN anoma

@@ -1,0 +1,152 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025                                                             8475
+
+
+
+
+ KD-BERT: A Lightweight Knowledge Distillation
+  Bidirectional Encoder Representations from
+         Transformers for IoT Network
+               Intrusion Detection
+                        Zhong Cao , Xiaohua Liu, Zheng Zhou , Lei Ding, and Wenli Shang
+
+
+   Abstract—The Internet of Things (IoT) network intrusion                       Index Terms—Intrusion detection, bidirectional encoder
+detection (NID) has emerged as a powerful technique                          representations from Transformer (BERT, Knowledge dis-
+for effectively detecting attacks and protecting internet                    tillation.
+safety across a wide range of applications. However,
+existing NID models often struggle to achieve good de-
+tection performance when deployed in resource-restricted
+environments. To achieve an optimal balance between de-                                                 I. INTRODUCTION
+tection performance and computational cost, we propose
+                                                                                      ITH the proliferation of the Internet of Things (IoT),
+a lightweight knowledge distillation bidirectional encoder
+representations from Transformers (KD-BERT) framework
+for efficient IoT intrusion detection. Specifically, we first
+                                                                             W        its integration into daily life across industries, such as
+                                                                             healthcare, pharmacy, food and beverage, agriculture, electron-
+develop a header-payload pairs tokenization method to
+preprocess the raw data. Then, we distill rich knowledge
+                                                                             ics, transportation, and retail, has become ubiquitous, harnessing
+from a large pre-trained BERTteacher model into a smaller                    its immense potential for practical solutions [1], [2], [3], [4],
+BERTstudent model with fewer training parameters. By lever-                  [5]. However, this widespread adoption has also attracted the
+aging KD-BERT, the BERTteacher can be compressed into the                    attention of malicious actors, leading to a surge in IoT device
+BERTstudent , reducing the number of parameters from 135 to                  intrusions and attacks [2]. These attacks have manifested in
+9 M, while maintaining high detection accuracy. To effec-
+tively obtain the essential features, we design a data trans-
+                                                                             various forms, posing significant risks to users and society.
+formation strategy and fine-tuned the BERTstudent model on                   For instance, hackers can infiltrate wireless webcams to violate
+several labeled IoT NID tasks. Comprehensive experimental                    privacy, compromise medical equipment endangering patients’
+results on three public datasets (telemetry datasets, oper-                  lives, or access sensitive data from children’s smartwatches and
+ating systems datasets and network traffic dataset of IoT                    vehicle control systems, manipulating their functionality with
+(TON-IoT), Edge-IIoTset, and IoMT2024) have demonstrated
+superior performance compared to state-of-the-art meth-
+                                                                             dire consequences. A recent case underscores this threat, as
+ods.                                                                         a survey revealed that smart home systems experienced over
+                                                                             12 000 illicit attacks within a week, highlighting the urgent
+                                                                             need for robust security measures to safeguard IoT devices and
+                                                                             their users. Therefore, it is imperative to develop a lightweight
+   Received 11 March 2025; revised 6 May 2025; accepted 11 June              IoT network intrusion detection systems (NIDS) to effectively
+2025. Date of publication 22 July 2025; date of current version 17 Octo-     detect and mitigate the emerging cyber threats.
+ber 2025. This work was supported in part by the National Key Research          IoT systems present distinct challenges for intrusion detection
+and Development Program of China under Grant 2021YFB2012300, in
+part by the National Natural Science Foundation of China under Grant         when compared to traditional networks, primarily due to their
+62173101, in part by the Basic and Applied Basic Research Fund-              inherent constraints in computational power, memory capacity,
+ing of Guangdong Province under Grant 2022A1515011558 and Grant              battery life, and network bandwidth. Furthermore, the integra-
+2022A1515010865, in part by the Guangzhou Science and Technology
+Funding under Grant 202201020217, in part by the Guangzhou Basic             tion of a diverse range of heterogeneous protocols and technolo-
+and Applied Basic Research Topics under Grant 2025A04J3377, and in           gies within the same system exacerbates these challenges. Previ-
+part by the Key Laboratory of On-Chip Communication and Sensor Chip          ous intrusion detection models primarily relied on datasets with
+of Guangdong Higher Education Institutes under Grant 2023KSYS002.
+Paper no. TII-25-1470. (Zhong Cao and Xiaohua Liu contributed equally        manually selected features. However, network traffic feature sets
+to this work.) (Corresponding authors: Zheng Zhou; Wenli Shang.)             provided by various edge devices often exhibit inconsistency,
+   Zhong Cao, Xiaohua Liu, Zheng Zhou, and Wenli Shang are with              and there is no standardized network traffic feature set in this
+the School of Electronics and Communication Engineering, Guangzhou
+University, Guangzhou 510006, China (e-mail: zhongc@gzhu.edu.                field. As a result, feature engineering-based intrusion detection
+cn; 32119500035@e.gzhu.edu.cn; zhouzheng@gzhu.edu.cn; shangwl                approaches face significant challenges in manually extracting
+@gzhu.edu.cn).                                                               features from the diverse range of protocols and technologies.
+   Lei Ding is with the School of Cyber Security, Guangzhou University,
+Guangzhou 510006, China (e-mail: 1112206007@e.gzhu.edu.cn).                  In contrast, end-to-end approaches offer a promising direction
+   Digital Object Identifier 10.1109/TII.2025.3582375                        for intrusion detection in IoT environments, as they have the
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+8476                                                      IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025
+
+
+
+capability to discover globally optimal solutions without relying    process. In this approach, a larger, more complex teacher model
+on manually selected features [6]. This makes them more adept        guides the training of a smaller, more compact student model,
+at handling heterogeneous systems and addressing the complexi-       enabling the student to mimic the functionality of the teacher.
+ties of IoT environments. However, these methods often require       This technique has garnered significant research attention due to
+significant computational resources, making them impractical         its remarkable ability to substantially reduce model sizes while
+for direct application to IoT environments [1], [7], [8].            maintaining high levels of accuracy. Wang et al. [10] introduced
+   In this work, we introduce a lightweight knowledge distil-        the concept of knowledge distillation into a triple convolu-
+lation bidirectional encoder representations from Transformers       tional neural network (TCNN) architecture, termed KD-TCNN,
+(KD-BERT) framework specifically tailored for IoT environ-           with the aim of deriving optimal features while utilizing a
+ments. Our approach initially learns generalized representations     compressed student network. This approach effectively reduces
+from an extensive corpus of unlabeled IoT traffic. Subsequently,     resource consumption and model parameters, enabling real-time
+we compress this pretrained model into a lightweight student         detection capabilities. Meanwhile, Wang et al. [11] developed
+model, maintaining high performance through the application          BERT of Theseus Transformer and PoolFormer, which utilizes
+of knowledge distillation techniques. This student model is then     knowledge distillation in conjunction with a Siamese network
+fine-tuned for specific downstream tasks. Notably, we construct      dimension reducer and a large teacher model. This method
+our pretraining dataset directly from raw packet-level traffic,      successfully compresses an efficient detection model for IoT
+enabling the model to discern inherent patterns within IoT           applications, demonstrating the suitability of knowledge distilla-
+networks. During pretraining, we introduce a same-origin packet      tion for IoT NIDS. By enabling model compression, knowledge
+prediction module, which effectively captures the intricate rela-    distillation facilitates the practical deployment of NIDS in IoT
+tionships between headers and payloads. Following pretraining,       environments.
+we utilize a BERT model consisting of 12 Transformer layers
+as a teacher to guide the training of a more efficient student
+BERT model containing only two Transformer layers. To obtain         B. Transformer
+a compact student model, we strategically reduce the number of          The Transformer model [12] has achieved remarkable perfor-
+self-attention (SA) modules. Finally, KD-BERT fine-tunes its         mance on a wide range of natural language processing tasks by
+parameters using a limited amount of task-specific labeled data,     incorporating the attention mechanism, distinguishing it from
+ensuring optimal performance for the intended application. The       traditional deep learning approaches that rely on recurrent or
+main contributions of this article can be summarized as follows.     convolutional layers. Subsequently, BERT [13] further advanced
+    1) We propose a KD-BERT framework for IoT network in-            this field by leveraging a bidirectional Transformer architecture
+        trusion detection, avoiding manual feature extraction and    that enables the sharing of attention and parameters, resulting in
+        significantly reducing model computational complexity.       outstanding multitask fine-tuning capabilities. These innovative
+    2) We implement a header-payload pairs tokenization strat-       models have found widespread application in IoT NIDS. Ferrag
+        egy for preprocessing raw data, and devise a knowledge       et al. [14] introduced a novel approach for cyber threat hunting
+        distillation module to capture essential representations     in 6G IoT NIDS, combining the power of generative adversarial
+        from pivotal network layers. In addition, we incorporate     networks with a Transformer-based model. Their work focused
+        a data transformation module utilizing a sliding window      on threat mining using a new dataset, demonstrating the poten-
+        approach to fine-tune the KD-BERT model, further ob-         tial of this methodology. In Ferrag et al. [15] they presented
+        taining representative features and enhancing its perfor-    SecurityLLM, which builds upon BERT from the ground up,
+        mance.                                                       integrating it with a large language model called FalconLLM for
+    3) We conduct comprehensive comparison experiments with          enhanced threat analysis. Furthermore, they introduced PPFLE,
+        state-of-the-art methods on real network security datasets   a structured and private format for representing network data,
+        (telemetry datasets, operating systems datasets and net-     addressing the challenges posed by nontextual data for language
+        work traffic dataset of IoT (TON-IoT), Edge-IIoTset,         models. Basset et al. [16] proposed federated deep learning-
+        and IoMT2024) to demonstrate the superiority and high-       based intrusion detection system (FED-IDS), a framework that
+        efficiency of KD-BERT.                                       utilizes federated deep learning for collaborative detection of
+   The rest of this article is organized as follows. Section II      cyberattacks. Their approach incorporates an improved Trans-
+introduces the related works of this article. In Section III, we     former model to extract features for edge node detection, while
+propose the KD-BERT framework for IoT network intrusion              ensuring data privacy is preserved.
+detection. In Section IV, we evaluate the performance of the            Furthermore, several studies have delved into the application
+proposed approach and compare it with the state-of-the-art           of end-to-end models grounded in Transformer architectures and
+methods, demonstrating the superiority and effectiveness of our      their derivatives, directly processing raw traffic data. He et al.
+approach. Finally, we conclude this article in Section V.            [17] introduced a payload encoding representation from Trans-
+                                                                     former, leveraging dynamic word embedding techniques to au-
+                      II. RELATED WORK                               tonomously discern the salient features within traffic payloads.
+                                                                     Similarly, Lin et al. [18] presented encrypted traffic bidirectional
+A. Knowledge Distillation
+                                                                     encoder representation from Transformer (ET-BERT), a ground-
+  Knowledge distillation [9] is a highly effective technique for     breaking traffic representation model that introduces a tailored
+compressing deep learning models through a transfer learning         traffic representation method alongside two traffic-oriented
+CAO et al.: KD-BERT: A LIGHTWEIGHT KD-BERT FOR IOT NETWORK INTRUSION DETECTION                                                       8477
+
+
+
+
+Fig. 1.   Overall framework of KD-BERT for IoT network intrusion detection
+
+
+
+self-supervised pretraining tasks: Masked BURST Model and                intrusion detection and efficiently capturing the essential char-
+Same-origin BURST Prediction.                                            acteristics of IoT traffic, we propose the KD-BERT model as
+   Previous research has demonstrated significant advancements           illustrated in Fig. 1.
+in applying knowledge distillation techniques and Transformer               1) The header-payload pairs tokenization module is firstly
+models for IoT network intrusion detection and traffic analysis.         designed to preprocess the raw traffic data and elevate the
+However, most methods rely on preprocessed datasets with                 KD-BERT model’s proficiency in comprehending heteroge-
+manually crafted features, which limits their generalization ca-         neous IoT data features. 2) The masked packet modeling and
+pabilities in diverse IoT environments. Due to the constrained           same-origin packet p

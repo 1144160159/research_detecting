@@ -1,0 +1,832 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026 2077
+
+TrafficAudio: Audio Representation for Lightweight
+ Encrypted Traffic Classification in IoT
+Yilu Chen , Ye Wang, Ruonan Li, Member, IEEE, Yujia Xiao , Lichen Liu, Member, IEEE, Jinlong Li, Yan Jia,
+ and Zhaoquan Gu , Member, IEEE
+
+ Abstract—Encrypted traffic classification has become a crucial I. I NTRODUCTION
+task for network management and security with the widespread
+ RAFFIC classification which aims to identify specific
+adoption of encrypted protocols across the Internet and the
+Internet of Things. However, existing methods often rely on
+discrete representations and complex models, which leads to
+ T services, applications, or malware in network traffic,
+ is a fundamental capability for network management and
+incomplete feature extraction, limited fine-grained classification security [1]. It enables quality of service control, quality
+accuracy, and high computational costs. To this end, we propose of experience optimization, malware detection, and intrusion
+TrafficAudio, a novel encrypted traffic classification method
+based on audio representation. TrafficAudio comprises three
+ detection. In recent years, various encryption technologies
+modules: audio representation generation (ARG), audio feature have been widely adopted in network transmissions to enhance
+extraction (AFE), and spatiotemporal traffic classification (STC). data security. However, these technologies provide opportuni-
+Specifically, the ARG module first represents raw network ties for attackers to conceal malicious activities, thereby posing
+traffic as audio to preserve temporal continuity of traffic. significant challenges to traffic classification [2]. Traditional
+Then, the audio is processed by the AFE module to compute
+low-dimensional Mel-frequency cepstral coefficients (MFCC),
+ traffic classification methods primarily rely on analyzing packet
+encoding both temporal and spectral characteristics. Finally, spa- payloads and ports, known as deep packet inspection (DPI)
+tiotemporal features are extracted from MFCC through a parallel and port-based methods, respectively. Nevertheless, DPI cannot
+architecture of one-dimensional convolutional neural network directly analyze encrypted traffic because the payload content
+and bidirectional gated recurrent unit layers, enabling fine- is inaccessible due to encryption [3]. Moreover, with the
+grained traffic classification. Experiments on five public datasets
+across six classification tasks demonstrate that TrafficAudio
+ widespread adoption of non-standard interfaces and dynamic
+consistently outperforms ten state-of-the-art baselines, achiev- port allocation, port-based methods have also become ineffecing accuracies of 99.74%, 98.40%, 99.76%, 99.25%, 99.77%, tive [4]. Therefore, capturing implicit and robust representations
+and 99.74%. Furthermore, TrafficAudio significantly reduces in encrypted traffic is essential for accurate classification.
+computational complexity, achieving reductions of 86.88% in
+ To address the above challenges, existing methods utilize
+floating-point operations and 43.15% of model parameters over
+the best-performing baseline. various representations for encrypted traffic classification.
+ Early feature-based methods [5], [6], [7], [8] represent network
+ Index Terms—Encrypted traffic classification, malicious
+traffic detection, Mel-frequency cepstral coefficients, traffic traffic as feature vectors or sequences derived from plaintext
+representation. and statistical features, such as certificate version and packet
+ lengths, as shown in Figure 1(a). Although these methods are
+ Received 29 April 2025; revised 24 October 2025; accepted 28 December more robust than DPI and port-based methods, they depend on
+2025. Date of publication 6 January 2026; date of current version selected features and lack rich information in encrypted pay-
+26 January 2026. This work was supported in part by the Shenzhen Science
+and Technology Program under Grant KJZD20240903103811016; in part by loads. To overcome these limitations, more recent studies have
+the Major Key Project of PCL under Grant PCL2024A05; and in part by proposed byte-based representations that transform raw traffic
+the Science and Technology Development Fund, Macao SAR under Grant bytes into images [9], [10], [11], graphs [12], [13], [14] or
+0007/2024/AKP. The associate editor coordinating the review of this article
+and approving it for publication was Y.-D. Lin. (Corresponding author: Ye natural language [15], [16], [17], as illustrated in Figure 1(b).
+Wang.) These methods enable automatic feature extraction and end-
+ Yilu Chen, Ye Wang, and Yujia Xiao are with the Department
+of Computer Science and Technology, Harbin Institute of Technology
+ to-end traffic classification through deep learning techniques.
+(Shenzhen), Shenzhen 518055, China (e-mail: 23B951004@stu.hit.edu.cn; Temporal continuity refers to the ordered and sequential arrival
+wangye2020@hit.edu.cn; 24B951013@stu.hit.edu.cn). of bytes or packets along the time dimension, preserving the
+ Ruonan Li and Lichen Liu are with the Department of New Networks,
+Peng Cheng Laboratory, Shenzhen 518100, China (e-mail: lirn@pcl.ac.cn;
+ inherent temporal structure of network traffic. In contrast, byteliulch@pcl.ac.cn). based representations, such as images, graphs, and sentences,
+ Jinlong Li is with the Cyberspace Institute of Advanced Technology, do not have an intrinsic time dimension. Instead, temporal
+Guangzhou University, Guangzhou 510006, China (e-mail: jinlongli@
+gzhu.edu.cn). characteristics may be implicitly encoded in positions of
+ Yan Jia is with the College of Computer Science and Technology, pixels [18], connections or attributes of nodes [19], [20], or
+National University of Defense Technology, Changsha 410073, China (e-mail:
+jiayanjy@vip.sina.com).
+ sequences of tokens [21]. Therefore, these representations
+ Zhaoquan Gu is with the Department of Computer Science and Technology, disrupt the temporal continuity of network traffic, leading
+Harbin Institute of Technology (Shenzhen), Shenzhen 518055, China, and also to insufficient feature extraction. In addition to this, these
+with the Department of New Networks, Peng Cheng Laboratory, Shenzhen
+518100, China (e-mail: guzhaoquan@hit.edu.cn).
+ methods also tend to capture fine-grained spatial and temporal
+ Digital Object Identifier 10.1109/TNSM.2026.3651599 characteristics at the expense of increased computational costs.
+ 1932-4537 
+ c 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2078 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ and spectral characteristics in a low-dimensional
+ space.
+ 3) We evaluate TrafficAudio on five public datasets.
+ Experimental results demonstrate that TrafficAudio
+ consistently outperforms ten state-of-the-art (SOTA)
+ methods in terms of both accuracy and computational
+ efficiency.
+ The remainder of this paper is organized as follows.
+ Section II reviews existing traffic classification and audiobased methods. Section III presents our proposed TrafficAudio
+ method. Section IV provides the theoretical analysis of
+ TrafficAudio. Section V introduces experiment details and
+ result analysis. Section VI analyzes the strengths and limitations of TrafficAudio. Finally, we conclude the paper in
+ Section VII.
+
+ II. R ELATED W ORKS
+ In this section, we review existing traffic classifi-
+Fig. 1. Different representations for encrypted traffic classification methods. cation and audio-based methods. Current classification
+(a) Feature vectors and sequences in feature-based methods. (b) Images, studies can be categorized into feature-based methods and
+graphs, and natural language in byte-based methods.
+ byte-based methods. Audio-based methods are applied to
+ non-encrypted traffic intrusion detection and Android malware analysis. Table I compares our method with existing
+ methods.
+ On the other hand, audio exhibits temporal continuity
+through its waveform over time, making it a promising
+representation for traffic analysis. The continuous audio A. Feature-Based Methods
+representation encodes both temporal and spectral patterns, Feature-based methods rely on plaintext and statistical feacapturing subtle deviations or anomalies of network traffic. tures for encrypted traffic classification, typically representing
+Audio-based methods [22], [23] map packet parameters to traffic by feature vectors or sequences based on domain knowlaudio signals and then pre-train security practitioners by edge. Feature vector representations are formed by plaintext
+auditory cues for unencrypted traffic intrusion detection. These fields and packet-related statistics extracted from encrypted
+methods enhance the functionality of security operations traffic via feature engineering. Van Ede et al. [26] proposed
+centers [24]. Moreover, audio features expand detection views FlowPrint for fingerprinting mobile apps from encrypted
+and improve Android malware detection [25]. However, these network traffic. FlowPrint extracted the destination IP and port
+methods rely on manually defined mapping rules and are not number, timestamp, length, and direction of all packets in
+applicable to encrypted traffic. This motivates us to explore the the flow and created a fingerprint library by cross-correlating.
+automatic audio representation of raw encrypted traffic content By using only packet length information, Shen et al. [5]
+for accurate and lightweight traffic classification. extracted block, sequence, and statistical features to con-
+ In this paper, we propose TrafficAudio, a fine-grained struct webpage fingerprints and employed k-nearest neighbor,
+encrypted traffic classification model based on audio rep- random forest (RF), and decision tree to analyze encrypted
+resentation of network traffic. It aims to preserve the traffic. Zaki et al. [6] used a RF classifier on protocol
+temporal continuity inherent in raw traffic, thereby enabling as well as payload length statistics, and achieved a 94%
+the encoding of both temporal and spectral characteris- average F1 score in the ISCX-VPN2016 dataset. In contrast,
+tics for accurate yet computationally efficient classification. deep learning models automatically learn sequential features
+Specifically, TrafficAudio is composed of three key modules: from raw traffic sequences. Sequence representations encode
+audio representation generation (ARG), audio feature extrac- important information about traffic services or applications,
+tion (AFE), and spatiotemporal traffic classification (STC). such as packet length and arrival time sequences. Liu et al. [7]
+The main contributions of our paper are summarized as introduced a flow sequence network, called FS-Net, to clasfollows: sify encrypted traffic. FS-Net employed gated recurrent units
+ 1) We propose TrafficAudio, a novel encrypted traffic (GRU) to learn sequential characteristics from packet length
+ classification method based on audio representation. sequences without lots of human effort. Wang et al. [27] also
+ It preserves the inherent continuity of network traffic proposed an end-to-end hybrid neural network, called APPand captures discriminative characteristics of diverse Net. APP-Net combined recurrent neural networks (RNN) and
+ traffic. convolutional neural networks (CNN) in a parallel way to
+ 2) We convert traffic bitmap data into audio samples to capture traffic patterns from flow sequences and demonstrated
+ avoid manually defined rules and extract Mel-frequency a better performance than FS-Net. Additionally, Shapira and
+ cepstral coefficients (MFCC) to encode temporal Shavitt [28] designed FlowPic to classify network services
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2079
+
+ TABLE I
+ C OMPARISON W ITH R ELATED T RAFFIC C LASSIFICATION M ETHODS
+
+and applications. FlowPic converted packet size and arrival temporal fusion encoder using GNN. TFE-GNN extracted featime sequences into histograms and utilized CNN to classify. tures from byte-level traffic graphs for fine-grained encrypted
+Although these methods have shown good performance, the traffic classification. Han et al. [32] took packet-level and flowfeatures tend to become ineffective as encryption techniques level features into account and employed dual embedding with
+evolve. Additionally, these methods only analyze high-level GNN for classification. Luo et al. [33] utilized the semantic
+features and fail to automatically extract meaningful features association of pcap headers, packet headers and payloads to
+from specific traffic content. construct topologies, and achieved an accuracy of 95.76% on
+ the USTC-TFC2016 dataset. The large language model (LLM)
+ demonstrates promising performance in many fields. Given
+B. Byte-Based Methods
+ that network traffic can also be viewed as natural language,
+ Byte-based methods directly capture traffic patterns from LLM can be utilized to achieve classification through preraw traffic bytes by using deep learning models. These training and fine-tuning stages. During the pre-training stage,
+methods can be categorized as image-based, graph-based, and generic semantic representations are learned from large-scale
+natural language-based methods according to representations unlabeled data, while specific downstream tasks are performed
+of the input traffic. Image-based methods transform raw traffic using a limited amount of labeled data during the finecontent into grayscale images, thereby classifying traffic using tuning stage [35]. Lin et al. [16] proposed ET-bert to learn
+image recognition techniques. Wang et al. [9] firstly utilized contextual relationships between bytes via a transformer-
+CNN to learn traffic patterns from image representations of based architecture after representing traffic as language-like
+traffic. Lotfollahi et al. [29] proposed Deep Packet for traffic tokens. Meng et al. [21] provided a generative model based
+classification. Deep Packet extracted packet-level images and on GPT-2, called NetGPT, for both traffic understanding
+then utilized CNN to classify traffic. Yu et al. [30] intro- and generation tasks. To overcome the limitation of token
+duced lightweight CNN on packet-level images, improving length, Qu et al. [34] employed a generative model with a
+computational efficiency and performance. Lin et al. [31] linear attention mechanism, expanding the capacity from the
+presented a novel identification scheme of encrypted traffic, previous limit of only 512 tokens to 12,032 tokens. However,
+called TSCRNN. Zhu et al. [18] proposed the cost matrix these methods require a large number of byte values and
+time–space neural network (CMTSNN) for abnormal and complex model architectures for high accuracy classification.
+encrypted IoT traffic. Both TSCRNN and CMTSNN integrated They thus have not achieved a trade-off between performance
+CNN and bidirectional long short-term memory (Bi-LSTM) and complexity.
+layers based on session-level images to extract spatiotemporal
+features. Liu et al. [11] proposed an attention-based vision
+transformer and spatiotemporal scheme for traffic classification C. Audio-Based methods
+(ATVITSC). ATVITSC extracted global and spatiotemporal The aforementioned representations often fail to explicitly
+features from images and achieved 97.89% accuracy on reflect the temporal continuity of traffic bytes. In contrast,
+the ISCX-VPN2016 dataset. Graph-based methods represent audio inherently preserves the continuity through its wavepacket interactions or byte relationships through nodes and form over time. The audio representation has been primarily
+edges, which allows graph neural networks (GNN) to capture applied to intrusion detection for non-encrypted network traffic
+traffic patterns. Zhang et al. [19] designed TFE-GNN, a and Android malware. For non-encrypted traffic intrusion
+2080 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 2. Overview of our encrypted traffic classification method, TrafficAudio. TrafficAudio takes raw traffic as input and outputs fine-grained classification
+results. It consists of audio representation generation, audio feature extraction, and encrypted traffic classification.
+
+detection, existing methods typically generate audio using A. Audio Representation Generation
+parameter-mapping algorithms and identify malicious traffic The ARG module automatically transforms network traffic
+by pre-training security practitioners through auditory cues. into audio through a two-stage process: session segmentation
+Axon et al. [23] explored the performance of a security and audio conversion. This conversion establishes a conceptual
+information and event management tool with sonification correspondence between encrypted network traffic and audio
+(S-SIEM). S-SIEM designed parameter-mapping algorithms signals. Both can be treated as one-dimensional temporal
+to map packet information into acoustic dimensions and sequences of values for traffic bytes and amplitude for audio
+trained security practitioners by these audios for attack samples. In the first stage, raw traffic is divided into sessions
+detection. However, these methods rely on manual design by grouping packets into flows from the same source and
+and human interpretation. For Android malware detection, destination. In the second stage, each session is converted into
+Tarwireyi et al. [25] unpacked raw Android application an audio representation.
+package (APK) files into one-dimensional binary arrays, First, the raw traffic is partitioned into sessions. Since the
+which were then converted into audio signals for feature raw traffic contains packets from various sources, it is divided
+extraction. Ismail et al. [36] proposed MIDALF, a novel into flows produced by a single source. A flow represents a
+multimodal image and audio late fusion method. MIDALF sequence of packets with the same source IP, destination IP,
+transformed malware binaries into image and audio represen- source port, destination port and communication protocol. A
+tations to improve detection accuracy. These studies motivate session consists of a pair of bidirectional flows, denoted as
+us to explore automatic audio representation of encrypted Session = Flowup ∪ Flowdown , where Flowup refers to the
+traffic through binary conversion. However, network traffic packets from the source IP to the destination IP, and Flowdown
+exhibits different structural and semantic characteristics from represents those in the reverse direction. Each session is
+Android APK files. To this end, we design a novel audio then interpreted as a binary stream, defined as Session =
+representation that automatically generates audio from raw {bit1 , bit2 , . . . , bitn }, where each bit stores a single binary
+encrypted traffic, achieving more generalizable and scalable value, either 0 or 1. The session length L is defined as the
+analysis. total number of bits.
+ Next, each binary session is converted into audio by
+ III. M ETHODOLOGY mapping the binary data to audio samples and calculating
+ In this section, we provide a detailed description of amplitude values. The resulting audio, denoted as A, consists
+TrafficAudio. An overview of the TrafficAudio architecture of a series of samples and their corresponding amplitude
+is illustrated in Figure 2. TrafficAudio consists of three main values:
+modules: ARG, AFE, and STC. First, audio representation is
+automatically generated for each session partitioned from raw A = {Amp(smp) | smp ∈ N } (1)
+traffic in the ARG module. Next, these audio representations
+are passed to the AFE module for MFCC extraction. Finally, where Amp(smp) denotes the amplitude value of the sample
+the STC module leverages one-dimensional convolutional smp, and N represents the set of samples.
+neural networks (1D-CNN) and bidirectional gated recurrent The number of samples and the range of amplitude values
+unit (Bi-GRU) layers to capture spatiotemporal features for are determined by the bit depth B. Specifically, setting the
+encrypted traffic classification. bit depth to B means each audio sample contains B bits.
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2081
+
+Fig. 3. Process of audio conversion from network traffic. By reading the
+traffic PCAP file in binary format, bits are converted into audio samples and
+amplitude values based on the bit depth, thus generating the audio WAV file.
+
+Accordingly, the total number of samples S is calculated as
+L/B . Each sample smp is defined as: Fig. 4. Transformation of audio signal into spectrum signal. The audio signal
+   is first divided into frames, a Hamming window is applied to each frame, and
+ FFT is performed to generate the spectrum.
+ smpi = bit(i−1)B +1 , . . . , bitiB ∈ {0, 1}B (2)
+
+ Each sample smp is then interpreted as a signed binary
+integer, with the most significant bit serves as the sign bit. Its with adjacent frames by Fs samples. The total number of
+amplitude value Amp(smp) is computed by: frames in each audio is:
+  
+ S − Fl
+ 
+ B F = +1 (5)
+ Amp(smp) = (−1)bit1 bitk 2B −k (3) Fs
+ k =2
+ Then, each frame is multiplied by a Hamming window [37]
+ The audio conversion of each session is illustrated in to taper the edges and reduce spectral leakage. Subsequently,
+Figure 3. Given a session, the first L bits are extracted. If the a fast Fourier transform (FFT) is applied to each windowed
+session length exceeds L, it is truncated; otherwise, it is padded frame to obtain its frequency-domain representation. The FFT
+with 0 × 00. Then the session is read in binary format. For for a frame x (n) is defined as:
+a given bit depth of B = 16, every 16 bits form one audio
+ l −1
+ F
+sample whose amplitude corresponds to a signed integer. The − 2πjkn
+duration of the audio is determined by the sampling rate and X (k ) = x (n)e Fl , 0 ≤ k ≤ Fl − 1 (6)
+ n=0
+the total number of audio samples. The sampling rate refers to
+the number of samples collected per second. For example, at where X (k ) represents the k th frequency component and j is
+a sampling rate of 16kHz, 16,000 samples are captured each the imaginary unit.
+second. A set of Mel filter banks is applied to the magnitude spectrum, producing a Mel-frequency representation. The Mel filter
+B. Audio Feature Extraction effectively emphasizes lower frequencies while suppressing
+ The audio feature MFCC is extracted from the generated high-frequency noise. The energy in each Mel filter band is
+audio, which represents compact and discriminative character- computed as:
+istics of encrypted traffic. The process of extracting MFCC ⎛ ⎞
+ Fl −1
+involves pre-emphasis filtering, magnitude spectrum genera- E (m) = ln⎝ Hm (k ) · |X (k )|2 ⎠, 1 ≤ m ≤ M (7)
+tion, Mel filter bank application, and coefficient selection. n=0
+ We firstly perform pre-emphasis filtering to compensate for
+the high-frequency attenuation and balance the spectral energy. where M is the total number of Mel filters, and |X (k )|2 is
+Pre-emphasis enhances the high-frequency components of the the power at k th frequency bin. Hm (k ) denotes the frequency
+audio, making short-term fluctuations more distinguishable. response of the m th Mel filter, computed as:
+This is implemented through a high-pass filter: ⎧
+ ⎪ 0, k < f (m − 1)
+ ⎪
+ ⎪ k −f (m−1)
+ x  (td ) = x (td ) − αx (td − 1), 0.95 < α < 0.99 (4) ⎨ , f (m − 1) ≤ k ≤ f (m)
+ Hm (k ) = f (m)−f (m−1)
+ (8)
+where x (td ) represents the original signal at time step td , ⎪
+ ⎪
+ f (m+1)−k
+ , f (m) ≤ k ≤ f (m + 1)
+ ⎪
+ ⎩ f (m+1)−f (m)
+x  (td ) is the pre-emphasized signal, and α is the pre-emphasis 0, k > f (m + 1)
+coefficient controlling the level of enhancement.
+ Next, we transform the pre-emphasized audio signal into where f (m) denotes center frequencies of the m th Mel filter.
+a magnitude spectrum signal, as shown in Figure 4. At the Finally, we select the first C coefficients as our MFCC
+beginning, the audio signal is divided into overlapping frames, after applying the discrete cosine transform (DCT) to the Melin order to capture its short-time stable and smooth variations. frequency spectrum. The application of DCT further reduces
+Each frame contains Fl chronological samples and overlaps redundancy and compresses the feature space, making the
+2082 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ At each time step, the hidden states from both directions
+ → ←
+ − −
+ are concatenated as ht = [ h t ; h t ]. We use the concatenated
+ hidden state at the final step F as the temporal representation:
+ FGRU = hF ∈ R512 (14)
+ 3) Classification Layers: The spatial features Fcnn and
+ temporal features FGRU are fused along the feature dimension
+ to perform traffic classification.
+ Ffused = [Fcnn ; FGRU ] (15)
+Fig. 5. Workflow of classification model in TrafficAudio. The model mainly
+consists of CNN, Bi-GRU and classification layers. Then, we apply a dropout layer with a dropout rate of
+ 0.5 to avoid overfitting. Subsequently, a fully connected layer
+ (Linear) followed by a Softmax function is used to predict the
+representation compact and computationally efficient. The class probabilities:
+coefficient is computed as follows:
+ Ŷ = Softmax(Linear(Ffused , D)) (16)
+ 
+ M −1  
+ nπ(m − 0.5)
+ c(n) = E (m) · cos (9) where D denotes the output dimension.
+ M
+ m=0
+
+where c(n) denotes the n th coefficient. Therefore, the dimen- IV. T HEORETICAL A NALYSIS
+sionality of MFCC is C × F. MFCC captures different This section presents a theoretical analysis of TrafficAudio.
+frequency-domain characteristics of encrypted traffic from the We analyze the scalability of the audio feature MFCC and the
+temporal dimension in a compact representation. time and space complexity of the ARG and AFE modules.
+
+C. Spatiotemporal Traffic Classification A. Audio Feature Scale Analysis
+ Our classification model comprises three main layers: 1D- The proposed TrafficAudio employs MFCC to capture
+CNN, Bi-GRU, and classification layers. The 1D-CNN extracts both temporal and spectral characteristics of network trafhigh-level spatial features from the spectral dimension of the fic. By adjusting the parameters for extracting MFCC,
+MFCC, while Bi-GRU captures temporal features along the the feature space of the audio can be flexibly controlled
+time dimension. Finally, the classification layers fuse spatial relative to the length of the raw traffic session. The scale ratio
+and temporal features to perform traffic classification. The ρ between the dimensionality of the MFCC (C × F ) and the
+workflow of our classification model is shown in Figure 5. length of the traffic session L is calculated by:
+ 1) 1D-CNN Layers: We employ two 1D-CNN blocks to  
+ S −Fl
+extract spatial information. Each block consists of a 1D con- C ×F Fs +1
+ ρ= = ×C
+volutional layer (Conv1D), followed by batch normalization L S ×B
+(BatchNorm1D) and a ReLU activation function to stabilize S ×C
+ C
+training and introduce non-linearity: < Fs = (17)
+ S ×B Fs × B
+ Xconv = ReLU(BatchNorm1D(Conv1D(X ))) (10) When C < Fs × B , the dimensionality of MFCC becomes
+ Then, a max pooling operation is applied to downsample smaller than the raw session length. It demonstrates that
+and reduce the dimensionality of the feature maps: MFCC provides effective compression in terms of storage
+ space. Transformer-based models typically represent each
+ Xpool = MaxPool1D(Xconv ) (11) session word with a high-dimensional vector (e.g., 768
+ dimensions). In contrast, the MFCC of audio provides a
+ After the second 1D-CNN block and max pooling, we lower-dimensional and adjustable feature space, achieving
+apply mean pooling along the time dimension to compress the effective information compression. Therefore, this compactfeatures into a fixed-size representation: ness in audio representation allows TrafficAudio to efficiently
+  
+ Fcnn = MeanPool1D Xpool (12) handle encrypted traffic, offering a balance between feature
+ richness and computational efficiency.
+ 2) Bi-GRU Layers: To capture temporal dependencies in
+both forward and backward directions, we utilize a two-layer
+ B. Complexity of Feature Extraction
+Bi-GRU with a hidden size of 256 and a dropout rate of 0.3.
+Given an input sequence X ∈ RF ×C , the Bi-GRU processes The proposed TrafficAudio maintains low computational
+the sequence in both forward and backward directions: overhead by avoiding high-complexity operations during audio
+ →
+ −  − → 
+ generation in the ARG module and MFCC extraction in the
+ h t = GRUforward xt , h t−1 (13a) AFE module. The time and space complexity analyses of
+ −
+ ←  −
+ ←  the ARG and AFE modules are summarized in Table II. In
+ h t = GRUbackward xt , h t+1 (13b) particular, the AFE module consists of four sequential steps:
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2083
+
+ TABLE II TABLE III
+C OMPLEXITY A NALYSIS OF ARG AND AFE M ODULES IN T RAFFIC AUDIO H YPER -PARAMETERS C ONFIGURATIONS OF T RAFFIC AUDIO
+
+pre-emphasis filtering, magnitude spectrum generation, Mel
+filter bank application, and coefficient selection, corresponding
+to AFE Steps 1 to 4 in Table II, respectively.
+ In the ARG and AFE modules of TrafficAudio, the overall time and space complexities are O(F × Fl × M ) and
+O(F × (F + Fl + M )), respectively. Both time and space
+complexities exhibit linear or linear multiplicative scaling. The
+primary computational cost is incurred by the Mel filter bank
+ TABLE IV
+application, whose complexity scales with the total number of DATASETS I NFORMATION FOR C LASSIFICATION TASKS
+Mel filters. Consequently, TrafficAudio achieves efficient and
+scalable computation in the ARG and AFE modules, making
+it practical for encrypted traffic classification tasks.
+
+ V. E XPERIMENTS
+ In this section, we evaluate the effectiveness of TrafficAudio
+on six encrypted traffic classification tasks covering various
+encryption scenarios. First, we compare the classification
+performance of our method with ten SOTA baselines. We learning rate of 0.001, default betas of (0.9, 0.999), and epsilon
+then analyze model complexity using floating-point operations of 1e-8.
+(FLOPs) and the number of model parameters (Params). 2) Datasets: To evaluate the effectiveness and general-
+Finally, ablation studies validate the contribution of audio ization ability of TrafficAudio, we construct six encrypted
+features to classification performance. traffic classification tasks across five public datasets. Table IV
+ summarizes the datasets and their corresponding tasks.
+A. Experiment Setup CIC-IoT2023 [38]: The dataset collects benign traffic and
+ 1) Implementation Details: TrafficAudio is implemented in 33 attacks within an IoT topology. The attacks are classified
+Python 3.10, utilizing soundfile 0.12.1 for audio generation, into seven categories. We select one representative attack from
+torchaudio 2.4.0 for feature extraction, and PyTorch 2.4.0 for each class, including SlowLoris, dictionary brute force, ARP
+model classification. All experiments are conducted on Ubuntu spoofing, TCP flooding, port scanning, browser hijacking,
+18.04 system equipped with an NVIDIA A100 GPU. and Mirai’s GREETH flood. The selected attacks all include
+ We first use SplitCap to obtain sessions from public datasets. encrypted traffic using TLS v1.2 or TLS v1.3. These seven
+Each dataset is then divided into training and testing sets attacks along with benign traffic construct the encrypted traffic
+with a ratio of 9:1. For classes with limited data, a data classification in IoT (ETCI) task.
+augmentation strategy is then applied by splitting long sessions CipherSpectrum [39]: The dataset collects encrypted TCP/
+into sub-sessions, each containing 15 non-overlapping packets. UDP sessions from 40 distinct domains. Traffic from each
+To further prevent overfitting and reduce training time, we Web is encrypted using three major TLS 1.3 cipher suites,
+randomly select up to 6000 sessions per class. including AES-128-GCM, AES256-GCM, and CHACHA20-
+ Table III presents the hyper-parameters used in our exper- POLY1305. From a mixture of traffic across all three cipher
+iments. In the ARG module, we set L = 1568 bytes, suites, we select 20 distinct domains to construct the encrypted
+bitdepth = 8 bits, and samplingrate = 16kHz . In the AFE traffic classification on Web (ETCW) task.
+module, the pre-emphasis coefficient is set to α = 0.97, USTC-TFC2016 [40]: The dataset contains 10 types of
+frame length Fl = 25, frame shift Fs = 10, number of Mel benign traffic generated by the IXIA BPS network traffic
+filters M = 128, and number of MFCC coefficients C = 28. simulator and 10 types of malicious traffic collected from
+For 1D-CNN layers in the STC module, Conv1D filters have a real-world network environment. The encrypted malware
+a kernel size of 3, with both stride and padding set to 1. classification (EMC) task aims to classify encrypted traffic
+The MaxPool1D layer uses a kernel size and stride of 2. containing both benign and malicious traffic.
+During model training, we apply early stopping to select the ISCX-VPN Service [41]: The ISCX-VPN2016 dataset [41]
+best-performing model and to avoid overfitting. The Adam is captured through the Canadian Institute for Cybersecurity
+optimizer is employed to minimize the loss with an initial in both Virtual Private Network (VPN) and non-VPN. It
+2084 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+can be categorized by services to form the ISCX-VPN • DeepPacket [29]: It converts the first 1500 bytes of each
+Service dataset, which comprises 12 services and supports the packet into an image and leverages a CNN model for
+encrypted traffic classification on VPN (ETCV) task. feature extraction and traffic classification.
+ ISCX-VPN APP [41]: The ISCX-VPN2016 dataset is also • TSCRNN [31]: It transforms the first 1500 bytes of 15
+categorized by application types, thereby resulting in the packets into an image, and combines CNN and Bi-LSTM
+ISCX-VPN APP dataset. The ISCX-VPN APP dataset contains layers for spatiotemporal feature extraction.
+traffic from 17 distinct applications, and supports the encrypted • CMTSNN [18]: It transforms the first 1000 bytes of 10
+application classification on VPN (EACV) task. packets into an image, and integrates Bi-LSTM, CNN,
+ ISCX-Tor2016 [42]: The onion router (Tor), as a and cost penalty layers to learn IoT traffic patterns.
+privacy-enhancing technology, poses challenges for traffic • ATVITSC [11]: It transforms the first 256 bytes of 16
+classification. The ISCX-Tor2016 dataset includes 16 different packets into an image, utilizes packet vision transformer
+applications over Tor and non-Tor traffic. The dataset is to capture global features, and combines convolution and
+utilized for encrypted application classification on Tor (EACT) Bi-LSTM to learn spatiotemporal features.
+task. • TFE-GNN [19]: It constructs byte-level traffic header and
+ 3) Performance Metrics: We evaluate and compare clas- payload graphs based on bytes and their correlations, and
+sification performance using four metrics: accuracy (AC), employs stacked GraphSAGE networks for embedding.
+macro-precision (PRm ), macro-recall (RCm ), and macro-F1 • ET-bert [16]: It tokenizes raw network traffic into
+(F1m ). AC measures the overall proportion of correctly classi- language-like sequences and performs encrypted traffic
+fied data samples out of the total samples, serving as a standard classification through pre-training transformer models.
+metric in classification tasks. In multi-classification tasks, • AndMal [25]: It transforms one-dimensional binary
+macro average metrics [43] independently compute precision, arrays of unpacked Android APK files into audio, extracts
+recall, and F1 for each class, and average them across all bark frequency cepstral coefficients (BFCC), and uses a
+classes. They avoid biased results caused by imbalanced data RF classifier for malware detection.
+distributions. The metrics are calculated as follows:
+ TP + TN B. Comparison of Classification Results
+ AC = (18)
+ TP + TN + FP + FN Tables V and VI present the experimental results of
+ TP
+ Precision = (19) TrafficAudio on the six classification tasks. It can be observed
+ TP + FP that TrafficAudio consistently outperforms most SOTA meth-
+ TP
+ Recall = (20) ods in terms of AC, PRm , RCm , and F1m .
+ TP + FN 1) CIC-IoT2023: As shown in Table V, TrafficAudio sig-
+ Precision × Recall
+ F1 = 2 × (21) nificantly outperforms all SOTA methods in the ETCI task.
+ Precision + Recall Specifically, our model achieves improvements of 10.17%,
+where TP, FP, TN, and FN denote true positive, false positive, 10.70%, and 15.62% in F1m over TSCRNN, 1D-CNN,
+true negative, and false negative, respectively. Subsequently, and ET-bert, respectively. The 1D-CNN baseline directly
+PRm , RCm , and F1m are obtained by averaging these metrics takes raw traffic bytes prior to audio conversion, TSCRNN
+across all classes. transforms traffic bytes into grayscale image pixels, and ETbert represents traffic as language-like tokens. In contrast,
+ 1 
+ N
+ TrafficAudio preserves temporal continuity through audio con-
+ PRm = Precisioni (22)
+ N version and extracts discriminative frequency-domain features,
+ i=1
+ enabling more effective capture of traffic patterns. Therefore,
+ 1 
+ N
+ TrafficAudio achieves significant improvements for the ETCI
+ RCm = Recalli (23)
+ N task due to its audio representation.
+ i=1
+ 2) CipherSpectrum: Table V demonstrates that
+ 1 
+ N
+ F1m = F 1i (24) TrafficAudio achieves competitive performance on the
+ N CipherSpectrum dataset, reaching an accuracy of 0.9840.
+ i=1
+ In comparison with SOTA baselines, it achieves marginal
+where N is the number of classes and i means the i th class. improvements over TSCRNN and TFE-GNN, and markedly
+ 4) Benchmark Methods: We compare TrafficAudio with surpasses recent approaches including ATVITSC and ETten SOTA baselines on the six classification tasks, including: bert. Since the traffic in this dataset is encrypted using
+ • 1D-CNN: It uses the raw network bytes prior to audio three modern cipher suites, this performance indicates that
+ conversion as input and employs two 1D-CNN layers and TrafficAudio effectively captures discriminative patterns from
+ two fully connected layers for classification. modern encrypted traffic, achieving an accurate classification
+ • FlowPrint [26]: It extracts fingerprints and identifies of Web traffic.
+ applications through a fingerprint matching algorithm. 3) USTC-TFC2016: From the results of the EMC task
+ • FlowPic [28]: It extracts packet arrival time and packet presented in Table V, TrafficAudio achieves the highest
+ size sequences from traffic sessions and employs a CNN performance across all evaluation metrics, including an AC
+ model for traffic classification. of 99.76% and an F1m of 99.77%. The USTC-TFC2016
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2085
+
+ TABLE V
+ C OMPARISON R ESULTS OF C LASSIFICATION P ERFORMANCE ON THE CIC-I OT2023, C IPHER S PECTRUM , AND USTC-TFC2016 DATASETS
+
+ TABLE VI
+ C OMPARISON R ESULTS OF C LASSIFICATION P ERFORMANCE ON THE ISCX-VPN S ERVICE , ISCX-VPN APP, AND ISCX-T OR 2016 DATASETS
+
+dataset contains unencrypted application data within mali- TSCRNN and ATVITSC attempt to extract spatiotemcious traffic, which reduces the difficulty for models to poral features. However, such image representations fail
+learn discriminative traffic patterns, thereby enabling more to preserve the inherent temporal continuity of network
+accurate classification. As a result, other methods such as traffic. In contrast, TrafficAudio maintains the continu-
+ET-bert, ATVITSC, TSCRNN, and TFE-GNN also perform ity through audio representation and effectively captures
+well. Nevertheless, TrafficAudio achieves the best results, spatiotemporal characteristics. Consequently, TrafficAudio
+highlighting its strong capability in identifying multiclass effectively overcomes the limitations of image-based methtraffic. ods and achieves superior performance in VPN application
+ 4) ISCX-VPN Service: As shown in Table VI, TrafficAudio classification.
+outperforms the suboptimal method ET-bert by 1.94%, and 6) ISCX-Tor2016: Table VI demonstrates the consistent
+exceeds ATVITSC by 1.39% in F1m for the ETCV Task. superiority of TrafficAudio across all evaluation metrics for
+Notably, ET-bert leverages a pre-trained transformer based the EACT task. In fact, Tor traffic poses greater chalon language-like token sequences, and ATVITSC employs lenges for application classification due to its anonymity.
+a packet vision transformer based on images, both of Nonetheless, TrafficAudio achieves an AC of approximately
+which require substantial computational resources. In con- 99.74%, outperforming ATVITSC, 1D-CNN, TSCRNN, and
+trast, TrafficAudio utilizes lightweight 1D-CNN and Bi-GRU TFE-GNN by 0.95%, 3.98%, 4.74%, and 7.11%, respectively.
+layers to learn spatiotemporal characteristics of the audio While ATVITSC relies on fixed-step sampling, TSCRNN
+feature. By preserving the temporal continuity of network employs random sampling for augmentation, and TFE-GNN
+traffic, TrafficAudio based on the audio representation more partitions sessions into multiple blocks before graph convereffectively captures subtle traffic patterns and improves the sion. Both TrafficAudio and 1D-CNN sequentially sample
+classification accuracy. As a result, TrafficAudio can achieve 15 packets from long sessions to form sub-sessions for
+high-precision VPN traffic classification with lower computa- data augmentation. Furthermore, TrafficAudio further contional overhead. verts these traffic bytes into audio representations. This
+ 5) ISCX-VPN APP: In the EACV task, although the clas- effectively preserves explicit temporal relationships and capsification metrics of several methods decline, our proposed tures subtle time-frequency patterns that 1D-CNN cannot.
+TrafficAudio still achieves the best performance, as presented These results validate the capability of TrafficAudio in idenin Table VI. Specifically, the F1m of TrafficAudio sur- tifying applications even in challenging Tor environments.
+passes those of TSCRNN, ATVITSC and Deep Packet Overall, TrafficAudio achieves outstanding performance across
+by 18.22%, 18.63%, and 31.42%, respectively. All these six different classification tasks, which confirms its effeccomparative methods adopt image representations. Deep tiveness and generalization ability for encrypted traffic
+Packet lacks the ability to capture temporal features, while classification.
+2086 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE VII
+ C OMPARISON R ESULTS OF FLOP S AND PARAMS OF
+ D IFFERENT M ETHODS
+
+ comparison, TrafficAudio achieves a higher F1m of 99.75%
+ with 1.86M FLOPs and 1.64M Params, reducing FLOPs and
+ Params by 86.88% and 43.15%, respectively. Compared to
+ ET-bert and ATVITSC, TrafficAudio achieves better classification performance with FLOPs and Params that are orders
+ of magnitude lower. TrafficAudio benefits from its audio
+ feature MFCC that encodes rich traffic characteristics in a
+ lower-dimensional space. Furthermore, its classification model
+ primarily comprises 1D-CNN, Bi-GRU, and fully connected
+ layers. This architecture results in relatively low computational
+ complexity. However, ET-bert relies on transformer architecture, while TSCRNN processes high-dimensional traffic
+ features using 1D-CNN and Bi-LSTM layers, leading to
+ increased model complexity. Although FlowPic uses fewer
+ Params than TrafficAudio, its representation of each traffic
+ session as a 1500 × 1500 histogram leads to significantly
+ higher FLOPs and the lowest classification performance
+ among all methods. In particular, compared to 1D-CNN layers
+Fig. 6. FLOPs and Params of our method TrafficAudio and other methods. in TrafficAudio, 1D-CNN lacks mean pooling for dimen-
+(a) FLOPs vs. F1m . (b) Params vs. F1m . sionality reduction and processes high-dimensional features
+ directly through a large fully connected layer, resulting in
+ a less favorable performance-complexity trade-off. This validates the effectiveness of our audio representation in creating
+C. Analysis of FLOPs and Params
+ a compact encoding of traffic data and supporting high-
+ To evaluate model complexity, we measure the FLOPs performance classification. Therefore, TrafficAudio achieves
+and Params of TrafficAudio and other deep learning methods superior performance with significantly lower feature dimenon the CIC-IoT2023 dataset, excluding traditional machine sionality and computational cost, making it well-suited for
+learning methods, such as FlowPrint and AndMal. Specifically, deployment in resource-constrained IoT environments.
+we input randomized data samples into these models trained
+on the CIC-IoT2023 dataset and then measure FLOPs and
+Params. In addition, FLOPs and Params are intrinsic properties D. Ablation Studies of Audio Feature
+of a fixed model architecture and thus remain constant regard- To select appropriate audio features and validate their
+less of the dataset used. Therefore, the results are directly effectiveness, we conduct two sets of experiments using the
+comparable across all datasets. CIC-IoT2023 and ISCX-VPN APP datasets. First, we compare
+ As illustrated in Figure 6, TrafficAudio outperforms most the classification performance of four widely used audio
+state-of-the-art (SOTA) methods by achieving the highest F1m features, including filter bank (Fbank), gammatone frequency
+on the CIC-IoT2023 dataset while maintaining competitive cepstral coefficients (GFCC), BFCC, and MFCC. We then use
+FLOPs and Params. The numerical results of FLOPs and MFCC features as input to several high-performing classifica-
+Params are provided in Table VII, which further highlights tion models to evaluate the representation’s effectiveness.
+TrafficAudio’s favorable trade-offs between classification 1) Audio Features: As shown in Table VIII, MFCC conperformance and complexity. In contrast, although several sistently achieves the highest classification AC, PRm , RCm ,
+SOTA methods exhibit strong classification capabilities, they and F1m across both datasets, demonstrating its superior
+often incur substantially higher computational overhead. For capability in capturing discriminative characteristics of differinstance, the second-best method TSCRNN achieves an F1m ent encrypted traffic. Among the compared features, Fbank
+of 89.58% but requires 13.8M FLOPs and 2.893M Params. In preserves raw filter bank energies without applying a DCT,
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2087
+
+ TABLE VIII
+ C OMPARISON R ESULTS OF D IFFERENT AUDIO F EATURES
+
+resulting in the lowest performance on both datasets. BFCC
+and GFCC employ bark and gammatone perceptual scales, Fig. 7. Classification performance of our proposed TrafficAudio and SOTA
+ methods on small (CIC-IoT 6,000), medium (CIC-IoT 24,000), and large
+respectively. Although BFCC achieves a high F1m of 99.47% (CIC-IoT 50,000) datasets.
+on the CIC-IoT2023 dataset, its performance drops by 3.10%
+on the ISCX-VPN APP dataset. Similarly, GFCC also shows
+inconsistent performance. In contrast, the Mel filter bank used we refer to as CIC-IoT 6,000, CIC-IoT 24,000, and CIC-IoT
+in MFCC better matches the feature distribution of encrypted 50,000, respectively. The scalability results of TrafficAudio
+traffic. Consequently, MFCC demonstrates both discriminative and other SOTA methods are shown in Figure 7.
+capability and stability for different traffic classification tasks. The results indicate that TrafficAudio maintains stable
+ 2) MFCC-Based Models: To further validate the effec- and superior performance across datasets of varying sizes.
+tiveness of the audio representation in TrafficAudio, we Specifically, TrafficAudio achieves an F1m of 99.75% on the
+evaluate four image-based classification methods, such as small dataset, improves to 99.87% on the medium dataset,
+Deep Packet, TSCRNN, CMTSNN, and ATVITSC, by replac- and maintains a strong performance of 99.01% on the large
+ing their original input features with MFCC extracted from dataset. As the dataset size increases, models have the potenaudio representation of traffic. These image-based methods tial to learn more generalizable features. Consequently, the
+have previously demonstrated competitive performance across performance of FlowPrint, Deep Packet, and ATVITSC also
+various encrypted traffic classification tasks. The classification improves with increasing data scale. However, more complex
+results are listed in Table IX. All four methods show signifi- or ambiguous samples may be introduced, which negatively
+cant performance improvements when taking MFCC as input. affect performance. As a result, the performance of FlowPic
+In particular, MFCC-based ATVITSC achieves an improve- and AndMal continues to decline due to changes in data disment of 1.13% in AC on the ISCX-VPN APP dataset, and an tribution. In addition, 1D-CNN, TSCRNN, and TrafficAudio
+improvement of up to 11.78% on the CIC-IoT2023 dataset. that have relatively small FLOPs and Params exhibit slight
+These results further highlight the superior generalization and performance fluctuations on the large-scale dataset. It suggests
+representation capacity of the proposed audio representation. a trade-off between model capacity and data complexity.
+In summary, the proposed audio representation and the MFCC However, TrafficAudio still achieves an 8% higher F1m
+feature are highly effective in capturing essential character- compared to the best-performing baseline TSCRNN on the
+istics of encrypted traffic, leading to significant gains across large dataset. In IoT environments, variations in the number
+diverse models and classification tasks. of devices and network activities often lead to changes in
+ traffic scale. These results demonstrate that TrafficAudio can
+ VI. D ISCUSSION effectively adapt to these scale changes by capturing temporal
+ The experimental results demonstrate that TrafficAudio per- and frequency-domain features, thereby maintaining robust
+forms encrypted traffic classification effectively and efficiently. classification performance across different traffic scales.
+In this section, we provide a comprehensive analysis of
+its performance in IoT environments, including scalability, B. Robustness
+robustness, and sensitivity. Finally, we discuss its limitations
+ To evaluate the robustness of TrafficAudio under realistic
+and suggest potential directions for future research.
+ audio degradation scenarios, we simulate three common distortion conditions: additive Gaussian noise, and partial data loss
+A. Scalability through time masking and frequency masking. Specifically, we
+ To investigate the impact of traffic scale on classifi- randomly select 5%, 10%, 15%, and 20% from the generated
+cation performance, we construct three subsets from the audio data to add Gaussian noise and apply time masking as
+CIC-IoT2023 dataset with varying sizes. Specifically, after well as frequency masking. Experiments are conducted on the
+partitioning each dataset into training and testing sets, we CIC-IoT2023 dataset. As illustrated in Figure 8, TrafficAudio
+sample sub-sessions from long sessions for data augmentation, remains resilient under various audio distortions, demonstratwith each sub-session containing 15 packets. Finally, the ing stability in noisy or lossy IoT environments.
+number of samples per class is capped at 6,000, 24,000, and 1) Gaussian Noise: As shown in Figure 8(a), the
+50,000 for the small, medium, and large dataset settings, which performance of TrafficAudio remains stable despite increasing
+2088 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE IX
+ C LASSIFICATION P ERFORMANCE OF MFCC-BASED M ETHODS ON CIC-I OT2023 AND ISCX-VPN APP DATASETS
+
+Fig. 8. Impact of Gaussian noise and masking effects on classification.
+(a) Gaussian noise. (b) Time mask. (c) Frequency mask.
+
+noise levels. The F1m ranges from 0.9978 to 0.9972 as the
+noise ratio increases from 0% to 20%. The model peaks at a
+15% noise level with an F1m of 0.9978, and the F1m drops
+marginally to 0.9972 at 20% noise. The overall variation is
+merely 0.0006, indicating effective noise processing inherent
+in the audio feature extraction. In the MFCC extraction, preemphasis filtering, Mel-frequency representation, and DCT
+ Fig. 9. Classification performance under different session length L and bit
+suppress high-frequency noise components. Additionally, depth settings. (a) AC. (b) PRm . (c) RCm . (d) F1m .
+adding moderate noise during model training may enhance
+the generalization capability of TrafficAudio. Therefore,
+TrafficAudio exhibits reliable performance in the presence
+ between 15% and 20% frequency masking. This suggests
+of Gaussian noise, supporting its deployment in noisy IoT
+ that TrafficAudio effectively learns the critical frequency
+environments.
+ components even with more frequency information loss,
+ 2) Time Masking: Figure 8(b) reveals the resistance of thereby maintaining classification performance. Furthermore,
+TrafficAudio to time information loss. As the time masking 1D-CNN layers capture robust and discriminative spatial
+ratio increases, the F1m gradually declines from 0.9975 representations even under partial frequency masking. Overall,
+without masking to 0.9934 at the maximum 20% masking these findings demonstrate that TrafficAudio maintains robust
+level. The total reduction of only 0.0041 across all time classification under various audio distortions. Its resilience to
+masking conditions demonstrates that TrafficAudio effectively noise, temporal masking, and frequency masking confirms its
+handles time information loss through its classification model. robustness for dynamic and unstable IoT environments.
+This resilience can be primarily attributed to the bidirectional
+dependency modeling and temporal segment inference of the
+Bi-GRU layer. Furthermore, network traffic inherently exhibits C. Sensitivity
+temporal redundancy in packets, which allows the model to To analyze the impact of audio hyper-parameters on
+predict temporal patterns. Thus, TrafficAudio is capable of classification, we conduct sensitivity experiments on the CICmaintaining accurate classification under conditions of packet IoT2023 dataset by exploring various combinations of session
+loss and temporal information degradation that are caused by length L and bit depth in the ARG module, as well as frame
+the dynamic and unstable IoT communications. length Fl and frame shift Fs in the AFE module.
+ 3) Frequency Masking: As shown in Figure 8(c), 1) Session Length and Bit Depth: In the ARG module,
+TrafficAudio maintains effective classification even with session length L and bit depth determine the total number
+incomplete frequency information. The F1m of TrafficAudio of audio samples and their amplitude values. We choose L
+still remains above 95%, though it decreases by 0.0448 at to be 256, 768, 1568 and bit depth to be 8, 16, 32. Note
+a 20% frequency masking rate. It indicates that frequency that L = 256 means the session consists of 256 bytes, each
+information plays a more significant role in the classification. byte containing 8 bits. The results across different hyper-
+Notably, the most gradual F1m reduction of 0.0054 occurs parameter settings are presented in Figure 9. The optimal
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2089
+
+ D. Limitation
+ Despite its outstanding performance in encrypted traffic classification accuracy, TrafficAudio still faces a few
+ limitations that deserve attention in future work. Firstly,
+ TrafficAudio currently applies the same audio representation
+ to both packet headers and payloads. Given the distinct
+ semantics of these fields, using identical acoustic mappings
+ may introduce semantic confusion. To address this, we plan
+ to design differentiated sonification representations that are
+ tailored to the specific semantics of headers and payloads. In
+ addition, our experiments are conducted under a closed-set
+ setting. However, as new protocols, applications, and attack
+ behaviors continue to emerge, network traffic patterns and
+ distributions evolve over time. To adapt to such dynamic IoT
+ environments, we aim to extend TrafficAudio toward openset and real-time recognition, enabling the model to detect
+ previously unseen traffic patterns and make timely responses
+Fig. 10. Classification performance under different frame length Fl and under continuously arriving encrypted traffic.
+frame shift Fs settings. (a) AC. (b) PRm . (c) RCm . (d) F1m .
+
+ VII. C ONCLUSION
+classification AC of 99.81% is achieved with a bit depth of
+8 and L = 768. Overall, the performance of TrafficAudio In this paper, we propose TrafficAudio, a novel encrypted
+declines as bit depth increases, while it improves with larger L, traffic classification method based on audio representation.
+except when the bit depth is 32. This is because longer traffic TrafficAudio consists of ARG, AFE, and STC modules. The
+sessions contain more key and redundant information, whereas ARG module first generates the audio representation of raw
+higher bit depths expand the amplitude range, potentially traffic by conceptualizing traffic bytes as audio samples,
+obscuring discriminative patterns. Notably, even at a bit depth preserving the temporal continuity of traffic. Next, the AFE
+of 32, TrafficAudio maintains an F1m between 85.67% and module extracts MFCC from the generated audio to encode
+87.37% across different L values. From a practical standpoint, temporal and spectral characteristics, which captures subtle
+longer sessions may lead to higher-dimensional audio features, differences of various traffic patterns. Then, the STC module
+slower audio processing, and increased model complexity. integrates 1D-CNN and Bi-GRU layers to model spatiotem-
+However, TrafficAudio can achieve strong performance even poral patterns for fine-grained classification. Comprehensive
+with relatively short traffic, which reduces memory usage and experiments demonstrate that TrafficAudio outperforms ten
+computational overhead. This capability to maintain accurate SOTA methods, achieving accuracies of 99.74%, 98.40%,
+classification with compact audio representations makes it 99.76%, 99.25%, 99.77%, and 99.74% across six classification
+well-suited for IoT deployment. tasks, while reducing FLOPs by 86.88% and Params by
+ 2) Frame Length and Frame Shift: In the AFE module, 43.15% compared to the best-performing baseline. Future
+frame length Fl and frame shift Fs divide the entire audio work will focus on mitigating semantic confusion and extendsignal into frames, which directly affects the time dimension ing TrafficAudio for open-set and real-time recognition in
+of the MFCC, see (5). The typical value for Fs ranges dynamic IoT environments.
+between one third and one half of Fl . We select Fs values
+of 10, 15, and 20, and Fl values of 25, 30, and 35. It is R EFERENCES
+important to note that these parameters are specified as sample [1] V. Tong et al., “Encrypted traffic classification through deep domain
+counts, in contrast to the millisecond units typically employed adaptation network with smooth characteristic function,” IEEE Trans.
+ Netw. Service Manag., vol. 22, no. 1, pp. 331–343, Feb. 2025.
+in conventional audio processing. For instance, Fs = 10 [2] N. Malekghaini et al., “AutoML4ETC: Automated neural architecture
+denotes a shift of 10 samples. Figure 10 reveals that the search for real-world encrypted traffic classification,” IEEE Trans. Netw.
+classification performance of TrafficAudio stabilizes across Service Manag., vol. 21, no. 3, pp. 2715–2730, Jun. 2024.
+ [3] Z. Chen, G. Cheng, Z. Wei, D. Niu, and N. Fu, “Classify traffic
+various settings of Fl and Fs . Specifically, setting Fl = rather than flow: Versatile multi-flow encrypted traffic classification with
+30 and Fs = 10 achieves the highest AC of 99.98%. The flow clustering,” IEEE Trans. Netw. Service Manag., vol. 21, no. 2,
+classification performance tends to degrade as Fs increases pp. 1446–1466, Apr. 2024.
+ [4] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+because the number of MFCC frames decreases, which reduces traffic analysis applications, techniques, and countermeasures,” ACM
+temporal encoding capability. Even under the worst setting, Comput. Surv., vol. 54, no. 6, pp. 1–35, Jul. 2021.
+Fl = 25 and Fs = 20, TrafficAudio still achieves a [5] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained Webpage
+ fingerprinting using only packet length information of encrypted trafhigh AC of 96.83%. These results indicate that TrafficAudio fic,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021.
+remains robust and reliable under varying Fl and Fs . The [6] F. Zaki, F. Afifi, S. Abd Razak, A. Gani, and N. B. Anuar,
+insensitivity of TrafficAudio to audio framing configurations “GRAIN: Granular multi-label encrypted traffic classification using
+ classifier chain,” Comput. Netw., vol. 213, Aug. 2022, Art. no. 109084.
+offers operational flexibility for diverse and evolving IoT [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+environments. S1389128622002213
+2090 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ [7] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow [30] L. Yu, J. Yuan, J. Zheng, and N. Yang, “A model of encrypted network
+ sequence network for encrypted traffic classification,” in Proc. IEEE traffic classification that trades off accuracy and efficiency,” J. Netw.
+ Conf. Comput. Commun., 2019, pp. 1171–1179. Syst. Manage., vol. 33, no. 11, pp. 1–32, 2025.
+ [8] M. Shen, Z. Gao, L. Zhu, and K. Xu, “Efficient fine-grained Website [31] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme of
+ fingerprinting via encrypted traffic analysis with deep learning,” in Proc. encrypted traffic based on flow spatiotemporal features for efficient man-
+ IEEE/ACM 29th Int. Symp. Qual. Service (IWQOS), 2021, pp. 1–10. agement of IIoT,” Comput. Netw., vol. 190, May 2021, Art. no. 107974.
+ [9] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end [32] X. Han et al., “DE-GNN: Dual embedding with graph neural network for
+ encrypted traffic classification with one-dimensional convolution neural fine-grained encrypted traffic classification,” Comput. Netw., vol. 245,
+ networks,” in Proc. IEEE Int. Conf. Intell. Security Inf. (ISI), 2017, May 2024, Art. no. 110372.
+ pp. 43–48. [33] Y. Luo, M. He, and X. Wang, “Analyzing the semantic structure of
+[10] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder network flow: A threat detection method with independent generalization
+ based traffic transformer with multi-level flow representation,” in Proc. capabilities,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 1, pp. 28–43,
+ AAAI Conf. Artif. Intell., vol. 37, 2023, pp. 5420–5427. Jan./Feb. 2025.
+[11] Y. Liu, X. Wang, B. Qu, and F. Zhao, “ATVITSC: A novel encrypted [34] J. Qu, X. Ma, and J. Li, “TrafficGPT: Breaking the token barrier for
+ traffic classification method based on deep learning,” IEEE Trans. Inf. efficient long traffic analysis and generation,” 2024, arXiv:2403.05822.
+ Forensics Security, vol. 19, pp. 9374–9389, 2024. [35] W. Dong, J. Yu, X. Lin, G. Gou, and G. Xiong, “Deep learning and pretraining technology for encrypted traffic classification: A comprehensive
+[12] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decenreview,” Neurocomputing, vol. 617, Feb. 2025, Art. no. 128444.
+ tralized application identification via encrypted traffic analysis using
+ [36] S. J. I. Ismail, Hendrawan, B. Rahardjo, T. Juhana, and
+ graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+ Y. Musashi, “MIDALF—Multimodal image and audio late fusion for
+ pp. 2367–2380, 2021.
+ malware detection,” EURASIP J. Inf. Secur., vol. 2025, no. 1, p. 5,
+[13] J. Li, R. Li, and L. Xu, “Multi-stage deep residual collaboration learning
+ 2025.
+ framework for complex spatial–temporal traffic data imputation,” Appl.
+ [37] A. Roy and U. Satija, “A novel multi-head self-Organized operational
+ Soft Comput., vol. 147, Nov. 2023, Art. no. 110814.
+ neural network architecture for chronic obstructive pulmonary disease
+[14] T.-L. Huoh, Y. Luo, P. Li, and T. Zhang, “Flow-based encrypted network detection using lung sounds,” IEEE/ACM Trans. Audio, Speech, Lang.
+ traffic classification with graph neural networks,” IEEE Trans. Netw. Process., vol. 32, pp. 2566–2575, 2024.
+ Service Manag., vol. 20, no. 2, pp. 1224–1237, Jun. 2023. [38] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and
+[15] Y. Chen et al., “A survey of large language models for cyber threat A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark
+ detection,” Comput. Secur., vol. 145, Oct. 2024, Art. no. 104016. for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13,
+[16] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A p. 5941, 2023.
+ contextualized datagram representation with pre-training transformers [39] N. Wickramasinghe, A. Shaghaghi, G. Tsudik, and S. Jha, “
+ for encrypted traffic classification,” in Proc. ACM Web Conf., 2022, SoK: Decoding the enigma of encrypted network traffic classipp. 633–642. fiers,” in Proc. IEEE Symp. Security Privacy (SP), May 2025,
+[17] H. Y. He, Z. G. Yang, and X. N. Chen, “PERT: Payload encoding repre- pp. 1825–1843. [Online]. Available: https://doi.ieeecomputersociety.org/
+ sentation from transformer for encrypted traffic classification,” in Proc. 10.1109/SP61157.2025.00165
+ ITU Kaleidosc. Ind.-Driven Digit. Transf. (ITU K), 2020, pp. 1–8. [40] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+[18] S. Zhu, X. Xu, H. Gao, and F. Xiao, “CMTSNN: A deep learning model classification using convolutional neural network for representation
+ for multiclassification of abnormal and encrypted traffic of Internet of learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), 2017, pp. 712–717.
+ Things,” IEEE Internet Things J., vol. 10, no. 13, pp. 11773–11791, [41] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani,
+ Jul. 2023. “Characterization of encrypted and vpn traffic using time-
+[19] H. Zhang et al., “TFE-GNN: A temporal fusion encoder using graph related,” in Proc. 2nd Int. Conf. Inf. Syst. Security Privacy (ICISSP),
+ neural networks for fine-grained encrypted traffic classification,” in Proc. 2016, pp. 407–414.
+ ACM Web Conf., 2023, pp. 2066–2075. [42] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani,
+[20] Y. Hong, Q. Li, Y. Yang, and M. Shen, “Graph based encrypted mali- “Characterization of tor traffic using time based features,” in Proc. Int.
+ cious traffic detection with hybrid analysis of multi-view features,” Inf. Conf. Inf. Syst. Security Privacy, vol. 2, 2017, pp. 253–262.
+ Sci., vol. 644, Oct. 2023, Art. no. 119229. [Online]. Available: https:// [43] C. Liu, W. Wang, M. Wang, F. Lv, and M. Konan, “An efficient
+ www.sciencedirect.com/science/article/pii/S0020025523008149 instance selection algorithm to reconstruct training set for support vector
+[21] X. Meng, C. Lin, Y. Wang, and Y. Zhang, “NetGPT: Generative machine,” Knowl.-Based Syst., vol. 116, pp. 58–73, Jan. 2017.
+ pretrained transformer for network traffic,” 2023, arXiv:2304.09513.
+[22] L. Axon, J. Happa, M. Goldsmith, and S. Creese, “Hearing attacks
+ in network data: An effectiveness study,” Comput. Secur., vol. 83,
+ pp. 367–388, Jun. 2019.
+[23] L. Axon, J. Happa, A. J. van Rensburg, M. Goldsmith, and S. Creese,
+ “Sonification to support the monitoring tasks of security operations
+ centres,” IEEE Trans. Dependable Secure Comput., vol. 18, no. 3,
+ pp. 1227–1244, May/Jun. 2021.
+[24] P. Badva, K. M. Ramokapane, E. Pantano, and A. Rashid, “Unveiling
+ the hunter-gatherers: Exploring threat hunting practices and challenges in Cyber defense,” in Proc. 33rd USENIX Secur. Symp., 2024,
+ pp. 3313–3330.
+[25] P. Tarwireyi, A. Terzoli, and M. O. Adigun, “Using multi-audio feature fusion for android malware detection,” Comput. Secur., vol. 131,
+ Aug. 2023, Art. no. 103282.
+[26] T. Van Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting
+ on encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp.
+ (NDSS), vol. 27, 2020, pp. 1–18.
+[27] X. Wang, S. Chen, and J. Su, “App-Net: A hybrid neural network for Yilu Chen received the B.E. and M.S. degrees
+ encrypted mobile traffic classification,” in Proc. IEEE Conf. Comput. from the Department of Computer Science and
+ Commun. Workshops (INFOCOM WKSHPS), 2020, pp. 424–429. Technology, Harbin Institute of Technology in 2021
+[28] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for and 2023, respectively. She is currently pursuencrypted traffic classification and applications identification,” IEEE ing the Ph.D. degree with the Department of
+ Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021. Computer Science and Technology, Harbin Institute
+[29] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and of Technology (Shenzhen), Shenzhen. Her research
+ M. Saberian, “Deep packet: A novel approach for encrypted traffic interests include encrypted network traffic analysis
+ classification using deep learning,” Soft Comput., vol. 24, no. 3, and anomaly detection.
+ pp. 1999–2012, 2020.
+CHEN et al.: TrafficAudio: AUDIO REPRESENTATION FOR LIGHTWEIGHT ENCRYPTED TRAFFIC CLASSIFICATION 2091
+
+ Ye Wang received the Ph.D. degree in applied Jinlong Li received the Ph.D. degree from the
+ informatics from Victoria University, Australia, in South China University of Technology, Guangzhou,
+ 2019. She is currently a Research Fellow with the China, in 2024. He is currently a Lecturer with
+ Harbin University of Technology (Shenzhen). She the Cyberspace Institute of Advanced Technology,
+ worked as an Assistant Professor with the National Guangzhou University, Guangzhou. His research
+ University of Defense Technology from 2019 to centers on spatiotemporal data mining, generative
+ 2025. Her research interests include social network AI, data security, and hybrid intelligent information
+ analysis, information security, and knowledge graph systems modeling.
+ reasoning.
+
+ Ruonan Li (Member, IEEE) received the Ph.D.
+ degree from the Department of Computer Science
+ and Technology, Harbin Institute of Technology
+ in 2024. She is currently a Postdoctoral Fellow
+ with Peng Cheng Laboratory. Her research interest
+ include AI empowered Internet of Things and deep Yan Jia currently serves as the Head of a Major
+ reinforcement learning for networking. Project with the National Laboratory and as the
+ Chief with the National Engineering Research
+ Center for Industrial Control System Information
+ Security Technology, National University of Defense
+ Technology. She has published more than 320 papers
+ indexed by SCI and EI, authored eight monographs,
+ and obtained over 100 invention patents. Her main
+ research directions include the application of artifi-
+ Yujia Xiao is currently pursuing the Ph.D. cial intelligence and big data analysis technologies
+ degree with the Department of Computer Science in cybersecurity. She is also the Vice President of
+ and Technology, Harbin Institute of Technology the Chinese Information Processing Society. She is the Principal Initiator and
+ (Shenzhen), Shenzhen, China. Her research interests a Committee Chair of international forums, such as FFD and international
+ include encrypted network traffic analysis and AI conferences, including IEEE DSC and CSE.
+ security.
+
+ Zhaoquan Gu (Member, IEEE) received the
+ Lichen Liu (Member, IEEE) received the Ph.D. bachelor’s and Ph.D. degrees in computer scidegree in transportation information engineering and ence from Tsinghua University, Beijing, China, in
+ control from Chang’an University in 2024. He is 2011 and 2015, respectively. He is currently a
+ currently a Postdoctoral Fellow with Peng Cheng Professor with the Department of Computer Science
+ Laboratory. His research interests include artificial and Technology, Harbin Institute of Technology
+ intelligence, cybersecurity, computer vision, and (Shenzhen), Shenzhen, China, and a Researcher with
+ multimodal fusion tasks. the Department of New Networks, Peng Cheng
+ Laboratory, Shenzhen. His research interests include
+ wireless networks, distributed computing, big data
+ analysis, and artificial intelligence security.

@@ -1,0 +1,1207 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [814] SwarmSense-DNN: A Trustworthy and Decentralized Neural Framework for Proactive Anomaly Defense in Consumer IoT
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：814
+题名：SwarmSense-DNN: A Trustworthy and Decentralized Neural Framework for Proactive Anomaly Defense in Consumer IoT
+年份：2025
+DOI：10.1109/tce.2025.3634160
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2025.3634160.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全、联邦学习、隐私保护与分布式协同
+相关性：弱相关，分数 2
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\814.txt
+- 原始字符数：44823
+- 本次发送字符数：44823
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+1997
+
+SwarmSense-DNN: A Trustworthy and
+Decentralized Neural Framework for Proactive
+Anomaly Defense in Consumer IoT
+Jing Yang , Vijay Govindarajan , Senior Member, IEEE, Saad Arif , Xu Xu , Graduate Student Member, IEEE,
+Mohamed Kallel, Zaffar Ahmed Shaikh , Zhe Liu , Graduate Student Member, IEEE, Chunhong Yuan ,
+and Lip Yee Por , Senior Member, IEEE
+
+Abstract— The rapid growth of consumer IoT devices has
+introduced unprecedented challenges in trustworthy anomaly
+detection against AI-enabled cyber threats, requiring real-time,
+privacy-preserving, and scalable defense mechanisms. Traditional centralized strategies face critical limitations, including
+communication bottlenecks, single points of failure, and privacy vulnerabilities when processing distributed consumer data.
+We propose SwarmSense-DNN, a novel decentralized neural
+framework employing swarm intelligence for secure, cooperative anomaly detection across distributed IoT environments.
+The framework integrates autonomous agents with deep neural networks to form a self-organizing defense system that
+detects evolving anomalies without centralized coordination.
+It utilizes hierarchical federated learning with graph neural
+networks and attention mechanisms to capture local and global
+anomaly behaviors while ensuring data privacy. Extensive experiments demonstrate SwarmSense-DNN’s superior performance:
+it achieves 95.44% average detection accuracy across five benchmark datasets while reducing communication overhead by 67%.
+Received 11 July 2025; revised 18 September 2025 and 29 October 2025;
+accepted 9 November 2025. Date of publication 18 November 2025; date of
+current version 25 March 2026. This work was supported by the Deanship
+of Scientific Research, Vice Presidency for Graduate Studies and Scientific
+Research, King Faisal University, Saudi Arabia, under Grant KFU253799.
+(Corresponding authors: Lip Yee Por; Xu Xu.)
+Jing Yang and Lip Yee Por are with the Center of Research for Cyber
+Security and Network (CSNET), Faculty of Computer Science and Information Technology, Universiti Malaya, Kuala Lumpur 50603, Malaysia (e-mail:
+s2147529@siswa.um.edu.my; porlip@um.edu.my).
+Vijay Govindarajan is with the Distribution and Supply Technology, Expedia
+Group, Seattle, WA 98119 USA (e-mail: vigovindaraja@expediagroup.com).
+Saad Arif is with the Department of Mechanical Engineering, College of
+Engineering, King Faisal University, Al Ahsa 31982, Saudi Arabia (e-mail:
+sarif@kfu.edu.sa).
+Xu Xu is with the School of Computer Science and Engineering, Northeastern University, Shenyang 110004, China (e-mail: xuxu@ieee.org).
+Mohamed Kallel is with the Department of Physics, College of Science, Northern Border University, Arar 91431, Saudi Arabia (e-mail:
+Mohamed.Kallel@nbu.edu.sa).
+Zaffar Ahmed Shaikh is with the Department of Computer Science
+and Information Technology, Benazir Bhutto Shaheed University Lyari,
+Karachi 75660, Pakistan, and also with the School of Engineering, École
+Polytechnique Fédérale de Lausanne, 1015 Lausanne, Switzerland (e-mail:
+zashaikh@bbsul.edu.pk).
+Zhe Liu is with the College of Mathematics and Computer, Xinyu University, Xinyu 338004, China, and also with the School of Computer Sciences,
+Universiti Sains Malaysia, Penang 11800, Malaysia (e-mail: zheliu@ieee.org).
+Chunhong Yuan is with the Faculty of Control Systems and Robotics,
+National Research University for Information Technology, Mechanics and Optics (ITMO), 197101 Saint Petersburg, Russia (e-mail:
+Y2399549081@outlook.com).
+Digital Object Identifier 10.1109/TCE.2025.3634160
+
+The framework maintains robust resilience against adversarial
+threats through differential privacy safeguards and demonstrates
+strong fault tolerance under node failures and AI-enabled attacks.
+Index Terms— Swarm intelligence, decentralized learning,
+anomaly detection, federated learning, graph neural networks.
+
+I. I NTRODUCTION
+
+T
+
+HE rapid growth of interconnected systems across smart
+homes, consumer devices, and industrial IoT has reshaped
+trustworthy anomaly detection in distributed environments
+increasingly exposed to AI-enabled cyber threats [1], [2].
+Centralized detectors can work in controlled settings but face
+key limits in consumer networks where privacy, bandwidth,
+and real-time processing are essential [3]. These constraints are
+acute in consumer and critical infrastructure scenarios, where
+anomalies may signal AI-driven intrusions, device faults,
+or operational risks that demand immediate response [4]. The
+spread of edge computing and ubiquitous IoT has therefore
+pushed a shift toward decentralized, on-device processing that
+supports localized detection and decision-making [5], [6]. Yet
+many distributed methods still rely on simplified aggregation
+that fails to capture complex temporal dynamics and internode
+dependencies in heterogeneous systems [7]. The diversity of
+data sources, together with strict privacy rules and bandwidth
+limits, calls for trustworthy frameworks that maintain high
+accuracy and efficiency under edge constraints [8], [9].
+Swarm intelligence, inspired by the collective behavior of
+biological entities such as ant colonies and bee swarms, offers
+a promising foundation for building decentralized and adaptive
+defense mechanisms in distributed systems [10], [11]. Unlike
+traditional distributed systems that rely on centralized coordination, swarm-based approaches enable autonomous agents
+to collaborate through local interactions, emerging complex
+global behaviors without explicit central control [12]. This
+self-organizing coordination mechanism aligns naturally with
+the goals of trustworthy distributed anomaly detection systems,
+enabling nodes to make local defense decisions while contributing to a unified and system-wide threat perspective [13].
+Recent developments in federated learning have shown the
+feasibility of training models across decentralized datasets
+while preserving data privacy, which is an essential requirement for secure consumer applications [14], [15], [16].
+
+1558-4127 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1998
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+However, many federated learning methods for anomaly
+detection still rely solely on model aggregation, overlooking
+the potential of swarm intelligence to enhance robustness,
+adaptability, and cyber threat detection accuracy [17], [18].
+The integration of swarm intelligence with deep neural networks presents an opportunity to develop scalable, adaptive,
+and trustworthy anomaly detection frameworks tailored for
+dynamic and adversarial consumer IoT environments [19].
+Modern consumer IoT faces challenges from privacy constraints, limited communication, and growing demands for
+scalability and reliability. Centralized architectures cause single points of failure, bandwidth inefficiency, and privacy
+risks [20]. Conventional federated learning with simple aggregation fails to capture temporal and cross-node dependencies
+in heterogeneous networks. The key goal is to build a
+decentralized and trustworthy framework that achieves high
+detection accuracy with privacy preservation and low communication cost, while adapting to dynamic environments,
+resisting AI-enabled adversaries, and tolerating node failures under resource constraints [21]. This work advances
+IoT security through SwarmSense-DNN’s novel integration
+of swarm intelligence with federated learning, enabling distributed anomaly detection without centralized data aggregation, a departure from traditional centralized security models.
+SwarmSense-DNN introduces a decentralized paradigm where
+consumer IoT devices collaboratively detect anomalies through
+pheromone-inspired coordination and local model training,
+eliminating the privacy risks inherent in centralized architectures. This paper makes the following contributions toward
+secure and decentralized anomaly detection in consumer IoT.
+1) We propose SwarmSense DNN, a trustworthy decentralized framework that fuses swarm intelligence with
+deep neural networks for collaborative, proactive anomaly
+detection in consumer IoT. Autonomous nodes learn
+and adapt collectively without relying on centralized
+coordination.
+2) We design a hierarchical architecture that integrates local
+swarm clusters with lightweight coordination mechanisms
+to balance detection accuracy, scalability, and communication efficiency. The architecture employs adaptive
+clustering and selective information exchange to reduce
+overhead.
+3) We introduce differential privacy mechanisms tailored
+for swarm-based learning. These techniques protect individual node data while enabling effective collaboration
+across distributed systems.
+4) We implement self-healing strategies that autonomously
+detect and recover from node failures or compromises.
+These mechanisms enhance system reliability, trustworthiness, and resilience in adversarial and dynamic
+conditions.
+II. L ITERATURE R EVIEW
+A. Distributed and Federated Anomaly Detection
+Federated learning is a leading approach for
+privacy-preserving distributed ML, with broad uses in anomaly
+detection [8]. Mothukuri et al. [1] validated its feasibility
+
+for IoT security, showing that accuracy can be maintained
+while protecting data, though simple parameter averaging
+struggles with complex, heterogeneous anomaly patterns.
+Recent work tackles heterogeneity, communication, and
+decentralization. Man et al. [14] used adaptive aggregation
+in edge-assisted IoT to handle data quality variation and
+reduce latency but relied on centralized coordination.
+Li et al. [17] advanced decentralized FL to remove single
+points of failure and improve resilience, yet lacked adaptive
+coordination for evolving threats. Zhang et al. [22] introduced
+a spatially aware GNN that captures topology while keeping
+a centralized setup that limits scalability and privacy.
+Syu et al. [19] studied privacy-aware energy grids, clarifying
+privacy–accuracy trade-offs in critical infrastructure.
+B. Swarm Intelligence and Cooperative Systems
+Swarm intelligence is a powerful approach for optimization
+and coordination in distributed systems [10]. Wardhana et al.
+surveyed core concepts and applications, outlining foundations
+for integrating machine learning. Xu et al. [23] introduced
+cooperative swarm learning with cyclic updates that cut
+communication while preserving effectiveness, though it was
+not aimed at anomaly detection. Pham et al. [12] showed
+how bio-inspired methods tackle large-scale, dynamic network challenges, offering insights for swarm-based anomaly
+detection. In robotics, Blais and Akhloufi [13] reviewed
+reinforcement learning for swarm coordination and demonstrated the value of decentralized decision-making, which we
+adapt for anomaly detection in distributed systems. In clinical contexts, Wardhana et al. [24] validated decentralized,
+privacy-preserving collaboration, directly informing our confidentiality mechanisms.
+C. Deep Learning Architectures for Anomaly Detection
+Deep learning for anomaly detection has progressed rapidly.
+Surveys by Huang et al. [25] and Kumari et al. [7] chart the
+evolution of neural architectures and explain how designs
+are tuned for different anomaly types and deployment contexts. Building on this foundation, Nazir et al. [26] introduce
+hybrid CNN–LSTM models for IoT threat detection that
+capture spatial–temporal patterns under resource constraints;
+Singh et al. [27] boost accuracy with hybrid deep models
+augmented by optimization and ensemble techniques; and
+Chen et al. [28] integrate fuzzy clustering–based signature
+intrusion detection with deep learning to demonstrate the
+benefits of combining traditional and modern methods.
+D. Graph Neural Networks and Attention Mechanisms
+Graph neural networks are central to anomaly detection in networked systems. Kim et al. [29] reviewed methods and challenges, outlining foundations and limits.
+Zhou et al. [30] introduced grouped GNNs for multivariate time series, capturing dependencies across sensors and
+groups. Tang et al. [31] rethought GNN architectures for
+anomaly detection, offering insights that guide our swarmbased coordination. Dadhania et al. [32] applied GNNs to
+
+YANG et al.: SwarmSense-DNN: A TRUSTWORTHY AND DECENTRALIZED NEURAL FRAMEWORK
+
+1999
+
+software-defined networks for high-speed anomaly detection, showing scalability in real-time settings. Chen et al. [28]
+advanced transformer models with improved attention for
+time series anomalies, capturing long-range temporal patterns.
+Liu et al. [33] used inter-variable attention for multivariate
+anomalies, informing our attention-driven swarm coordination.
+Kavadi et al. [34] combined temporal graph attention with
+transformer-augmented RNNs, highlighting the promise of
+hybrid attention architectures.
+Fig. 1.
+
+SwarmSense-DNN system model.
+
+E. Edge Computing and IoT Applications
+Edge anomaly detection has been widely studied under tight
+latency, bandwidth, and energy limits. Liu et al. [5] outlined
+deployment principles for resource-constrained industrial IoT,
+while Rezaee et al. [35] showed the need for real-time distributed pipelines in edge video surveillance. Practical systems
+include IoT intrusion detection that balances accuracy with
+resources [36] and frameworks with dynamic node insertion and deletion for evolving streams and topologies [37].
+Domain-specific designs such as multi-sensor detection in
+underground mining further illustrate edge-centric constraints
+and choices [38].
+
+distributed learning, they maintain centralized coordination
+mechanisms. Xu et al.’s cooperative swarm learning [23]
+demonstrates bio-inspired coordination but lacks trust-based
+consensus, while Zhang et al.’s GNN approach [22] uses static
+network topologies rather than adaptive clustering. Current
+hierarchical methods like Li et al.’s decentralized FL [17]
+rely on simple parameter averaging instead of bio-inspired
+collective decision-making, leaving a fundamental gap in truly
+autonomous distributed systems that can self-organize without
+centralized control.
+III. M ETHODOLOGY
+
+F. Ensemble Learning and Variational Methods
+
+A. System Model and Assumptions
+
+Ensemble learning has shown strong potential for enhancing
+anomaly detection robustness and accuracy. Sarhan et al. [39]
+developed deep ensembles for detecting network anomalies
+and cyber attacks, proving that combining multiple models improves detection performance over single approaches.
+Liu et al. [40] introduced selective parallel ensemble methods
+that optimize the balance between diversity and accuracy,
+offering design insights for distributed and scalable systems.
+Variational autoencoders have gained prominence in anomaly
+detection, with Nguyen et al. [41] providing a comprehensive comparison that establishes benchmarks and architectural
+guidelines. Wang et al. [42] integrated LSTM based autoencoders with attention to detect multidimensional temporal
+anomalies, highlighting the benefit of combining recurrent and
+attention mechanisms. Ji et al. [43] further demonstrated the
+scalability of VAE based unsupervised models in large scale
+energy storage systems, illustrating their adaptability to critical
+infrastructure and real world deployment scenarios.
+
+1) System Model: We consider a distributed network comprising N autonomous nodes N = {n1 , n2 , . . . , nN } deployed
+across a heterogeneous environment. The network topology is
+modeled as a dynamic graph G (t) = (N , E (t), W (t)), where
+E (t) ⊆ N × N represents time-varying communication links
+and W (t) ∈ RN×N denotes the weighted adjacency matrix. The
+connectivity between nodes i and j at time t is defined as:
+(
+exp(−di j /σc ) if di j ≤ rc
+Wi j (t) =
+(1)
+0
+otherwise
+
+G. Research Gap Analysis
+Although distributed anomaly detection has advanced, a key
+gap remains in integrating swarm intelligence with deep learning for autonomous cooperative systems. Existing methods
+rely on simple FL aggregation [1], [14] or centralized neural
+models [22], [28], lacking adaptive coordination, privacy,
+efficiency, and resilience [44]. No work has yet combined
+swarm-based coordination [12], [23] with powerful neural architectures to build self-organizing, privacy-preserving
+anomaly detection adaptable to evolving threats [8], [21].
+This gap motivates our SwarmSense-DNN framework. While
+recent federated approaches like Dong et al.’s FADngs [8] and
+Popoola et al.’s consumer IoT intrusion detection [15] achieve
+
+where di j is the distance between nodes, rc is the communication range, and σc controls the connectivity strength decay.
+Each node ni continuously observes local data streams
+Xi (t) = [xi (t − T + 1), . . . , xi (t)] ∈ Rdi ×T over sliding time
+windows of length T . The local feature vector at time t is
+denoted as xi (t) ∈ Rdi , where di represents the dimensionality
+of observations at node i. We assume that the data distribution
+at each node follows:
+xi (t) ∼ Di (t) = (1 − λi )Dnormal + λi Danomaly
+
+(2)
+
+where λi ∈ [0, 1] represents the anomaly rate at node i, Dnormal
+is the normal data distribution, and Danomaly represents the
+anomalous distribution.
+Figure 1 shows SwarmSense-DNN’s edge–cloud deployment for real-time, privacy-preserving anomaly detection.
+Robotic sensors gather data, edge nodes infer collaboratively, and cloud units synchronize without central
+control. Figure 2 illustrates pheromone updates where
+confidence-driven deposits and decay rate ρ ensure adaptive
+threat response. The pheromone decay rate ρ = 0.1 and
+trust smoothing factor β = 0.8 were selected via grid search
+on IoT-23 validation data, balancing information persistence
+
+2000
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Input Preprocessing Layer: The input data undergoes
+normalization and feature scaling:
+Xi (t) − µ i
+(3)
+σi +ε
+where µ i and σ i denote the local mean and standard deviation
+vectors, and ε is a small constant for numerical stability.
+In Eq. (3) we set ε = 10−8 to avoid division by zero during
+normalization. This ε is distinct from the differential privacy
+budget εdp used elsewhere in this paper.
+Temporal Convolutional Feature Extractor: A stack of
+1D convolutional layers with residual connections processes
+the normalized input:
+Xnorm
+(t) =
+i
+
+Fig. 2.
+
+Pheromone mechanism flowchart.
+
+(0)
+
+Hi
+
+= Xnorm
+(t)
+i
+
+(4)
+
+(l)
+(l−1)
+(l−1)
+Hi = ReLU(BatchNorm(Conv1D(Hi
+))) + Hi
+(L)
+temp
+Fi
+= GlobalMaxPool(Hi )
+
+(5)
+(6)
+
+temp
+
+where L is the number of convolutional layers and Fi
+∈
+Rdtemp represents the temporal features.
+Multi-Head Self-Attention Module: The attention mechanism captures long-range dependencies and patterns:
+MultiHead(Q, K, V) = Concat(head1 , . . . , headh )WO
+
+(7)
+
+head j = Attention(QWQj , KWKj , VWVj )
+
+
+QKT
+
+(8)
+
+Fig. 3.
+SwarmSense-DNN Hierarchical Architecture: Individual nodes
+organize into adaptive swarm clusters with local coordinators that participate
+in global coordination.
+
+√
+dk
+
+Attention(Q, K, V) = softmax
+with system adaptability based on swarm intelligence principles [12].
+2) Assumptions: The SwarmSense-DNN framework operates under the following key assumptions:
+Assumption 1 (Partial Connectivity): The network maintains partial connectivity such that |Ni (t)| ≥ kmin for all nodes
+i and time t, where Ni (t) = { j : Wi j (t)>0} and kmin is the
+minimum connectivity requirement.
+Assumption 2 (Bounded Byzantine Nodes): The number of
+malicious or compromised nodes is bounded: |B| ≤ ⌊N/3⌋,
+where B represents the set of Byzantine nodes.
+Assumption 3 (Local Differentiability): The local loss
+functions Li (θ i ) are twice continuously differentiable and
+satisfy the Lipschitz condition with constant L>0.
+Assumption 4 (Privacy Budget Availability): Each
+node
+has access to a privacy budget εi >0 for differential privacy
+mechanisms, with ∑Ni=1 εi = εtotal .
+
+(9)
+
+Multi-head attention operates only at the node level for
+temporal feature processing, while cluster coordination uses
+GAT-based attention for inter-node communication. where h
+is the number of attention heads, WQj , WKj , WVj ∈ Rdtemp ×dk
+are learned projection matrices, and WO ∈ Rhdk ×dtemp .
+Swarm Context Integration Layer: This layer incorporates information from neighboring nodes through weighted
+aggregation:
+!
+temp
+
+Fcontext
+= LayerNorm Fi
+i
+
+∑ αi j (t)Fshared
+j
+
++
+
+(10)
+
+j∈Ni (t)
+temp
+
+αi j (t) = softmax
+
+· Fshared
+j
+
+Fi
+
+!
+
+p
+
+dtemp
+
+(11)
+
+where Fshared
+represents the shared feature representation from
+j
+node j.
+Anomaly Classification Head: A multi-layer perceptron
+with dropout produces the final anomaly scores:
+
+B. Model Architecture
+1) Hierarchical Architecture Overview: SwarmSense-DNN
+employs a three-tier hierarchical architecture: (1) Local Node
+Layer for individual anomaly detection, (2) Swarm Cluster
+Layer for coordinated decision-making, and (3) Global Coordination Layer for inter-cluster communication. The architecture
+is illustrated in Figure 3. Cluster coordinators are dynamically
+elected based on scoring: Si = w1 · CPUi + w2 · degreei + w3 ·
+avg
+Ri , with re-election every 10 rounds or upon failure.
+2) Local Node Neural Network Architecture: Each node ni
+maintains a specialized deep neural network Fi consisting of
+five primary components:
+
+V
+
+context
++ b1 )
+Hcls
+i = ReLU(W1 Fi
+
+(12)
+
+cls
+Hcls
+i = Dropout(Hi , pdrop )
+pi = sigmoid(W2 Hcls
+i + b2 )
+
+(13)
+(14)
+
+where pi ∈ [0, 1] represents the anomaly probability at node i.
+3) Swarm Intelligence Coordination Module: The swarm
+coordination module implements bio-inspired algorithms for
+distributed decision-making:
+Pheromone Update Mechanism: Each node maintains
+pheromone concentrations for different anomaly types:
+(k)
+
+(k)
+
+(k)
+
+τi (t + 1) = (1 − ρ)τi (t) + ∆τi (t)
+
+(15)
+
+YANG et al.: SwarmSense-DNN: A TRUSTWORTHY AND DECENTRALIZED NEURAL FRAMEWORK
+
+(
+(k)
+∆τi (t) =
+
+2001
+
+(k)
+
+φ · confi (t) if anomaly type k detected
+0
+otherwise
+(16)
+
+where ρ ∈ [0, 1] is the evaporation rate, φ >0 is the
+(k)
+pheromone deposit factor, and confi (t) is the confidence
+score. Unlike FedAvg’s simple parameter averaging (θ global =
+∑ wi θ i ), SwarmSense-DNN employs trust-weighted consensus: Wconsensus
+= ∑ j∈Ni Ri, j (t) × θ j , where nodes selectively
+i
+incorporate knowledge from trusted neighbors rather than
+blindly averaging all parameters. This trust-based approach
+provides superior robustness under heterogeneous data and
+adversarial conditions.
+4) Graph Neural Network for Cluster Coordination:
+a) Trust and reputation system: Each node maintains
+trust scores for its neighbors:
+Ri, j (t + 1) = β Ri, j (t) + (1 − β )consistencyi, j (t) (17)
+|pi (t) − p j (t)|
+(18)
+consistencyi, j (t) = 1 −
+|pi (t)| + |p j (t)| + ε
+where β ∈ [0, 1] is the trust decay factor and consistencyi, j (t)
+measures the agreement between nodes i and j.
+5) Graph Neural Network for Cluster Coordination: Within
+each cluster, a Graph Attention Network (GAT) facilitates
+coordinated decision-making:
+ei j = LeakyReLU(aT [Whi ∥Wh j ])
+exp(ei j )
+αi j =
+∑k∈Ni exp(eik )
+!
+
+(19)
+
+h′i = σ
+
+(21)
+
+∑ αi j Wh j
+
+(20)
+
+j∈Ni
+
+where hi represents the node embedding, W is a learned
+transformation matrix, a is the attention parameter vector, and
+∥ denotes concatenation.
+6) Privacy-Preserving Mechanisms:
+a) Differential privacy for feature sharing: Before sharing features, each node adds calibrated noise:
+temp
+
+2
+I)
+(22)
+F̃shared
+= Fi + N (0, σdp
+i
+p
+2 log(1.25/δ ) · ∆
+σdp =
+(23)
+εi
+where ∆ is the global sensitivity, εi is the privacy budget for
+node i, and δ is the failure probability. Privacy parameters are
+set to ε = 1.0 and δ = 10−5 for our experiments. Gaussian
+noise N (0, σ 2 ) is added element-wise
+to individual feap
+tures before aggregation, where σ = 2 ln(1.25/δ ) · ∆/ε with
+global sensitivity ∆ = 1.0 determined by L2-norm clipping of
+feature vectors.
+b) Secure multi-party computation: For aggregating
+cluster-level statistics, nodes employ additive secret sharing:
+
+si = vi +
+
+∑
+
+ri j
+
+Fig. 4.
+
+SwarmSense-DNN model architecture.
+
+adaptive clustering. Differential privacy and pheromone-based
+coordination enable secure, decentralized, and resilient
+anomaly detection.
+C. Algorithms of SwarmSense-DNN
+This section presents two core algorithms governing the
+operation of SwarmSense-DNN.
+Algorithm 1 Decentralized Swarm Coordination Protocol
+With Pheromone-Inspired Mechanism
+Input: Set of nodes N = {n1 , n2 , . . . , nk }; Neighborhood
+radius r; Initial model weights W0 ; Pheromone decay rate
+ρ; Minimum pheromone threshold τmin
+Output: Updated
+local
+models
+{Wi }ki=1
+node ni ∈ N
+1: Discover neighbors: Ni ← {n j | dist(ni , n j ) ≤ r}
+2: Initialize pheromone levels: τi j ← 1.0, ∀n j ∈ Ni
+3: Compute local anomaly score Ai from node ni
+4: Update pheromone based on anomaly intensity:
+τi j ← τi j + α · A i
+Share local weights Wi and pheromones τi j with neighbors
+Ni
+6: Receive {W j } and {τ ji } from Ni
+7: Apply pheromone-weighted aggregation via swarm consensus:
+∑ j∈Ni τ jiW j
+Winew ←
+∑ j∈Ni τ ji
+
+5:
+
+8:
+9:
+
+Update local model: Wi ← Winew
+Apply pheromone decay:
+τi j ← (1 − ρ) · τi j
+
+10: if τi j < τmin then
+11:
+τi j ← τmin
+12: end if
+13:
+
+// Prevent complete evaporation
+
+14: return {Wi }ki=1
+
+(24)
+
+j∈Ci , j̸=i
+
+where vi is the private value, ri j are random shares, and si is
+the shared secret.
+Figure 4 shows the SwarmSense-DNN architecture, combining convolutional feature extraction, trust evaluation, and
+
+D. Evaluation Metrics
+1) Detection Performance Metrics:
+Accuracy =
+
+1 N
+T Pi + T Ni
+∑
+N i=1 T Pi + T Ni + FPi + FNi
+
+(25)
+
+2002
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Algorithm 2 Anomaly Detection With Attention-Guided
+Swarm GNN and Pheromone-Based Coordination
+Input: Graph G = (V, E) with node features X; attention
+parameters α; model weights W ; pheromone matrix τ
+Output: Anomaly scores S and updated pheromone levels τ
+1: Initialize GNN layers with attention heads
+2: Initialize pheromone matrix: τi j ← 1.0, ∀(i, j) ∈ E
+3: for l = 1 to L do
+4:
+for each node vi ∈ V do
+5:
+Compute pheromone-modulated attention
+weights:
+
+αi j ← τi j · softmax LeakyReLU(a⊤ [W Xi ∥W X j ])
+6:
+
+where w is the stability window and εconv is the convergence
+threshold.
+3) Privacy Preservation Metrics:
+a) Privacy budget utilization: Fraction of total privacy
+budget consumed:
+PrivacyUtil =
+
+InfoLeakage =
+
+1 N
+)
+∑ I(Xi ; F̃shared
+i
+N i=1
+
+∑ αi jW X j
+j∈N (i)
+
+7:
+end for
+8: end for
+
+FaultTolerance =
+
+9: for each node vi ∈ V do
+10:
+Compute anomaly score:
+(L)
+
+
+
+AttackResistance = 1 −
+
+where µ is the expected behavior embedding
+Update pheromone based on anomaly detection:
+for each j ∈ N (i) do
+τi j ← τi j + β · Si
+// Deposit pheromone on
+anomalous paths
+14:
+end for
+15: end for
+16: Apply pheromone evaporation:
+
+11:
+12:
+13:
+
+(26)
+
+1 N
+T Pi
+∑ T Pi + FNi
+N i=1
+2 × Precision × Recall
+F1-Score =
+Precision + Recall
+Recall =
+
+TPR(FPR−1 (x))dx
+
+(27)
+(28)
+(29)
+
+0
+
+2) Communication Efficiency Metrics:
+a) Communication overhead: Total amount of data transmitted per time unit:
+CommOverhead =
+
+Accuracynormal − Accuracyattack
+Accuracynormal
+(35)
+
+c) Recovery time: Time required to restore normal performance after disruption:
+Trecovery = min{t : Accuracy(t) ≥ 0.95 × Accuracynormal }
+(36)
+
+A. Experimental Setup and Overall Detection Accuracy
+Results
+
+T Pi
+1 N
+∑ T Pi + FPi
+N i=1
+
+AUC =
+
+(34)
+
+IV. R ESULTS
+
+∀(i, j) ∈ E
+
+17: return S = {Si }, τ
+
+Z 1
+
+Accuracyfailed
+Accuracynormal
+
+b) Attack resistance: Performance under adversarial
+conditions:
+
+Si ← 1 − cos hi , µ
+
+Precision =
+
+(33)
+
+4) Resilience Metrics:
+a) Fault tolerance: Performance degradation under node
+failures:
+
+!
+
+τi j ← (1 − ρ) · τi j ,
+
+(32)
+
+b) Information leakage: Mutual information between
+shared data and private data:
+
+Aggregate messages:
+(l)
+hi ← σ
+
+∑Ni=1 εiused
+εtotal
+
+1 T N
+∑ ∑ ∑ ∥si→ j (t)∥0
+T t=1
+i=1 j∈N (t)
+
+(30)
+
+i
+
+b) Convergence time: Number of communication rounds
+required to reach stable performance:
+Tconv
+= min{t : |Accuracy(t + k) − Accuracy(t)| < εconv , ∀k ≤ w}
+(31)
+
+Table I consolidates all experimental settings.
+Table II presents detection performance across all datasets.
+SwarmSense-DNN outperforms baselines, achieving an average 5.23% gain over the best competitor (Distributed GNN).
+Its precision (94.87%) ensures low false positives, recall
+(96.12%) confirms strong anomaly detection, and an AUC
+of 0.967 demonstrates robustness across thresholds. Figure 5
+shows SwarmSense-DNN’s superior detection, achieving
+95.44% accuracy, 94.87% precision, 96.12% recall, 95.49%
+F1, and 0.967 AUC, a 5.26% gain over the best baseline, with
+consistent reliability across scenarios.
+B. Dataset-Specific Performance Analysis
+Table III shows that SwarmSense-DNN consistently outperforms baselines across all datasets, with the largest
+gain (6.5%) on UNSW-NB15 and the smallest gain (4.3%)
+on CICIDS2017. These results highlight the framework’s
+robustness. Figure 6 shows SwarmSense-DNN’s robustness,
+maintaining over 95% accuracy across IoT-23, NSL-KDD,
+CICIDS2017, UNSW-NB15, and Industrial IoT, with improvements of 4.3–6.5% over baselines, confirming strong generalizability.
+
+YANG et al.: SwarmSense-DNN: A TRUSTWORTHY AND DECENTRALIZED NEURAL FRAMEWORK
+
+2003
+
+TABLE I
+
+TABLE III
+
+C OMPREHENSIVE E XPERIMENTAL C ONFIGURATION S UMMARY
+
+DATASET-S PECIFIC D ETECTION P ERFORMANCE A NALYSIS
+
+Fig. 6.
+
+Dataset-specific performance analysis with statistical validation.
+TABLE IV
+C OMMUNICATION E FFICIENCY M ETRICS C OMPARISON
+
+TABLE II
+D ETECTION P ERFORMANCE C OMPARISON ACROSS DATASETS
+
+Fig. 7.
+
+Fig. 5.
+
+SwarmSense-DNN detection performance.
+
+SwarmSense-DNN communication efficiency analysis.
+TABLE V
+P RIVACY P RESERVATION P ERFORMANCE U NDER D IFFERENT
+P RIVACY B UDGETS
+
+C. Communication Overhead Analysis
+All bandwidth measurements reported in this study are
+per-node averages, computed across the network to ensure
+reproducibility of efficiency comparisons. Table IV and
+Figure 7 highlight SwarmSense-DNN’s communication efficiency. It reduces bandwidth usage by 72.9% (585 MB/h vs.
+2160 MB/h for FedAvg-AD) and achieves convergence in
+32 rounds, 64.1% faster than the best baseline, confirming
+its suitability for resource-constrained environments.
+
+D. Privacy-Accuracy Trade-off Analysis
+Table V shows that SwarmSense-DNN retains 93.2% accuracy at ε = 1, with reduced information leakage and stronger
+resistance to membership inference attacks.
+
+2004
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+TABLE VII
+S CALABILITY P ERFORMANCE ACROSS D IFFERENT N ETWORK S IZES
+
+Fig. 8.
+
+SwarmSense-DNN privacy preservation analysis.
+TABLE VI
+
+S YSTEM R ESILIENCE M ETRICS U NDER VARIOUS S TRESS C ONDITIONS
+
+Fig. 10.
+
+SwarmSense-DNN scalability analysis.
+TABLE VIII
+R EAL -W ORLD I NDUSTRIAL I OT D EPLOYMENT R ESULTS
+
+F. Large-Scale Performance Evaluation
+Fig. 9.
+
+SwarmSense-DNN system resilience evaluation.
+
+Figure 8 shows SwarmSense-DNN’s privacy strength,
+maintaining 93.2% accuracy under ε = 1, achieving 94.3%
+attack resistance, and reducing leakage from 0.847 to
+0.089, confirming its suitability for privacy-sensitive
+domains.
+
+E. Fault Tolerance and Recovery Analysis
+Table VI summarizes resilience. SwarmSense-DNN retains
+≥ 87% performance with 40% node failures and achieves
+≥ 88% self-healing. The resilience score Resilience =
+Performance Retention×Self Healing
+is high, indicating stable behavior
+1+log(Recovery Time)
+under stress. We simulate Byzantine failures: data poisoning
+with 10% false labels, model inversion via gradients, and
+coordinated attacks with 20% colluding nodes. Failures are
+randomly distributed across clusters to approximate worst-case
+conditions.
+Figure 7 shows SwarmSense-DNN’s resilience, retaining
+87.9% accuracy under 40% node failures, recovering in as little
+as 2.3 rounds, and sustaining self-healing above 88% across
+stress scenarios, confirming suitability for critical infrastructure.
+
+Table VII shows SwarmSense-DNN’s sub-linear scaling
+behavior, with the scalability index (normalized performance
+considering resource utilization) remaining above 0.79 even
+for 1000 nodes. The convergence time grows sublinearly
+(O(N 0.67 )), while memory usage increases modestly due to
+efficient swarm coordination protocols.
+The $47,000 reflects avoided emergency repair costs versus
+a reactive baseline: three averted failures saved $52,000, minus
+$5,000 for SwarmSense DNN deployment. Bandwidth and
+productivity gains are excluded, covering only the 30 day
+evaluation.
+Figure 10 shows SwarmSense-DNN scales efficiently,
+sustaining 94.2% accuracy with 1000 nodes, sub-linear
+convergence growth (O(N 0.67 )), and modest memory use
+(148–215 MB). Results confirm suitability for large-scale
+deployments with predictable resource utilization and better
+efficiency than centralized systems.
+G. Industrial IoT Implementation Results
+Table VIII validates SwarmSense-DNN’s practical effectiveness, achieving a 92% anomaly detection rate with a 75%
+reduction in false positives. The 96% improvement in detection latency enabled proactive maintenance, preventing three
+critical equipment failures and saving approximately $47,000
+in emergency repair costs during the evaluation period.
+
+YANG et al.: SwarmSense-DNN: A TRUSTWORTHY AND DECENTRALIZED NEURAL FRAMEWORK
+
+Fig. 11.
+
+Real-world industrial IoT deployment results.
+
+2005
+
+Fig. 13.
+
+Impact of swarm coordination on convergence performance.
+
+Fig. 14.
+dataset.
+
+t-SNE visualization of learned feature representations on IoT-23
+
+TABLE IX
+A BLATION S TUDY R ESULTS
+
+TABLE X
+C OMPARATIVE A NALYSIS : S WARM S ENSE -DNN VS . S TATE - OF - THE -A RT
+A PPROACHES
+
+Figure 13 shows that swarm coordination achieves 2.4×
+faster convergence and 53% less communication overhead.
+Figure 14 illustrates tSNE features where attention enhances
+anomaly separability by reducing intra-class variance by 34%
+and increasing inter-class distance by 28%.
+Fig. 12.
+
+Ablation results quantification.
+
+Figure 11 demonstrates SwarmSense-DNN’s 30-day industrial IoT deployment, achieving 92% detection accuracy, 96%
+lower latency, 75% fewer false positives, 18% higher energy
+efficiency, and USD 47K cost savings, confirming industrialgrade performance.
+
+I. Comparative Analysis Result
+Table X shows that SwarmSense DNN outperforms existing
+methods in accuracy, efficiency, and scalability, achieving a
+96% latency reduction with minor CPU overhead. Future work
+will address lightweight coordination and quantum-resistant
+privacy [25], [28].
+V. C ONCLUSION
+
+H. Ablation Study
+Table IX presents the results. The ablation study confirms
+that each component contributes significantly to overall system
+performance, with swarm intelligence providing the largest
+improvement in communication efficiency and convergence
+speed.
+Figure 12 shows that all modules enhance SwarmSenseDNN, with swarm intelligence contributing most (4.4%
+accuracy drop when removed). Clustering and attention offer
+moderate gains, while privacy maintains accuracy, confirming
+the design’s robustness.
+
+This paper presented SwarmSense-DNN, a decentralized
+neural framework integrating swarm intelligence and federated
+learning for trustworthy IoT anomaly detection. Evaluation
+across five benchmarks demonstrated superior performance
+with 95.44% detection accuracy and 72.9% reduction in
+communication overhead while maintaining strong privacy
+guarantees and resilience under node failures. Despite promising results, the framework faces limitations, including hyperparameter sensitivity, degraded performance during network
+partitions (89.6% accuracy), and unsuitability for ultra-lowlatency applications requiring sub-second response. Future
+work will enhance explainability through SHAP analysis and
+
+2006
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+attention visualization to support safety-critical deployments
+where algorithmic transparency is essential.
+R EFERENCES
+[1] V. Mothukuri, P. Khare, R. M. Parizi, S. Pouriyeh, A. Dehghantanha,
+and G. Srivastava, “Federated-learning-based anomaly detection for IoT
+security attacks,” IEEE Internet Things J., vol. 9, no. 4, pp. 2545–2554,
+Feb. 2022.
+[2] H. N. Aleisa et al., “Transforming transportation: Safe and secure
+vehicular communication and anomaly detection with intelligent cyberphysical system and deep learning,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 1736–1746, Feb. 2024.
+[3] J. Yang et al., “LLM-AE-MP: Web attack detection using a large
+language model with autoencoder and multilayer perceptron,” Expert
+Syst. Appl., vol. 274, May 2025, Art. no. 126982.
+[4] J. Zeng, L. T. Yang, C. Wang, X. Deng, and X. Yang, “Tensorbased multi-scale correlation anomaly detection for AIoT-enabled
+consumer applications,” IEEE Trans. Consum. Electron., vol. 71, no. 1,
+pp. 2061–2071, Feb. 2025.
+[5] X. Yu, X. Yang, Q. Tan, C. Shan, and Z. Lv, “An edge computing based
+anomaly detection method in IoT industrial sustainability,” Appl. Soft
+Comput., vol. 128, Oct. 2022, Art. no. 109486.
+[6] Z. Dai et al., “An intrusion detection model to detect zero-day attacks
+in unseen data using machine learning,” PLoS ONE, vol. 19, no. 9,
+Sep. 2024, Art. no. e0308469.
+[7] S. Kumari, C. Prabha, A. Karim, M. M. Hassan, and S. Azam, “A
+comprehensive investigation of anomaly detection methods in deep
+learning and machine learning: 2019–2023,” IET Inf. Secur., vol. 2024,
+no. 1, pp. 512–538, Jan. 2024.
+[8] B. Dong, D. Chen, Y. Wu, S. Tang, and Y. Zhuang, “Fadngs: Federated
+learning for anomaly detection with noisy global density estimation and
+self-supervised ensemble distillation,” IEEE Trans. Neural Netw. Learn.
+Syst., vol. 36, no. 2, pp. 2578–2592, Feb. 2025.
+[9] H. Gupta, S. Sharma, and S. Agrawal, “Artificial intelligence-based
+anomalies detection scheme for identifying cyber threat on IoT-based
+transport network,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 1716–1724, Feb. 2024.
+[10] A. Wardhana, B. F. Santos, and A. Reis, “Swarm learning: A survey of
+concepts, applications, and trends,” 2024, arXiv:2405.00556.
+[11] S. Cheng, H. Jin, H. Lu, and Y. Shi, “A Q-learning-based brainstorming
+optimization algorithm for solving multimodal optimization problems,” IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 7317–7327,
+May 2025.
+[12] Q.-V. Pham et al., “Swarm intelligence for next-generation networks:
+Recent advances and applications,” J. Netw. Comput. Appl., vol. 191,
+Oct. 2021, Art. no. 103141.
+[13] M.-A. Blais and M. A. Akhloufi, “Reinforcement learning for swarm
+robotics: An overview of applications, algorithms and simulators,”
+Cognit. Robot., vol. 3, pp. 226–256, Sep. 2023.
+[14] D. Man, F. Zeng, W. Yang, M. Yu, J. Lv, and Y. Wang, “Intelligent
+intrusion detection based on federated learning for edge-assisted Internet
+of Things,” Secur. Commun. Netw., vol. 2021, pp. 1–11, Oct. 2021.
+[15] S. I. Popoola, A. L. Imoize, M. Hammoudeh, B. Adebisi, O. Jogunola,
+and A. M. Aibinu, “Federated deep learning for intrusion detection in
+consumer-centric Internet of Things,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 1610–1622, Feb. 2024.
+[16] A. A. Khan, X. Zhang, F. Hajjej, J. Yang, C. S. Ku, and L. Y. Por,
+“ASMF: Ambient social media forensics chain of custody with an intelligent digital investigation process using federated learning,” Heliyon,
+vol. 10, no. 1, Jan. 2024, Art. no. e23254.
+[17] Z. Lian and C. Su, “Decentralized federated learning for Internet of
+Things anomaly detection,” in Proc. ACM Asia Conf. Comput. Commun.
+Secur., May 2022, pp. 1249–1251.
+[18] M. Fahim-Ul-Islam, A. Chakrabarty, M. G. R. Alam, and S. S. Maidin,
+“A resource-efficient federated learning framework for intrusion detection in IoMT networks,” IEEE Trans. Consum. Electron., vol. 71, no. 2,
+pp. 4508–4521, Feb. 2025, doi: 10.1109/TCE.2025.3544885.
+[19] J.-H. Syu, J. C.-W. Lin, and G. Srivastava, “Distributed learning mechanisms for anomaly detection in privacy-aware energy grid management
+systems,” ACM Trans. Sensor Netw., vol. 19, no. 4, pp. 1–27, Jan. 2024.
+[20] A. A. Khan et al., “BAIoT-EMS: Consortium network for smallmedium enterprises management system with blockchain and augmented
+intelligence of things,” Eng. Appl. Artif. Intell., vol. 141, Feb. 2025,
+Art. no. 109838.
+
+[21] Y. Liu, S. Ren, X. Wang, and M. Zhou, “Decentralized anomaly
+detection in cooperative multi-agent reinforcement learning,” in Proc.
+32nd Int. Joint Conf. Artif. Intell., Aug. 2023, pp. 162–170.
+[22] H. Zhang, Y. Zhou, H. Xu, J. Shi, X. Lin, and Y. Gao, “Graph neural
+network approach with spatial structure to anomaly detection of network
+data,” J. Big Data, vol. 12, no. 1, p. 105, Apr. 2025.
+[23] R. Xu, W. Jin, and A. N. Khan, “Cooperative swarm learning for
+distributed cyclic edge intelligent computing,” Internet Things, vol. 22,
+Jul. 2023, Art. no. 100783.
+[24] S. Warnat-Herresthal et al., “Swarm learning for decentralized and
+confidential clinical machine learning,” Nature, vol. 594, no. 7862,
+pp. 265–270, 2021.
+[25] H. Huang, P. Wang, J. Pei, J. Wang, S. Alexanian, and D. Niyato, “Deep
+learning advancements in anomaly detection: A comprehensive survey,”
+2025, arXiv:2503.13195.
+[26] A. Nazir et al., “A deep learning-based novel hybrid CNN-LSTM
+architecture for efficient detection of threats in the IoT ecosystem,” Ain
+Shams Eng. J., vol. 15, no. 7, Jul. 2024, Art. no. 102777.
+[27] M. Singh, A. Kumar, and D. Patel, “Enhanced anomaly network
+intrusion detection using an improved snow ablation optimizer with
+dimensionality reduction and hybrid deep learning model,” Sci. Rep.,
+vol. 15, no. 1, p. 4036, Apr. 2025.
+[28] Z. Chen, L. Wang, and H. Liu, “Signature-based intrusion detection
+using machine learning and deep learning approaches empowered with
+fuzzy clustering,” Sci. Rep., vol. 15, no. 1, p. 2101, Jan. 2025.
+[29] H. Kim, B. Suk Lee, W.-Y. Shin, and S. Lim, “Graph anomaly detection
+with graph neural networks: Current status and challenges,” 2022,
+arXiv:2209.14930.
+[30] J. Zhou, M. Liu, H. Wang, and X. Chen, “Grouped graph neural
+networks for anomaly detection in time series,” in Proc. IEEE Conf.
+Publication, Aug. 2024, pp. 1234–1240.
+[31] J. Tang, J. Li, Z. Gao, and J. Li, “Rethinking graph neural networks for
+anomaly detection,” in Proc. 39th Int. Conf. Mach. Learn., Sep. 2022,
+pp. 21076–21091.
+[32] A. Dadhania et al., “Software defined network and graph neural networkbased anomaly detection scheme for high speed networks,” Cyber Secur.
+Appl., vol. 3, Dec. 2025, Art. no. 100079.
+[33] H. Liu, R. Jiang, and B. Zhou, “An ensemble approach for unsupervised
+anomaly and cyber attack detection,” J. Comput. Secur., vol. 33, no. 4,
+pp. 215–238, Jul. 2025.
+[34] D. P. Kavadi et al., “Design of an integrated model with temporal
+graph attention and transformer-augmented RNNs for enhanced anomaly
+detection,” Sci. Rep., vol. 15, no. 1, p. 2020, Jan. 2025.
+[35] K. Rezaee, S. M. Rezakhani, M. R. Khosravi, and M. K. Moghimi,
+“Anomaly detection using edge computing in video surveillance system:
+Review,” Int. J. Multimedia Inf. Retr., vol. 11, no. 2, pp. 85–110,
+Jun. 2022.
+[36] A. Mudgerikar, P. Sharma, and E. Bertino, “Edge-based intrusion
+detection for IoT devices,” ACM Trans. Manage. Inf. Syst., vol. 11, no. 4,
+pp. 1–23, Dec. 2020.
+[37] H. Xiang and X. Zhang, “Edge computing empowered anomaly detection framework with dynamic insertion and deletion schemes on data
+streams,” World Wide Web, vol. 25, no. 5, pp. 1247–1275, Sep. 2022.
+[38] Y. Zhuang et al., “Edge computing for data anomaly detection of multisensors in underground mining,” Electronics, vol. 10, no. 3, p. 302,
+Jan. 2021.
+[39] M. Sarhan, S. Layeghy, N. Moustafa, and M. Portmann, “A deep learning
+ensemble for network anomaly and cyber-attack detection,” Sensors,
+vol. 20, no. 16, p. 4583, Aug. 2020.
+[40] Y. Liu et al., “Selective ensemble method for anomaly detection based
+on parallel learning,” Sci. Rep., vol. 14, no. 1, p. 5849, Jan. 2024.
+[41] H. H. Nguyen, C. N. Nguyen, X. T. Dao, Q. T. Duong, D. P. T. Kim,
+and M.-T. Pham, “Variational autoencoder for anomaly detection: A
+comparative study,” 2024, arXiv:2408.13561.
+[42] M. Wang, X. Zhu, G. Zhou, K. Li, Q. Wu, and W. Fan, “Anomaly
+detection in multidimensional time series for water injection pump
+operations based on LSTMA-AE and mechanism constraints,” Sci. Rep.,
+vol. 15, no. 1, p. 2020, Jan. 2025.
+[43] T. Ji et al., “Variational autoencoder based anomaly detection in largescale energy storage power stations,” Energies, vol. 18, no. 11, p. 2770,
+May 2025.
+[44] A. Jokic et al., “A convolutional neural network-enhanced attack detection framework with explainable artificial intelligence for Internet of
+Things-based metaverse security,” Eng. Appl. Artif. Intell., vol. 158,
+Oct. 2025, Art. no. 111358.
+PAPER_TEXT

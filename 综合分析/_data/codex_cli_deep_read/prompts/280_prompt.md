@@ -1,0 +1,1414 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [280] Practical Cyber Attack Detection With Continuous Temporal Graph in Dynamic Network System
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：280
+题名：Practical Cyber Attack Detection With Continuous Temporal Graph in Dynamic Network System
+年份：2024
+DOI：10.1109/tifs.2024.3385321
+来源：IEEE Transactions on Information Forensics and Security
+PDF：paper/10.1109_TIFS.2024.3385321.pdf
+已有粗分类：图学习、知识图谱与威胁情报
+二级关联：时序、日志、KPI 与云原生异常检测、恶意流量、暗网与攻击检测
+相关性：强相关，分数 10
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\280.txt
+- 原始字符数：69130
+- 本次发送字符数：69130
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+4851
+
+Practical Cyber Attack Detection With Continuous
+Temporal Graph in Dynamic Network System
+Guanghan Duan , Hongwu Lv , Huiqiang Wang , Guangsheng Feng , and Xiaoli Li , Fellow, IEEE
+
+Abstract— Deep learning (DL) greatly enhances cyber anomaly
+detection capabilities through effective statistical network characteristic. However, previous methods have not fully addressed
+two real-world scenario-driven challenges. 1) Frequent node
+access and disconnection sourced from free-bounded 5G/B5G
+cyberspace introduce unfamiliar communication behavior patterns, reducing the detection ability of the pre-trained DL model.
+2) Low-frequency or sporadic communication behaviors lack
+stable patterns, posing a challenge for existing AI-driven models,
+including DL-based detection methods. To address these issues,
+we propose a cyber anomaly detection framework based on
+Continuous Temporal Graph (CTG) neural network from a
+new interaction-centered perspective. The proposed framework
+refines the concrete information interaction between network
+entities into the CTG evolution process, thereby naturally incorporating new node access behaviors into feature extraction
+on CTG neural network. We furthermore present a message
+aggregation scheme on CTG with fusion of spatio-temporal
+neighborhood, the actual time distribution and the historical
+state, thus transforming communication into a more stable
+pattern for the learning of low-frequency interactions. Extensive
+experiments on 4 novel datasets, including ToN-IoT, UNSWNB15,
+CIC-Dark2020, J.P. Morgan payment, demonstrate that our
+approach outperforms state-of-the-art methods, particularly in
+detecting new access and low-frequency behaviors.
+Index Terms— Graph neural network, intrusion detection,
+anomaly detection, semisupervised learning.
+
+I. I NTRODUCTION
+T IS estimated that by the end of this year, 5.3 billion
+people and 29.3 billion devices will be interconnected by
+prospering networking technologies such as Beyond FifthGeneration (B5G) and the Industrial Internet of Things (IIoT)
+[1]. Consequently, people, machines, and things are more
+closely interacting than ever before. The rapid growth of
+networked devices and a significant increase in interactive
+
+I
+
+Manuscript received 28 September 2023; revised 23 February 2024;
+accepted 27 March 2024. Date of publication 4 April 2024; date of current
+version 7 May 2024. This work was supported in part by the National
+Natural Science Foundation of China under Grant 62272126, in part by
+the Fundamental Research Funds for Central Universities, in part by the
+Special Project for Industrial Foundation Reconstruction and High Quality
+Development of Manufacturing Industry by the Ministry of Industry and
+Information Technology under Grant TC220A04X-1, and in part by the
+Natural Science Foundation of Heilongjiang under Grant LH2021F001. The
+associate editor coordinating the review of this manuscript and approving it
+for publication was Dr. Z. Berkay Celik. (Corresponding author: Hongwu Lv.)
+Guanghan Duan, Hongwu Lv, Huiqiang Wang, and Guangsheng Feng are
+with the Department of Computer Science and Technology, Harbin Engineering University, Harbin 150001, China (e-mail: lvhongwu@hrbeu.edu.cn).
+Xiaoli Li is with the Institute for Infocomm Research, A*STAR, Singapore
+138632, and also with the School of Computer Science and Engineering,
+Nanyang Technological University, Singapore 639798.
+Digital Object Identifier 10.1109/TIFS.2024.3385321
+
+data are driving the attack surface to inflate rapidly. Therefore, the malicious behaviors of cybercriminals can be easily
+blended into these complex, massive, and (especially) multisource interactive data, just like a needle in a haystack.
+Network threats mixed with frequent interactions, i.e., phishing campaigns, unsolicited cryptomining, ransomware, and
+information-stealing malware, are intensively becoming a
+systemic challenge. Therefore, the detection of anomalous
+network behaviors among massive interactive data plays an
+essential role in ensuring the sustainability and security of
+cyberspace.
+Extensive research has been conducted to analyze and
+classify various types of abnormal cyber behaviors, e.g.,
+expert systems, signature-based network behavior analysis
+approaches, modern machine learning (ML)-based methods
+and advanced deep neural network models. However, most
+of these techniques focus on behavioral attributes rather
+than interactive processes. In reality, these methods based on
+behavioral feature representation often exhibit limited effectiveness due to some unavoidable factors, such as anonymity
+technology and privacy protection. For instance, signaturebased methods cannot cope with encrypted data [2], while
+the additional regulatory and privacy requirements within
+financial services usually disclose limited historical data and
+few available features [3].
+Furthermore, targeting better detection performance, other
+researchers are attempting to mine temporal and spatial information in cyberspace by employing graph-based learning
+approaches, e.g., Anomal-E [4], a dynamic line graph [5],
+a spatial-temporal graph convolutional network [2], a wrongdoing monitor [6], and WTAGRAPH [7]. Each of these
+graph-based methods contributes to achieving superior data
+representation capabilities. For the aforementioned successful
+works, the topological and temporal information encapsulated in network user interactions reflects distinct behavioral
+characteristics. Understanding these characteristics can aid in
+uncovering potential security risks. However, several challenges persist in previous methods.
+The first limitation is that the extraction of spatial-temporal
+features is restricted to a fixed topological structure by the
+existing graph-based methods [4], [5], which hinders the
+discovery of anomalies from new connections and interactions. Concretely, these methods generally treat the network
+topology as a consistent adjacency matrix during training
+and testing, which means that new topological information is
+difficult to fully learn and express. However, we are facing a
+
+1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+4852
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+more complicated and unbounded cyber environment [29]; for
+instance, attackers may use new virtual hosts to launch DDos
+attacks, and scammers can utilize new accounts to commit
+fraud.
+The second challenge lies in the inefficiency of most
+anomaly detection methods when confronted with the nonuniform distribution of network traffic traces across spatial and
+temporal domains. This inefficiency is particularly pronounced
+in handling low-frequency communication behavior among
+network hosts [30], [31]. For instance, statistics from the
+Ton-IoT, CIC-Darknet, and CIC-IDS2018 datasets show that
+5% of all host pairs have contributed more than 50% of
+the communication behaviors contained in all test sets, while
+the frequency of communication between the remaining 95%
+of the host pairs is less than 20 times. Traditional deep
+learning (DL) methods have difficulty mining stable statistical patterns from these low-frequency sporadic behaviors.
+Additionally, graph-based detection methods such as those
+of [2] and [5] assume that the spatial topology behind network
+communication is uniformly distributed in the time dimension
+while incorporating spatial-temporal characteristics. Specifically, these methods first extract the spatial information of
+each graph snapshot and adopt sequence models to model
+the sequence associations between these pieces of spatial
+information. In the face of these occasional interaction events,
+the sequence models adopted by [2] and [5] may not capture
+effective information for numerous time slices.
+To address the above issues, we propose a novel adversarial
+interaction behavior detection framework based on a continuous temporal graph neural network (CTGNN) to capture both
+the attribute and complex behavior information of network
+interactions. Specifically, the proposed framework refines the
+concrete information interaction processes between each pair
+of entities as corresponding interactive edges on a continuous
+temporal graph (CTG) so that the behavior generated by
+a new node access event can be naturally expressed as a
+CTG update. Furthermore, low-frequency behaviors are no
+longer processed in isolation but are incorporated into an
+entire spatiotemporal neighborhood for message aggregation,
+thus transforming them into a more stable pattern for model
+learning. By adopting richer cyberspace behavior features
+during the interaction process, the characteristics of network
+interactions can be more effectively learned, analyzed and
+summarized to efficiently distinguish malicious behaviors. The
+main contributions of this paper are summarized as follows.
+• We propose a cyberattack detection framework leveraging
+a CTG to address the challenge posed by fixed topologies
+in detecting newly connected entity behaviors. For the first
+time, the proposed method refines anomaly detection from a
+macroscopic topology level to a granular level, focusing on
+concrete information interactions between pairs of network
+entities. This approach naturally accommodates new node
+access behaviors within feature extraction.
+• To independently track the long-term historical status of
+the interaction process, we develop a CTGNN model. Unlike
+previous methods that primarily rely on sequence relationships
+to capture historical information [8], our CTGNN model offers
+a more detailed analysis by incorporating information updates
+
+and topological changes between network entity pairs. This
+enriched representation capability enhances the effectiveness
+of the detection model.
+• We propose a message aggregation scheme based on
+spatiotemporal neighborhoods to mitigate the impact of lowfrequency interactions. Our method systematically integrates
+interaction behavior details, including contextual neighborhood representations, temporal distributions, and historical
+states. This comprehensive approach improves detection performance, particularly for occasional interactions.
+• Extensive experiments are conducted on 4 datasets
+covering different interactive scenarios, including intrusion
+detection in the IIoT [9] and the intranet [10], J.P. Morgan
+fraud detection in transactional networks [3] and darknet
+traffic analysis [11]. The obtained results demonstrate that the
+proposed method significantly outperforms the state-of-the-art
+approaches.
+This paper is structured as follows. The related works are
+reviewed in Section II. Section III provides the formal problem
+definition. Section IV describes the employed methodology.
+In Section V, extensive experiments and results are presented.
+Section VI is devoted to the conclusions and further work.
+II. R ELATED W ORK
+A. Abnormal Detection in Interactive Network Behavior
+The detection and mitigation of abnormal interaction
+behaviors have long been prominent trends in the field of
+cybersecurity, including anomaly detection and darknet analysis in network traffic. Different from early rule-based methods
+such as Snort [12], ML- and DL-based methods have been
+widely explored to better detect malicious cyber activities with
+favorable scalability and high accuracy [13]. For instance,
+Marteau [14] proposed a semisupervised anomaly detection
+approach based on binary trees with random partitioning. Bitton and Shabtai [15] proposed an anomaly detection technique
+based on PCA and K-means for detecting malicious TCP
+packets, which can carry exploits aimed at a remote desktop
+server.
+Compared with above mentioned ML-based methods, flexible deep architectures and end-to-end learning processes
+enable DL-based methods to capture more sophisticated attack
+patterns. Yang et al. [16] developed a conditional variational
+autoencoder with extreme value theory to perform unknown
+intrusion detection by leveraging flow-level features. Kravchik
+and Shabtai [17] examined a cyberattack detection method for
+industrial control systems based on 1D convolutional neural
+networks (CNNs) and autoencoders. Moreover, Zhao et al. [8]
+presented an error-resilient recurrent neural network (RNN)
+for network-induced phenomena, thereby effectively detecting encrypted traffic. The above methods emphasize explicit
+attribute features, while implicit behavioral and topological
+features are difficult to deal with.
+B. Graph-Based Abnormal Interactive Detection
+Recently, several pioneering works have intensively
+explored NIDSs based on GNNs to exploit the spatial information of actual networks to varying degrees. For instance,
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+Caville et al. [4] presented a static graph-based intrusion
+detection method that leverages edge features and a graph
+topology structure in a self-supervised manner. Moreover,
+Wang and Zhu [6] integrated the inter- (event-level) and
+intra- (property-level) associations of behaviors into a unified
+graph for anomaly detection purposes. Furthermore, temporal
+information concerning topological structures has attracted
+researchers’ attention. Among them, Cao et al. [2] mapped
+a data plane-programmable SDN to a graph and deployed a
+spatial-temporal graph convolutional network to detect DDoS
+attack flows. Similarly, Duan et al. [5] converted network
+traffic into a series of line graphs and employed a dynamic line
+GNN-based NIDS to achieve improved intrusion detection performance. However, the underlying GNNs in the literature [2],
+[4], [5], [6] are all traditional static GNNs, which are limited
+to invariant topological structures. In other words, it is difficult
+for these methods to satisfy actual network environments, such
+as 5G NFV or 6G space-air-ground integrated networks, with
+time-varying characteristics, unbounded cyber environments
+and diverse connection densities.
+C. Dynamic Graph Representation Methods
+Dynamic graph representation is an emerging DL paradigm
+for learning evolving relationships among various entities
+across temporal dimensions. In general, dynamic graphs
+can be broadly classified into two categories: discretetime dynamic graphs (DTDGs) and continuous-time dynamic
+graphs (CTDGs). The evolution process of a DTDG can be
+described by a sequence of static graph snapshots sampled at
+regularly spaced times. Actually, the spatiotemporal graph and
+dynamic line graph representations used in the above anomaly
+detection methods [2], [5] can be regarded as different types
+of DTDGs.
+Different from a DTDG, a CTDG is modeled as a stream of
+serial events that occurs sequentially and has a finer temporal
+granularity. Zuo et al. [18] mentioned that snapshot-based
+methods (such as [2] and [5]) model temporal correlations as a
+fixed topological structure, thus ignoring the fine-grained topological variation process. Reference [18] suggested utilizing
+the neighborhood formation process to describe the evolution
+of a node and adopting a Hawkes process to generate the
+corresponding node representation. Ma et al. [19] proposed
+a novel CTDGNN framework that continuously updates node
+information by capturing the interaction information and the
+time intervals of edges. TGAT [20] utilizes a graph-based
+temporal attention mechanism to capture the temporal neighborhood information of a node, where the positional encoding
+of the attention mechanism is replaced by a temporal encoding.
+Based on that, Rossi et al. [21] added a memory module to
+TGAT to trace the long-term dependencies of different nodes.
+However, the above methods impose a certain upper limit
+on abnormal cyber interaction detection performance. Specifically, typical DGNNs usually focus on node embedding-driven
+tasks such as temporal link prediction or node classification,
+whereas abnormal cyber interaction detection tasks aim at
+the link states and communications between network agents.
+Moreover, the message aggregation mechanisms adopted by
+
+4853
+
+the previous DGNNs tend to aggregate high-frequency node
+signals from nodes with more connections, making it challenging to fully represent low-frequency or isolated behaviors.
+III. P ROBLEM D EFINITION
+A. Threat Model
+Our abnormal cyber behavior analysis task involves detecting malicious network behaviors by understanding their
+underlying interactive communication processes. Assuming
+an unbounded network environment, such as the Internet of
+Things, 5G or a trading network, would allow possible entities
+access and induce disconnections. Additionally, considering
+the diverse connection density characteristics of actual networks, some communication-intensive nodes possess frequent
+interactions, while other inactive entities only send a small
+amount of information. Malicious actors can exploit network
+entities to carry out various malicious activities, including
+DDoS attacks, brute-force attacks, money laundering, and
+fraudulent transactions.
+We assume that security analysts are capable of recording
+the interactive behaviors between cyber entities. Taking the
+intrusion detection scenario as an example, the network traffic
+interaction can be recorded in the network flow format, which
+is indexed by the following default five-tuple: <Source IP,
+Source Port, Destination IP, Destination
+Port, Protocol>. These recordings can represent the
+protocol-related, size-related and time-related basic features
+of the interaction between the server host and the network
+switch. In addition to the attribute features in the traditional
+network security analysis process, we combine the topology,
+interaction, and timing features between interactive events to
+introduce more information, which provides a new CTG-based
+modeling paradigm for cyber anomaly detection.
+B. Continuous Temporal Graph
+An interactive CTG is defined as a directed multigraph
+G = (V, E, Event), where V represents an initial node set,
+and each e ∈ E denotes a communication link between pairs of
+nodes. Each event ∈ Event represents a bipartite interaction
+event between nodes that corresponds to a network traffic flow
+or transaction record. Since multiple interactions directed from
+host u to host v are permitted in network G, we use different
+t
+timestamps eventu,v
+to indicate the interactions among the
+links (u, v). Moreover, when a new node i accesses the
+network and communicates with node u, a corresponding intert is generated. Intuitively, the CTG can
+action event eventi,u
+represent the interaction processes and temporal associations
+in a time-varying network. As shown in Fig. 1, each node
+denotes a host IP, while each interaction represents a specific
+netflow issued from the source host to the destination host.
+In line with real network characteristics, multiple bidirectional
+events occur between nodes, each representing different network interaction records.
+C. CTG-Based Interaction Representation and Classification
+With the above definition, the task of abnormal cyber
+interaction detection is formally converted to a classification
+
+4854
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 1.
+An example of the traffic temporal graph constructed from
+UNSW-NB15 network traffic.
+
+problem in the proposed CTG. Following the terminology
+in [22], we employ an encoder-decoder pair to resolve the
+interaction event representation learning and classification
+problem, where the encoder maps all interaction events
+to corresponding edge embeddings on the CTG. Formally,
+given a CTG G = (V, E, Event), the goal is to design a
+temporal graph encoder f ω : x n×e → Rn×d (d ≪ e) that
+generates a d-dimensional representation for n input events
+with e-dimensional interaction features in G. Furthermore,
+a decoder takes interaction representations as inputs and outputs the prediction ŷ, where each component of ŷ represents
+the conditional probabilities of each class. Specifically, our
+tasks in this work include classifying interaction events as
+benign or malicious and further distinguishing between different attack categories. The learned edge representations can
+be utilized in different ways, including supervised learning,
+semisupervised learning, unsupervised clustering, and fewshot learning.
+IV. M ETHODOLOGY
+As illustrated in Figure 2, the proposed CTGNN is composed of four components. Specifically, the temporal graph
+builder first constructs a sequence of temporal graphs from
+interaction records and determines the local event neighborhoods and event features. Next, the Bochner time encoder
+is deployed to map the time span to a d-dimensional vector. Subsequently, the interactive event update component
+has the ability to trace and update long-term dependencies
+across the corresponding events. The interaction event aggregation scheme fuses interaction behavior details including
+temporal-topological neighborhood information, the actual
+time distribution and the historical evolution process of each
+event.
+A. Continuous Temporal Graph Construction
+First, we transform the original interactive records into a
+CTG, as exemplified in Figure 1. Taking the interactive traffic
+in the UNSW-NB15 dataset as an example, all intercepted
+traffic flow records are treated as interaction events between
+corresponding source and destination hosts. With this setting,
+each node of the CTG represents a specific IP address. The
+edge features of the CTG are different network flow statistics
+that depend on the specific flow format and the exported flows,
+such as the protocol, duration, number of incoming flow bytes,
+and number of bytes per packet. It should be emphasized that
+
+the proposed CTG does not consist of a fixed adjacency matrix.
+Referring to [19] and [20], the proposed CTG dynamically
+updates the topology structure and edge feature through the
+interaction relationships in chronological order. Particularly,
+in traffic interaction scenarios, the interaction relationship
+is determined by the following quadruple: <Source IP,
+Destination IP, Time, Index>.
+In traditional GNNs, the local neighborhoods of nodes
+are naturally defined by explicit edge connections. Notably,
+in the interactive CTG, both network topology information
+determined by entities (such as IPs and transaction senders)
+and contextual relationships between interaction events in the
+time dimension are included. As shown in Figure 1, for event
+
+t
+t
+enn
+its 1-hopoo
+neighborhoods N eu,v
+=
+u,v at time t, weoconsider
+n
+ 0
+0
+0
+t−
+t−
+t−
+e , . . . , eu,n ∪ e1,v , . . . , en,v \ eu,v , . . . , eu,v , where
+n u,1
+o
+0
+t− indicates the interaction events launched from
+eu,1 , . . . , eu,n
+n
+o
+0 , . . . , et−
+source node u, e1,v
+stands for the interaction
+n,v
+ 0
+t−
+events received by destination node v, and eu,v
+, . . . , eu,v
+is the set of historical events occurring between u and v.
+Such neighborhood settings are mainly based on the following
+considerations. If an interactive record is a malicious network
+behavior, then the initiator of the interaction may send malicious messages to other entities. Similarly, other behaviors
+accepted by the interaction destination of this record may also
+be malicious behaviors. By defining the local neighborhoods of
+interaction events, we can further design a corresponding message passing mechanism, thus fusing the temporal-topological
+information between interaction events.
+B. Bochner Time Encoder
+Sequence models such as long short-term memory (LSTM)
+and gated recurrent units (GRUs) can mainly understand
+contextual relations, but it is difficult for them to model the
+actual time distribution between interactive events. Therefore,
+a Bochner time encoder [23] is deployed to extract and express
+the potential periodicity and translation invariance of the actual
+time distribution among interactive events. Formally, suppose
+we are given a function mapping 8 : T → Rd , where T
+and Rd are the continuous time domain and a d−dimensional
+vector space, respectively. Assume that for two time points
+t1 , t2 ∈ T = [0, tmax ], the corresponding time kernel can
+be defined as K (t1 , t2 ) := ⟨8 (t1 ) , 8 (t2 )⟩ and K (t1 , t2 ) =
+ψ (t1 − t2 ) , ∀t1 , t2 ∈ T for some ψ : [−tmax , tmax ] → R.
+We adopt the Bochner time encoder [23] to map the time
+interval to a d−dimensional vector.
+According to Bochner's Theorem, this time kernel K could
+be expressed as follows:
+K (t1 , t2 ) = ψ (t1 , t2 )
+Z
+
+
+=
+eiω(t1 −t2 ) p(ω)dω = Eω ξω (t1 ) ξω (t2 )∗ (1)
+R
+
+where ξω (t) = eiωt . Since the probability measure p(ω) is a
+real-valued function, the real part of equation 1 is denoted as:
+K (t1 , t2 ) = E ω [cos (ω (t1 − t2 ))]
+= E ω [cos (ωt1 ) cos (ωt2 ) + sin (ωt1 ) sin (ωt2 )] (2)
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+Fig. 2.
+
+4855
+
+The framework of the dynamic-graph-based NIDS model.
+
+The above expectation can be approximated by
+i.i.d
+Monte Carlo integral. Assuming ω1 , . . . , ωd ∼ p(ω),
+theP time kernel K (t1 , t2 ) could be estimated as
+d
+1
+i=1 (cos (ωi t1 ) cos (ωi t2 ) + sin (ωi t1 ) sin (ωi t2 )).
+d
+Therefore, Bochner's theorem motivates the time feature
+mapping t 7 → 8B
+d (t) as:
+r
+1
+(cos (ω1 t) , sin (ω1 t) , . . . , cos (ωd t) , sin (ωd t)) (3)
+d
+In our follow-up design, we combine the Bochner time encoder
+and GRU to model the time distribution of interaction events
+in a more fine-grained manner.
+C. Interactive Event Update Mechanism
+To understand differentiated interaction processes between
+different entities, we model their fine-grained behavioral patterns from an interaction perspective. Specifically, we propose
+an interactive event update mechanism to independently track
+and summarize the historical evolution of interaction events
+between correspondin entities. The interactive event update
+mechanism maintains a historical state list comprising a set of
+vectors that summarizes the history of events between different
+entities. Whenever a subsequent event occurs, its historical
+state will be updated by the GRU and Bochner time encoder.
+t
+Formally, the historical state of an interaction event eu,v
+consists of a vector h tu,v with d−dimensional features summat . It should be emphasized
+rizing the historical evolution of eu,v
+that since the CTG is a directed graph, we allocate separate
+′
+t ′ . The historical state h t
+historical states h tv,u for ev,u
+u,v is
+t+ occurs, where t+
+updated when the subsequent event eu,v
+t+ ,
+denotes a time stamp after t. For each subsequent event eu,v
+a response signal can be computed as follows:
+
+t+
+t+
+ru,v
+= ResPonse h tu,v ∥8(t + − t)∥euv
+(4)
+where ∥ indicates the concatenation operation, 8(·) represents
+the Bochner time encoder that captures the time distribution,
+t+ denotes the feature vector of subsequent events. Addiand euv
+tionally, ResPonse signifies learnable functions that merges the
+current state, the compressed historical state, and the actual
+
+time span feature. Multiple choices could be considered for
+the learnable function such as MLP, CNN, Transformers, our
+model selects MLP as the learnable function.
+To effectively reduce the computational overhead, the
+historical state is updated with a batch cycle. We deploy
+an aggregation mechanism to handle the corresponding
+responses when multiple events occur on a specific link. Let
+t1
+t ) denote the events on links (u, v) in a batch;
+J (eu,v
+, . . . , eu,v
+the aggregation operation can be written as
+t+
+t1
+t
+r̄u,v
+= agg(ru,v
+, . . . , ru,v
+)
+
+(5)
+
+Note that we select the average of all responses as the
+aggregation operation. It should be emphasized that the above
+aggregation operation is also performed on other interaction
+event sets of different links, such as (u, j) and (v, j). Thereafter, the historical state h tu,v is updated by applying
+t
+t+
+h t+
+u,v = Update(h u,v , r̄u,v )
+
+(6)
+
+Here, we deploy a GRU as the update function. The new
+embedding of the historical state h t+
+u,v is refined by incorporating historical information concerning interactive events, the
+time distribution and context relationships.
+D. Interaction Event Contexts Aggregation
+Typically, GNNs generate node embeddings in a simple
+homogenous graph by aggregating neighborhood information
+and graph topology features for tasks such as node classification, node clustering, and link prediction. For the task of
+network attack detection, we employ an event aggregation
+mechanism to fuse the neighborhood information of events
+and generate a embedding representation for each event at
+(ℓ)
+any time t. Specifically, the temporal representation su,v (t) of
+t
+event eu,v at layer ℓ can be calculated as
+
+
+(ℓ−1) ′
+(ℓ)
+′
+s̃(ℓ)
+(t)
+=
+AGG
+s
+(t
+)∥8(t
+−
+t
+)
+u,v
+i, j
+
+
+(ℓ)
+(ℓ)
+(ℓ−1)
+su,v (t) = MLP
+su,v (t)∥s̃(ℓ)
+(7)
+u,v (t) ,
+(ℓ−1)
+
+where si, j (t ′ ) represents the temporal representations of
+
+′
+t
+neighbor evnets (ei,t j ) ∈ N eu,v
+at layer ℓ − 1, 8(t − t ′ )
+
+4856
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+denotes the time span feature between neighbor evnets and
+origin events. There are multiple implementations of the AGG
+operation, including parameterized functions like MLP, MultiHead Attention, Informer, et al. In our practice, we adopt
+a multi-head attention mechanism to model the impact of
+different neighbors on event embeddings. The AGG operation
+based on the multi-head attention can be computed as follows:
+
+
+(l)
+s̃(ℓ)
+q (l) (t), K (l) (t), V (l) (t)
+u,v (t) = MultiHeadAttention
+q (l) (t) = s(ℓ−1)
+u,v (t)∥8(0)
+K (l) (t) = V (l) (t)
+h
+i
+(ℓ−1)
+(ℓ−1)
+= su ′ ,v ′ (t1′ )∥8(t − t1′ ), . . . , su ′ ,v ′ (t1′ )∥8(t − t N′ )
+1
+
+1
+
+N
+
+N
+
+(8)
+(ℓ)
+
+where the initial representation of each event s̃u,v (t) =
+t ∥h t ) exploits both the compressed historical state h t
+(eu,v
+u,v
+u,v
+t . The query q (l) (t) denotes
+and the current event feature eu,v
+a reference event, and the keys K (l) (t) and values V (l) (t)
+denote the information of its neighbors. In this case, we adopt
+scaled dot-product attention to calculate the attention scores
+of different neighbor events and their temporal distribution,
+although in principle, any other type of attention mechanism
+can be utilized. Following the typical GNN message passing
+mechanism, an MLP aggregates the neighborhood information
+and the reference event representation.
+
+Algorithm 1 The Overall Process of the Proposed Method
+0 , . . . , et ; CorInput: Interaction events with time steps: e1,2
+u,v
+n×e
+responding feature matrices X ∈ R
+Set hyperparameters: Number of events in each batch, number of events in the neighborhood of a specific interaction,
+labeled data percentage, dropout probability
+Output: Prediction ŷ
+1: Divide interaction events into batches and establish a
+CTG, initialize historical state to 0
+2: while not converged do
+3:
+for each batch = 1 : Maxbatch do
+4:
+Responses for the new events in the current batch
+t+ ← ResPonse(h t ∥8(t + − t)∥et+ )
+ru,v
+u,v
+uv
+t1
+t )
+5:
+Aggregate the response signals agg(ru,v
+, . . . , ru,v
+6:
+Obtain the updated historical state by aggregated
+t
+t+
+signals and previous state h t+
+u,v ← Update(h u,v , r̄u,v )
+
+7:
+8:
+9:
+
+Fuse the features from the local
+ spatiotemporal neigh
+(ℓ)
+(ℓ−1)
+borhood: s̃u,v (t) ← AGG(ℓ) si, j (t ′ )∥8(t − t ′ )
+Compute final embeddings combining
+neighborhood
+
+
+(ℓ)
+(ℓ−1)
+(ℓ)
+information su,v (t) ← MLP(ℓ) su,v (t)∥s̃u,v (t)
+Compute the classification loss L on the labeled data
+
+10:
+Gradient descent and model parameter update
+11:
+end for
+12: end while
+13: return Prediction ŷ
+
+E. Traffic Events Classifier
+To adapt topology-varying network environments, the proposed CTGNN is designed to support any topology during
+the test phase, including node connections and disconnections.
+We initialize new memory structures for nodes and interaction
+events that are not observed during training. The embeddings
+of the new interaction events and their memory are calculated
+by the trained components. During the training phase, all computational components (i.e., all learnable functions) involved
+in the embedding calculation are expected to contribute to
+the gradient update. Thus, the model first updates the events’
+memories by compressing and aggregating the historical signal
+at the beginning of each subbatch and then combines the
+updated memories and neighborhood features to infer the
+embeddings of the training events. As a result, the gradient
+update process depends on all computational components ever
+calculated. We summarize the training process of the proposed
+model in Algorithm 1.
+In addition, we adopt two different training strategies to test
+the performance capabilities of our CTGNN. The difference
+between them is that the fully supervised process uses all event
+labels from the training dataset, while the semisupervised
+process only utilizes parts of the training dataset labels.
+We combine the representations of temporal events into a
+classification subnetwork that includes a softmax function and
+minimizes the cross-entropy loss for event classification tasks.
+Furthermore, in the evaluation phase, we calculate the class
+probabilities of the test samples and compare them with their
+actual labels to assess the performance of the model.
+
+V. I MPLEMENTATION AND E VALUATION
+A. Experimental Implementation and Setup
+1) Datasets and Data Preparation: We choose 4 newly
+published public datasets with spatial information to evaluate
+the proposed methods: ToN-IoT 2021 [9], UNSW-NB 15 [10],
+Darknet 2020 [11] and J.P. Morgan payments dataset [3].
+These 4 datasets cover different application scenarios and
+follow different data distributions so that the performance of
+the model can be effectively tested. Specifically, the ToN-IoT
+and the UNSW-NB 15 datasets were both created by the Cyber
+Range Lab of UNSW Canberra. Among them, the ToN-IoT
+dataset was created by a realistic Industry 4.0 network environment incorporating a combination of normal traffic and various
+types of attack traffic. The UNSW-NB15 dataset is a hybrid
+dataset consisting of authentic normal and attack records.
+Its network packet volume is approximately 100 gigabytes,
+generating 2,540,044 observations with 47 features. The CICDarknet2020 dataset is published by the Canadian Institute
+for Cybersecurity and consists of 134,348 benign samples and
+24,311 darknet samples with 78 features. The J.P. Morgan
+payment dataset contains a large variety of transaction types
+representing normal activities as well as abnormal/fraudulent
+activities. The features of the payment data include the number
+of clients, time duration, etc.
+The data preparation phase consists of the following 2 steps.
+We first convert the network flows into a temporal graph as
+described above, with each network flow corresponding to an
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+4857
+
+TABLE I
+C HARACTERISTICS I NFORMATION OF A LL THE 4 DATASETS
+
+event. Second, preserving the contextual information process,
+we divide the interactive events into 3 groups in order of
+their appearance. The first 80% of the interactive events are
+treated as the training set, and the middle 5% and the last
+15% are designated as the validation and test sets, respectively.
+In combination with the subsequent data preparation process,
+we further present the details of these datasets in Table I. More
+detailed information and the corresponding resource list can
+be found in the website repository1234 . The operating environment for the experiments includes a 4.7-GHz i7-10710U CPU,
+16 GB of RAM, and the 64-bit Windows 10 operating system.
+Regarding the utilized software versions, we employ Python
+3.8, PyTorch 1.9.0, CUDA 11.1, and PyTorch Geometric 2.0.2.
+2) Evaluation Metrics: Five classic metrics are adopted to
+evaluate the performance of our NIDS model, namely, the
+accuracy (ACC), recall (DR), false alarm rate, precision and
+F1 score [24] metrics. In the multiclassification experiment
+conducted to identify different attack types, we use the macroDR and macro-F1 scores as evaluation indicators. They are
+calculated as shown below:
+n
+1X
+Macro F1 =
+F1x
+(9)
+n
+Macro DR =
+
+1
+n
+
+x=1
+n
+X
+
+D Rx
+
+(10)
+
+x=1
+
+where Macro F1 and Macro DR are the unweighted means
+of the corresponding F1 and DR scores of different classes,
+respectively. It’s need to emphasize that macro metrics give
+equal importance to the majority and minority classes, allowing us to still obtain objective results on imbalanced datasets.
+3) Baselines: We compare the performance of the proposed
+method against the following detection methods:
+CNN-BiLSTM [25] is a classical DL model that joins a
+CNN and bidirectional LSTM to analyze network traffic.
+Stacked Random Forest [26] is an ensemble ML model
+that combines the predictions derived from multiple random
+forest algorithms for the intrusion detection task. We train the
+classifier based on the sklearn.ensemble and mlxtend.classifier
+modules following the setup developed in the literature [26].
+1 https://research.unsw.edu.au/projects/toniot-datasets
+2 https://research.unsw.edu.au/projects/unsw-nb15-dataset
+3 https://www.unb.ca/cic/datasets/darknet2020.html
+4 https://www.jpmorgan.com/technology/artificialintelligence/initiatives/synthetic-data/payments-data-for-fraud-detection
+
+CVAE-EVT [16] synthesized conditional variational auto
+encoder and extreme value theory to boost known/unknown
+attack performance in a two-stage training. Since the author
+conducted unknown attack detection in the second stage,
+we only compare with the first stage of the known attack
+detection.
+TMG-GAN [32] is a generative adversarial network based
+attack detection method to deal with imbalanced traffic distribution. TMG-GAN first performs data augmentation for
+tail attack categories. Subsequently, a three-layer dense DNN
+classifier is used to identify different attack traffic.
+MTH-IDS [33] refers to a stacking ensemble model that
+enhances multi-attack detection by integrating four tree-based
+algorithms including Decision Tree, Random Forest, Extra
+Trees, and XGBoost. In particular, MTH-IDS trains these classifiers for initial attack assessment and then uses an additional
+XGBoost classifier for final decision making.
+Anomal-E [4] leverages edge-level and topological information to generate an efficient edge embedding representation
+for anomaly detection.
+B. Experimental Evaluation
+In this section, we evaluate the proposed CTGNN under
+different learning settings. We first present its overall
+performance, including binary and multiclass classification
+performance, and conduct a detailed comparison between the
+CTGNN and the state-of-the-art baseline methods. Second,
+we systematically evaluate the proposed model and baseline
+methods in the face of new access node behaviors as well
+as interactions with low frequency. Third, we perform additional ablation experiments to evaluate the effectiveness and
+contributions of the key computational components used in
+our method. Subsequently, we evaluate the performance of
+our work under a semisupervised setting with fewer label
+participated.
+1) Intrusion Detection Scenarios: In the intrusion detection
+scenario, our main goals include (1) detecting anomalous
+network traffic in a network and (2) distinguishing different
+malicious attacks in background traffic for network administrators to respond to. Table II summarizes the binary classification
+performance achieved by the tested methods on the UNSWNB15 and ToN-IoT datasets. Overall, the proposed method
+exhibits remarkable performance in the binary intrusion detection scenario, with higher accuracy, a higher anomalous
+
+4858
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE II
+B INARY C LASSIFICATION P ERFORMANCE C OMPARISON W ITH THE S TATE - OF - THE -A RT A LGORITHMS
+
+behavior detection rate, and a lower false-positive rate. For
+example, the detection accuracy, precision, recall, F1 score
+and FAR of the proposed method on the ToN-IoT dataset are
+99.98%, 99.98%, 99.94%, 99.96% and 0.015%, respectively.
+Several interesting implications can be derived from these
+results. Although binary classification is a fairly simple task,
+the performance of traditional DL methods such as CNNLSTM and CVAE-EVT on the TON-IoT dataset is not as
+powerful as expected. We speculate that the relatively worse
+performance achieved by the traditional DL methods on
+the TON-IoT dataset may be attributable to their copious
+amounts of Boolean or string features, such as dns_query,
+ssl_version, etc. Furthermore, our proposed CTGNN and
+the Anomal-E model outperform all of the remaining baseline
+methods. This implies that by benefiting from implicit topological features and neighborhood information, GNN methods can
+achieve satisfactory performance in binary intrusion detection
+scenarios. Moreover, by comparing the message aggregation
+results of the CTGNN to those of the traditional static GNN,
+we find that the former achieves better detection performance
+due to its finer-grained understanding of interaction behavior
+details. We further verify this point of view in the follow-up
+multicategory intrusion detection scenario.
+In the multicategory malicious attack recognition scenario,
+more challenges are encountered, including a copious amounts
+of attack categories and an extremely unbalanced data distribution. We mainly focus on the following indicators in the
+multiclassification setting: the detection rate, the F1 value of
+each category and the corresponding weighted macro value
+for the whole model. Tables III and IV summarize the detection performance achieved by the proposed method and the
+baseline methods on 16 categories of malicious behaviors in
+the TON-IoT and UNSW-NB15 datasets, respectively. Overall,
+the proposed method outperforms all baseline models on most
+attack categories.
+On the ToN-IoT dataset, the proposed method achieves
+detection rates and F1 scores exceeding 95% for 8 types
+
+of traffic behavior (i.e., Benign, Backdoor, DDoS, DoS,
+mitm, ransomware, scanning, and Xss attacks). Fig. 3
+demonstrates that some of the password attacks in the
+TON-IoT dataset are misclassified as DoS and injection
+attacks; this may be related to the similar context interaction characteristics of these attack behaviors. We review the
+source IPs involved in the password attacks (192.168.1.31,
+192.168.1.30), and these source IPs also perform DoS attacks
+and injection attacks on parts of the same communication
+links. These findings demonstrate from another perspective
+that our method can effectively capture the context interaction
+characteristics of a network. On the UNSW-NB15 dataset,
+the proposed method and baseline methods exhibit worse
+performance attributes due to the extremely unbalanced data
+distribution. In this case, the macro-DR and macro-F1 scores
+of our method are 60.34% and 51.67%, respectively, which
+are also better than those of the other baselines. The proposed
+methods still maintain good detection rates for each category.
+2) Encrypted Traffic Scenario: In the encrypted traffic classification scenario, we mainly conduct binary classification
+experiments. Figure 4 presents the performance of the proposed model and the remaining baseline methods. Although
+the darknet dataset has 78-dimensional attribute features, some
+baseline methods do not perform as expected, especially the
+static graph-based methods mentioned in the literature [4].
+Static graph-based models may not be a panacea for any
+scenario. We believe that the poor performance of the AnomalE methods may be due to the way they model static graphs.
+Anomal-E maps all interaction processes (IP: ports) to a
+complete whole graph, but in encrypted traffic scenarios,
+anonymous technologies such as port forwarding, port randomization and tunneling protocols make it difficult for these
+methods to capture the spatial characteristics of interactive
+behaviors. Repeated interaction patterns originating from the
+same machine, such as video services and chat services,
+may produce unpredictable results for static graph modeling
+methods. In contrast, the proposed model can predict the
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+4859
+
+TABLE III
+W EIGHTED AND M ACRO M ETRIC R ESULTS O BTAINED ON THE T O N-I OT DATASET
+
+TABLE IV
+W EIGHTED AND M ACRO M ETRIC R ESULTS O BTAINED ON THE UNSW-NB15 DATASET
+
+Fig. 4. The performance achieved by the proposed and baseline methods on
+the CIC-Darknet 2020 dataset.
+
+Fig. 3. Confusion matrix of the multiclass classification results obtained on
+the Ton-IoT 2021 dataset.
+
+141,481 requests of 28,296 testing interaction records in the
+CIC-Darknet dataset with an accuracy of 99.72%, a detection
+ratio of 98.99%, a precision level of 98.00%, an F1 score of
+97.18%, and an FAR of 1.01%. It becomes evident that our
+
+temporal graph-based models outperform static graph-based
+models, indicating the power of a finer-grained understanding
+of interaction behavior details.
+3) Fraud Payment Detection Scenario: In fraud detection
+datasets, we are faced with extremely uneven data distributions
+and quite a few available data features. Fig. 5 shows the
+fraud detection results of the proposed model and the baseline
+methods. Notably, the CTGNN consistently outperforms all
+
+4860
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 5. The performance achieved by the proposed and baseline methods on
+the Fraud Payment dataset.
+
+baselines with an accuracy of 96.09%, a detection ratio of
+81.80%, a precision level of 78.33%, an F1 score of 80.03%,
+and an FAR of 18.19%. There are two possible reasons for the
+performance discrepancy exhibited by the baseline methods.
+First, only 8 features are available, including USD_amount,
+Sender_Id, Sender_Account, Transaction_Type,
+and Sender_Country, in the entire transaction network,
+so most of the learning methods based on feature representations have worse performance. Second, we discover one
+limitation of the static graph-based models such as [4]: they
+may not be the most suitable solutions for these particular
+highly imbalanced datasets. For example, only 69.71% of the
+fraud behavior in the J.P. Morgan synthetic transaction network
+is detected by Anomal-E, while 34.17% of the macro-average
+DR is reported on the UNSW-NB15 dataset (Table IV). The
+traditional message passing mechanism reveals the inclination
+toward learning majority classes. Due to our fine-grained
+link history modeling method, spatiotemporal interactions, and
+temporal patterns, our method successfully overcomes the
+detrimental effects mentioned above in most of our considered
+datasets.
+4) Analysis of New Access Nodes: To further verify the
+impact of behaviors generated by new access nodes on
+anomaly detection, we conduct a set of manual verifications
+on the ToN-IoT and CIC-Darknet2020 datasets. As shown
+in Table I, in the testing phase, 2,529 new access nodes in
+the IIoT network generate 2,603 interaction records, including
+normal traffic as well as four types of attack behaviors, i.e.,
+DoS, mitm, password, and scanning attacks. In the
+CIC-Darknet2020 dataset, 612 new interactive IPs generate
+820 flow records that occupy 2.89% of the total testing
+samples. Table V shows the comparison between the results
+obtained by the proposed CTGNN and the suboptimal baseline
+methods on these flow records generated by new access nodes.
+On the ToN-IoT dataset, the performance of the three methods
+on these newly generated records is worse than that attained
+on all test samples. To our surprise, SRF does not detect
+the abnormal behavior generated by the new access nodes.
+
+Anomal-E detects 2 of the 4 types of attacks, while our
+proposed method detects 3 categories and achieves higher DR
+and F1 values. On CIC-Darknet2020, facing the encrypted
+traffic generated by the new access IP, SRF’s classification
+DR and F1 score drop by 12.78% and 11.49%, respectively; Anomal-e’s DR and F1 score drop by 16.24% and
+9.92%, respectively. In contrast, the proposed CTGNN method
+still maintains satisfactory performance when confronted with
+these behaviors.
+There are 2 potential reasons for these performance differences. First, we find that 2,544 of the 2,603 newly generated
+flow records only appeared once, which means that pretrained
+DL and ML methods are completely unfamiliar to these 2,544
+records. The network behavior generated by the new access
+nodes contains novel feature patterns that are difficult for
+traditional DL and ML to reason. Although Anomal-E maps
+all network behaviors to a large graph, these behaviors are
+isolated nodes in the overall graph structure. Anomal-E does
+not aggregate enough information to distinguish between different anomalous behaviors. Second, through the aggregation
+of spatial-temporal neighborhood information, the CTGNN
+makes these discrete and isolated behavior patterns continuous
+and compact in the local neighborhood. In other words, the
+CTGNN incorporates these novel behavior patterns into the
+local node interaction processes that have been more effectively learned and summarized during the training process,
+thus better reasoning about these unseen patterns.
+5) Analysis of Behaviors With Low Frequencies: Noting
+that most of the behaviors generated by new access nodes
+occur only once, we further systematically analyze the impact
+of the frequencies of behaviors on the resulting model performance. Since Anomal-E maps all behaviors to a large graph
+(all edges appear only once), we compare the CTGNN with
+SRF on the ToN-IoT dataset. We first count the communication
+frequency between each pair of IPs in the test set. Specifically,
+there are 5,680 IP pairs in the test set that produce 92,208 flow
+records, among which 5,463 pairs of IPs have communication
+frequencies below 20, generating 10,497 flow records. Furthermore, the frequency of communication between 5,630 IP
+pairs is less than 300, corresponding to 22,925 flow records.
+Fig. 6 presents the receiver operating characteristic (ROC)
+curves produced by the SRF and CTGNN methods, where
+f denotes different communication frequencies.
+As seen from the above figures, although SRF performs
+well on the overall test samples in Fig. 6a, its performance
+is not stable when faced with low-frequency traffic records
+(shown in Figs. 6b and 6c). In fact, Figs. 6a and 6d reveal
+that the excellent performance of SRF may be mainly concentrated in the behaviors with the majority frequency, the
+frequencies of these behaviors are greater than 300, but only
+accounts for 0.88% of the total IP pairs. In contrast, benefiting
+from utilizing the historical state, the local spatiotemporal
+neighbor information and the actual time distribution, the
+proposed CTGNN alleviates the negative impact of the lowfrequency interaction distributions. As shown in Figs. 6a
+and 6d, the proposed approach maintains encouraging performance for most IP pairs, which is essential for real-world
+scenarios.
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+4861
+
+TABLE V
+P ERFORMANCE C OMPARISON W HILE C ONSIDERING THE B EHAVIORS G ENERATED BY N EW ACCESS N ODES
+
+Fig. 6. For the Ton-IoT 2021 dataset, RoC curves are generated by SRF with communication frequency (b) f ≤ 20, (c) f ≤ 300, or (d) f >300, as well as
+RoC curves on CTGNN with (f) f ≤ 20, (g) f ≤ 300, or (h) f >300.
+
+6) Ablation Analysis: We conduct additional ablation experiments to demonstrate the contributions of each component of
+our model to its overall performance. Essentially, we introduce
+historical representations (summarized by the interactive event
+update mechanism), spatiotemporal neighborhood information,
+and the time interval encoding process in the interaction behavior analysis. We design a simple and direct ablation experiment
+to verify the effect of each component on the overall performance. To eliminate the influence of the multihead attention
+mechanism on the proposed method, an MLP-based message
+aggregation approach is deployed to verify the role of each
+component in the interaction network analysis. To clarify how
+different components impact the interactive network analysis,
+we conduct ablation studies on the following message aggregation strategy variants: (1) a variant without neighborhood
+information, (2) a variant without the interactive event update
+mechanism, and (3) a variant without time interval encoding.
+Fig. 7 presents the overall performance achieved in these
+confirmatory experiments compared with that of the MLP
+message aggregation-based CTGNNs and the base MLP.
+These CTGNN variants outperform the vanilla MLP model
+but perform slightly worse than the complete CTGNN. For
+instance, without neighborhood information aggregation, the
+
+accuracy, precision, recall, and F1 score of the MLP message
+aggregation-based CTGNN drop by 1.26%, 7.64%, 4.22% and
+5.98%, respectively. These results imply that (1) the introduced
+additional interactive event update mechanism, spatiotemporal
+neighborhoods, and time interval encoding components are
+all conducive to improving the performance achieved in the
+interaction behavior analysis. (2) The adopted computing
+components are not limited to a specific computing framework,
+such as multihead attention; in fact, these components are compatible with different feature aggregation schemes, including
+MLPs and transformers. (3) Neighborhood information has
+a greater impact on model performance than the other two
+computational components.
+To further explore the expressive ability of our model,
+we conduct semisupervised learning with 20% of the labels
+sampled from the training sets of the ToN-IoT, CIC-Darknet
+and fraud payment datasets. Considering that the training set
+accounts for 80% of the total samples, the semisupervised
+learning process only uses 16% of the labels of the total
+samples. As shown in Table VI, when only 16% of the labels
+are utilized for these datasets, the results do not exhibit a
+large gap relative to those obtained when employing 80% of
+the labeled samples. The performance achieved with 16% of
+
+4862
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 7.
+
+Results of ablation experiments.
+
+TABLE VI
+ACCURACY AND F1 ACHIEVED W ITH D IFFERENT L ABEL P ROPORTIONS
+FOR S EMISUPERVISED L EARNING ON 3 DATASETS
+
+Fig. 8.
+
+Dimension-reduced visualizations of the embeddings.
+
+the labeled samples decreases by only 0.58% and 0.45% on
+the CIC-Darknet and ToN-IoT datasets, respectively. In other
+words, when only 16% of the samples are labeled, our model
+already has sufficient expressive power for distinguishing
+between different types of behaviors.
+Subsequently, we utilize the uniform manifold approximation and projection (UMAP) [27] algorithm to reduce the
+dimensionality of the high-level embedding representation
+obtained by our model. The visualization results in Fig. 8 a
+show the visualization results obtained with the original sample distribution of the ToN-IoT datasets. As shown in Fig. 8 b,
+the embedding representation of the network flows obtained
+with only 16% of the labeled samples already exhibits obvious
+classification boundaries. This visualization experiment presented in Fig. 8 further verifies that our model has sufficient
+expressive ability for distinguishing between different attack
+categories when few labeled samples are utilized.
+7) Summary: Our contributions in this paper, as supported
+by the experiments above, can be summarized as follows.
+
+(1) A novel network abnormality detection method that
+refines the concrete information interaction processes between
+each pair of entities is proposed, complementing substantial
+detailed behavior information. In the graph-based detection
+methods proposed in previous research [2], [4], [5], the
+extraction of temporal and spatial features is restricted to
+a fixed topology structure. In our work, via a customized
+CTGNN, we refactor the spatiotemporal correlation information as more granular entity interactions, which enhances
+the detection ability of the network and breaks through the
+fixed topology limitation. Experimental results show that this
+method works well on realistic scenarios, including intrusion
+detection, darknet analysis, and anti-fraud cases.
+(2) We reveal the inherent shortcomings of traditional
+anomaly detection methods in the face of new node interactions and low-frequency or sporadic communication behaviors.
+Although traditional anomaly detection methods perform well
+on the overall test set, their good detection capabilities can
+only cover a small number of network entities that generate
+frequent interactions. The proposed CTGNN systematically
+utilizes the historical state, the local spatiotemporal information of neighbors and actual time decodings to maintain
+good performance in most of the tested node communication
+settings. To our knowledge, this is the first attempt to alleviate
+the negative impact of low-frequency communication in the
+field of anomaly detection.
+(3) Ablation experiments demonstrate the effectiveness of
+each component in our proposed model. The key computing components include the CTG update mechanism, local
+spatiotemporal domain information, and time encoder, which
+exhibit good compatibility with various computational models
+and can strengthen their ability to detect anomalies. Furthermore, when only 16% of the total samples are labeled, our
+model achieves classification accuracies of 99.14%, 97.75%,
+and 95.49% on the CIC-Darknet2020, ToN-IoT, and Fraud
+Payment datasets, respectively, which are much higher than the
+accuracies achieved by the methods proposed in [4] and [26]
+when trained on 80% labeled samples. In an actual application
+scenario, these characteristics make our model competitive
+with other state-of-the-art methods via the imposition of a
+flexible computing overhead and weaker sample requirements.
+VI. C ONCLUSION
+In various scenarios, the Continuous Temporal Graph Neural Network (CTGNN) consistently demonstrates its effectiveness in detecting anomalies across both binary and multiclass
+classification settings. Specifically, CTGNN achieves outstanding anomaly detection results, with F1 scores of 97.03%,
+99.96%, 99.18%, and 81.95% on the UNSW-NB15, ToNIoT, CICDarknet, and Fraud Payment datasets in binary
+classification settings. Moreover, our proposed method attains
+remarkable detection rates and F1 scores, surpassing 95%,
+across eight distinct traffic behavior types within the ToN-IoT
+dataset. Notably, CTGNN also achieves the highest macro-F1
+score when applied to the UNSW-NB15 dataset.
+Furthermore, manual verification results underscore the limitations of traditional detection methods, revealing oversights
+in the detection of behaviors generated by new access nodes
+
+DUAN et al.: PRACTICAL CYBER ATTACK DETECTION WITH CTG IN DYNAMIC NETWORK SYSTEM
+
+and behaviors characterized by low-frequency occurrences.
+CTGNN effectively addresses these challenges by harnessing
+the natural interaction processes of network entities in both
+temporal and spatial dimensions, thereby maintaining robust
+detection performance for these elusive behaviors.
+Ablation experiments validate the versatility of the key computing components within CTGNN, showcasing their ability
+to enhance anomaly detection across various computational
+models. As we look ahead, our research will be dedicated
+to addressing the issue of strong data imbalance as well as
+further enhancing the interpretability of abnormal behavior
+detection methods. Furthermore, improving intrusion detection
+within the context of concept drift, characterized by shifts in
+traffic distribution and feature evolution, represents a challenge
+warranting considerable attention.
+R EFERENCES
+[1] Cisco. (2023). Cisco Annual Internet Report (2018–2023). [Online].
+Available: https://www.cisco.com/c/en/us/solutions/collateral/executiveperspectives/annual-internet-report/white-paper-c11-741490.html
+[2] Y. Cao, H. Jiang, Y. Deng, J. Wu, P. Zhou, and W. Luo, “Detecting
+and mitigating DDoS attacks in SDN using spatial–temporal graph convolutional network,” IEEE Trans. Dependable Secure Comput., vol. 19,
+no. 6, pp. 3855–3872, Nov. 2022.
+[3] S. A. Assefa, D. Dervovic, M. Mahfouz, R. E. Tillman, P. Reddy,
+and M. Veloso, “Generating synthetic data in finance: Opportunities,
+challenges and pitfalls,” in Proc. 1st ACM Int. Conf. AI Finance,
+Oct. 2020, pp. 1–8.
+[4] E. Caville, W. W. Lo, S. Layeghy, and M. Portmann, “Anomal-E: A selfsupervised network intrusion detection system based on graph neural
+networks,” Knowl.-Based Syst., vol. 258, Dec. 2022, Art. no. 110030.
+[5] G. Duan, H. Lv, H. Wang, and G. Feng, “Application of a dynamic
+line graph neural network for intrusion detection with semisupervised
+learning,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 699–714,
+2023.
+[6] C. Wang and H. Zhu, “Wrongdoing monitor: A graph-based behavioral
+anomaly detection in cyber security,” IEEE Trans. Inf. Forensics Security, vol. 17, pp. 2703–2718, 2022.
+[7] Z. Yang et al., “WTAGRAPH: Web tracking and advertising detection
+using graph neural networks,” in Proc. IEEE Symp. Secur. Privacy (SP),
+May 2022, pp. 1540–1557.
+[8] Z. Zhao et al., “ERNN: Error-resilient RNN for encrypted traffic detection towards network-induced phenomena,” IEEE Trans. Dependable
+Secure Comput., pp. 1–18, 2023, doi: 10.1109/TDSC.2023.3242134.
+[9] T. M. Booij, I. Chiscop, E. Meeuwissen, N. Moustafa, and
+F. T. H. D. Hartog, “ToN_IoT: The role of heterogeneity and the need
+for standardization of features and attack types in IoT network intrusion
+data sets,” IEEE Internet Things J., vol. 9, no. 1, pp. 485–496, Jan. 2022.
+[10] N. Moustafa, G. Misra, and J. Slay, “Generalized outlier Gaussian mixture technique based on automated association features for simulating
+and detecting web application attacks,” IEEE Trans. Sustain. Comput.,
+vol. 6, no. 2, pp. 245–256, Apr. 2021.
+[11] A. H. Lashkari, G. Kaur, and A. Rahali, “DIDarknet: A contemporary
+approach to detect and characterize the darknet traffic using deep image
+learning,” in Proc. 10th Int. Conf. Commun. Netw. Secur., Nov. 2020,
+pp. 1–13.
+[12] B. Caswell and J. Beale, Snort 2.1 Intrusion Detection. Amsterdam, The
+Netherlands: Elsevier, 2004.
+[13] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and P. Faruki,
+“Network intrusion detection for IoT security based on learning techniques,” IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2671–2701,
+3rd Quart., 2019.
+[14] P.-F. Marteau, “Random partitioning forest for point-wise and collective
+anomaly detection—Application to network intrusion detection,” IEEE
+Trans. Inf. Forensics Security, vol. 16, pp. 2157–2172, 2021.
+[15] R. Bitton and A. Shabtai, “A machine learning-based intrusion detection
+system for securing remote desktop connections to electronic flight
+bag servers,” IEEE Trans. Dependable Secure Comput., vol. 18, no. 3,
+pp. 1164–1181, May 2021.
+
+4863
+
+[16] J. Yang, X. Chen, S. Chen, X. Jiang, and X. Tan, “Conditional
+variational auto-encoder and extreme value theory aided two-stage
+learning approach for intelligent fine-grained known/unknown intrusion
+detection,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 3538–3553,
+2021.
+[17] M. Kravchik and A. Shabtai, “Efficient cyber attack detection in
+industrial control systems using lightweight neural networks and PCA,”
+IEEE Trans. Dependable Secure Comput., vol. 19, no. 4, pp. 2179–2197,
+Jul. 2022.
+[18] Y. Zuo, G. Liu, H. Lin, J. Guo, X. Hu, and J. Wu, “Embedding
+temporal network via neighborhood formation,” in Proc. 24th ACM
+SIGKDD Int. Conf. Knowl. Discovery Data Mining (KDD). New York,
+NY, USA: Association for Computing Machinery, 2018, pp. 2857–2866,
+doi: 10.1145/3219819.3220054.
+[19] Y. Ma, Z. Guo, Z. Ren, J. Tang, and D. Yin, “Streaming graph neural
+networks,” in Proc. 43rd Int. ACM SIGIR Conf. Res. Develop. Inf. Retr.
+New York, NY, USA: Association for Computing Machinery, 2020,
+pp. 719–728, doi: 10.1145/3397271.3401092.
+[20] D. Xu, C. Ruan, E. Korpeoglu, S. Kumar, and K. Achan, “Inductive
+representation learning on temporal graphs,” 2020, arXiv:2002.07962.
+[21] E. Rossi, B. Chamberlain, F. Frasca, D. Eynard, F. Monti, and
+M. Bronstein, “Temporal graph networks for deep learning on dynamic
+graphs,” 2020, arXiv:2006.10637.
+[22] S. M. Kazemi et al., “Representation learning for dynamic graphs: A survey,” J. Mach. Learn. Res., vol. 21, no. 1, pp. 2648–2720, Mar. 2020.
+[23] D. Xu, C. Ruan, E. Korpeoglu, S. Kumar, and K. Achan, “Self-attention
+with functional time representation learning,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 32, 2019, pp. 1–11.
+[24] F. D. Keersmaeker, Y. Cao, G. K. Ndonda, and R. Sadre, “A survey
+of public IoT datasets for network security research,” IEEE Commun.
+Surveys Tuts., vol. 25, no. 3, pp. 1808–1840, 3rd Quart., 2023.
+[25] J. Sinha and M. Manollas, “Efficient deep CNN-BiLSTM model for
+network intrusion detection,” in Proc. 3rd Int. Conf. Artif. Intell. Pattern
+Recognit., Jun. 2020, pp. 223–231.
+[26] T. Zebin, S. Rezvy, and Y. Luo, “An explainable AI-based intrusion
+detection system for DNS over HTTPS (DoH) attacks,” IEEE Trans.
+Inf. Forensics Security, vol. 17, pp. 2339–2349, 2022.
+[27] L. McInnes, J. Healy, and J. Melville, “UMAP: Uniform manifold approximation and projection for dimension reduction,” 2018,
+arXiv:1802.03426.
+[28] H. Studiawan, F. Sohel, and C. Payne, “Anomaly detection in operating
+system logs with deep learning-based sentiment analysis,” IEEE Trans.
+Dependable Secure Comput., vol. 18, no. 5, pp. 2136–2148, Sep. 2021.
+[29] J. Cao et al., “A survey on security aspects for 3GPP 5G networks,”
+IEEE Commun. Surveys Tuts., vol. 22, no. 1, pp. 170–195, 1st Quart.,
+2019.
+[30] O. Ajibuwa, B. Hamdaoui, and A. A. Yavuz, “A survey on AI/ML-driven
+intrusion and misbehavior detection in networked autonomous systems:
+Techniques, challenges and opportunities,” 2023, arXiv:2305.05040.
+[31] G. Andresini, F. Pendlebury, F. Pierazzi, C. Loglisci, A. Appice, and
+L. Cavallaro, “INSOMNIA: Towards concept-drift robustness in network
+intrusion detection,” in Proc. 14th ACM Workshop Artif. Intell. Secur.,
+Nov. 2021, pp. 111–122.
+[32] H. Ding, Y. Sun, N. Huang, Z. Shen, and X. Cui, “TMG-GAN:
+Generative adversarial networks-based imbalanced learning for network
+intrusion detection,” IEEE Trans. Inf. Forensics Security, vol. 19,
+pp. 1156–1167, 2024.
+[33] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered
+hybrid intrusion detection system for Internet of Vehicles,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+
+Guanghan Duan received the B.A. degree in computing science and technology from Chongqing
+University, China, in 2017. He is currently pursuing
+the Ph.D. degree in computing science and technology with Harbin Engineering University, China.
+His research interests include graph-based DL methods for modeling network traffic and adversarial
+examples.
+
+4864
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Hongwu Lv received the B.A. degree in information
+and computing science and the Ph.D. degree in
+computer applied technology from Harbin Engineering University, China, in 2006 and 2011,
+respectively. He is currently an Assistant Professor
+with the College of Computer Science and Technology, Harbin Engineering University. His research
+interests include formal modeling and performance
+evaluation, particularly regarding the availability of
+cloud computing and edge cloud modeling.
+
+Guangsheng Feng received the B.E. degree from
+Harbin Engineering University (HEU) in 2003, the
+M.E. degree from Harbin Institute Technology (HIT)
+in 2005, and the Ph.D. degree from HEU in 2009.
+He is currently an Associate Professor with
+the College of Computer Science and Technology, Harbin Engineering University. His research
+interests include the security of edge computing,
+LTE (LTE-A) networks, and wireless channel access
+control.
+
+Huiqiang Wang received the B.A. degree in computer systems and engineering from Harbin Institute
+of Technology, China, in 1982, the M.S. degree
+in computer applications from Harbin Shipbuilding
+Engineering Institute, China, in 1985, and the Ph.D.
+degree in computer applied technology from Harbin
+Engineering University, China, in 2005. He is currently a Professor with the College of Computer
+Science and Technology, Harbin Engineering University. He has published more than 100 journal
+and conference papers. His research interests include
+the security of distributed systems, particularly regarding cognitive networks,
+cloud computing, and indoor positioning.
+
+Xiaoli Li (Fellow, IEEE) is currently a Principal
+Scientist with the Institute for Infocomm Research,
+A*STAR, Singapore. He is also an adjunct full
+professor position with Nanyang Technological University, Singapore. His research interests include AI,
+machine learning, data mining, and bioinformatics.
+He has been the Area Chair/a Senior PC Member
+of leading AI and data mining-related conferences,
+including IJCAI, AAAI, KDD, and ICDM. He is the
+Editor-in-Chief of World Scientific Annual Review
+of Artificial Intelligence and an Associate Editor
+of IEEE T RANSACTIONS ON A RTIFICIAL I NTELLIGENCE and Machine
+Learning With Applications (Elsevier).
+PAPER_TEXT

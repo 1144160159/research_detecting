@@ -1,0 +1,800 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025 5528215
+
+ D3Former: Dual-Decoder Dual-Transformer
+ Reconstruction Network for Hyperspectral
+ Anomaly Detection
+ Tan Guo , Member, IEEE, Yukun Yang , Fulin Luo , Senior Member, IEEE, Chuan Fu , Member, IEEE,
+ and Lei Zhang , Senior Member, IEEE
+
+ Abstract—Hyperspectral anomaly detection (HAD) aims to Index Terms—Autoencoder (AE), dual-decoder, hyperspectral
+identify and locate anomalous targets in hyperspectral image anomaly detection (HAD), image reconstruction, transformer.
+(HSI) data that are significantly different from the surrounding
+background or environment. Most existing deep learning (DL) I. I NTRODUCTION
+methods for HAD utilize reconstruction errors by reconstructing
+the background, but they often result in equivalent reconstruction of both background and anomalies, failing to effectively
+separate them. To address this issue, we propose a novel dual-
+ H YPERSPECTRAL images (HSIs) are of significant
+ importance in remote sensing due to their ability to
+ identify fine spectral features of ground objects, particudecoder dual-transformer reconstruction network (D3 Former). larly excelling in target detection and localization [1], [2].
+Specifically, we introduce a new background feature purification decoding task, which focuses attention on the background Hyperspectral anomaly detection (HAD) involves identifying
+direction during image reconstruction. In addition, we develop anomalous targets with spectral features that are significantly
+an anomaly stripping auxiliary branch that uses an autoencoder different from the background in the absence of prior infor-
+(AE) and dynamic large convolution kernels to mask anomalies mation. HAD finds wide applications in fields such as Earth
+and learn local background information, further diminishing the sciences [3], remote sensing, agriculture, military, and environimpact of anomalies on the reconstruction process. Furthermore,
+we design a new cross-guided multihead self-attention mechanism mental monitoring [4]. Anomalies typically refer to targets that
+that integrates multiscale background attributes globally to are significantly different from the background in the spectral
+suppress anomalous pixels and guide the reconstruction of a domain and occupy a very small area. In HAD tasks, the
+pure background. Finally, we adopt a synergistic optimization lack of prior knowledge about targets and backgrounds makes
+(SYO) loss to achieve twofold suppression of potential anomalies the separation of anomalies from the background be a key
+in both spatial–spectral and frequency domains, resulting in more
+accurate detection. Extensive experiments on multiple datasets challenge [5], [6]. To address this, various methods have been
+demonstrate that our method outperforms existing state-of-the- proposed to model the background using different strategies
+art approaches in detection performance. The codes are available to detect anomalous targets that deviate from background patat https://github.com/YKYANG01/TGRS-D3Former. terns [7], [8]. Existing HAD methods are mainly categorized
+ into three types: statistical theory-based methods, representation learning-based methods, and deep learning (DL)-based
+ Received 7 August 2025; accepted 19 September 2025. Date of publication methods.
+25 September 2025; date of current version 16 October 2025. This work
+was supported in part by the National Natural Science Foundation of China A. Statistical Theory-Based Methods
+under Grant 62201109, Grant 62371076, and Grant 62501087; in part by
+China Postdoctoral Science Foundation under Grant 2025T180950 and Grant Statistical theory-based HAD methods typically model the
+2025MD774183; in part by the New Chongqing Youth Innovative Talents background using the statistical characteristics of HSI. Among
+Project under Grant CSTB2024NSCQ-QCXMX0071; and in part by the
+Natural Science Foundation of Chongqing under Grant CSTB2024NSCQ- these, the Reed–Xiaoli (RX) detector is pioneering, assuming
+MSX0393. (Corresponding author: Fulin Luo.) a multivariate Gaussian distribution for the background and
+ Tan Guo is with the School of Communications and Information Engi- detecting anomalies via the calculation of the Mahalanobis
+neering, Chongqing University of Posts and Telecommunications, Chongqing
+400065, China, and also with the Key Laboratory of Monitoring, Eval- distance between the global pixels and the background, thereby
+uation and Early Warning of Territorial Spatial Planning Implementation, acting as a global RX (GRX) detector [9]. To emphasize
+Ministry of Natural Resources (LMEE), Chongqing 401147, China (e-mail: local background features, local RX (LRX) [10] computes the
+guot@cqupt.edu.cn).
+ Yukun Yang is with the School of Communications and Information Engi- covariance matrix using a sliding window. Advanced methods,
+neering, Chongqing University of Posts and Telecommunications, Chongqing such as the kernel isolation forest detector (KIFD) [11], use
+400065, China (e-mail: yangyukun100@163.com). the isolation forest algorithm to model local backgrounds.
+ Fulin Luo and Chuan Fu are with the College of Computer Science,
+Chongqing University, Chongqing 400044, China (e-mail: luoflyn@163.com; Tao et al. [12] enhance anomaly detection (AD) with score
+fuchuan@cqu.edu.cn). Fourier entropy (FrFE). The two-step generalized likelihood
+ Lei Zhang is with the School of Microelectronics and Communica- ratio test (2S-GLRT) [13] employs a sliding double-window
+tion Engineering, Chongqing University, Chongqing 400044, China (e-mail:
+leizhang@cqu.edu.cn). technique to improve the accuracy of multipixel AD through
+ Digital Object Identifier 10.1109/TGRS.2025.3614482 a two-step process.
+ 1558-0644 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+B. Representation Learning-Based Methods and noise, some HAD methods consider the noise model
+ Most statistical theory-based AD methods assume that in AE, such as a fully convolutional AE (CAE, Auto-AD)
+the background conforms to a certain statistical distribution [36], and robust graph AE (RGAE) [37]. The guided AE
+model. However, due to the complexity of HSI backgrounds (GAED) [38] enhances the representation capability of the
+and the interference from various factors, these assumptions background. In order to better refine background recovery,
+are difficult to meet in practice. In contrast, representation- SMCNet [39], KACNet [40], and some methods incorporate
+based [14], [15] HAD methods reconstruct background pixels masking strategies and clustering concepts have been prousing a dictionary, where anomalous pixels fail to recon- posed. Recently, self-supervised learning (SSL) AD techniques
+struct effectively, with reconstruction errors used for detection. have also garnered attention. SSL designs self-supervised tasks
+Representation learning encompass sparse representation (SR) in HAD by leveraging techniques such as contrastive learning
+[16], collaborative representation (CR) [17], [18], and low- and masked reconstruction to enhance feature representation
+rank representation (LRR) [19], [20]. SR assumes background and generalization ability. Combined with deep networks,
+samples are represented by a few atoms, while anomalies can- it constructs an efficient detection framework, providing an
+not be done. CR emphasizes collaborative relationships among effective label-free solution for HAD. In [41], a self-supervised
+dictionary atoms, representing a pixel as a linear combination anomaly prior (SAP) network redefines the optimization criof its neighbors [21]. Improved CR models include the CR- terion for anomalies in spatial structure. Sun et al. [42]
+based detector (CRD) [22] and relaxed CR detector (RCRD) proposed a contrastive self-supervised background reconstruc-
+[23]. LRR captures global structures by decomposing HSI tion (CSSBR) approach to improve the model’s transferability.
+into a low-rank background and a sparse anomaly matrix. Other methods, such as NL2Net [43] and ACRL [44], enhance
+Based on LRR theory, Li et al. [24] combined low-rank and surrounding background awareness by coupling nonlocal and
+sparse decomposition with a mixture of Gaussian (LSDM- local features. Liu et al. [45] proposed a self-supervised
+MoG) using Manhattan distance to reduce noise effects. multiscale network (MSNet) that combines multiscale feature
+To utilize local geometric structural information from HSI, extraction to address the issue of reconstructing anomalies
+Feng et al. [25] proposed the local spatial constraint and of different sizes. Approaches including PDBSNet [46] and
+total variation (LSCTV) method. In [26], a learnable back- DirectNet [47] utilize blind spot networks to reduce the feature
+ground endmember with subspace representation (LEBSR) representation of anomalies.
+was developed to optimize background dictionary construction. He et al. [27] proposed the tensor low-rank approximation D. Motivation and Contributions
+(TLRA-MSL) model that combines spatial and spectral infor-
+ Although the established DL-based HAD methods have
+mation for HAD.
+ made significant progress, there are still some challenging
+ issues that need to be addressed.
+C. DL-Based Methods 1) Most existing reconstruction-based HAD networks use a
+ In recent years, DL [28] has made significant progress single encoding–decoding structure to extract the latent
+in the fields of computer vision and remote sensing [29], representation of the background. However, this limits
+[30]. DL-based HAD methods enhance the ability to recog- the depth and diversity of feature extraction, and the sinnize backgrounds and anomalous targets by extracting deep gle encoding–decoding path also restricts the generation
+features. Common methods are divided into the similar- of robust feature maps.
+ity measurement-based models and the reconstruction-based 2) Existing background reconstruction-based HAD netmodels. works apply constraints on features only at the pixel
+ Similarity measurement models use a convolutional neural level, which makes it easy to reconstruct anomalies
+network (CNN) as the core framework, with pixel pairs in complex scenarios. They lack an active suppression
+selected from labeled HSI during training to learn pixel strategy for anomalies in the background reconstruction.
+similarity for AD. Li et al. [31] proposed the CNN-based 3) There is a lack of constraints on anomalies in the
+detection (CNND) method outputs anomaly scores by com- frequency domain. In this case, the network learns
+paring the differences between pixel pairs. Rao et al. [32] to recover information from all frequencies, resultdesigned a transferable Siamese network (TSN) that converts ing in high-frequency anomaly features being unconpixel similarity into anomaly probabilities. However, these sciously restored, which lowers the purification of the
+methods rely heavily on the quantity and quality of labeled background.
+data, resulting in limited transferability. To address these challenges, transformer [48], [49] has been
+ Relative to this, reconstruction-based unsupervised DL tech- used in HAD due to its powerful capability for modeling
+niques have demonstrated their effectiveness and achieved global dependencies [50], [51]. However, existing methods still
+promising results in HAD tasks. Autoencoder (AE) [33] and have shortcomings in suppressing potential anomalies and are
+generative adversarial networks (GANs) [34] are among the unable to effectively adapt to the requirements of AD.
+typically used network architectures. Jiang et al. [35] proposed Therefore, the core issue of HAD lies in how to effeca weakly supervised GANs based on spectral constraints to tively reconstruct background pixels through a specific feature
+enhance the discriminative capability for anomalous targets. encoding–decoding mechanism, fully utilizing the spatial
+To improve the network’s robustness in handling anomalies correlations of the background area while eliminating the
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+mapping contamination caused by anomalies. To address this The remainder of this article is organized as follows.
+issue, this article proposes an end-to-end background recon- Section II outlines the general architecture of our network
+struction method based on a dual-decoder dual-transformer and elaborates on each component. In Section III, we validate
+reconstruction network (D3 Former). The newly designed dual- the effectiveness of our method through experiments. Finally,
+decoder structure can dynamically adjust its focus on the Section IV presents the conclusion.
+background and anomalies, fully leveraging the extracted
+global–local diversified features. It maps the uniform noise II. M ETHODOLOGY
+space into the HSI space to learn the spatial dependencies In this section, we will provide a comprehensive preof the background and reduce the visibility of anomalous sentation of our D3 Former. Section II-A introduces the
+targets. To further prevent the reconstruction of anomalous overall structural framework of our network. Following that,
+pixels, an anomaly removal auxiliary branch is designed, Sections II-B–II-E delve into several key components of
+which combines a CAE with an anomaly masking attention our network, including dual-decoder, ARMAB, cross-guided
+mechanism to effectively eliminate the significance of anoma- transformer module (CGTM), SYO loss function, background
+lous targets. This branch establishes an explicit suppression feature fusion module (BFFM) and detection phase.
+pathway for the anomaly’s spatial–spectral structure. Notably,
+our proposed background reconstruction architecture features
+ A. Overall Structure
+a unique cross-guided attention design that enhances the
+statistical dependencies of the background while effectively The overall framework of the proposed D3 Former is shown
+mitigating the spatial dependencies related to anomalous pix- in Fig. 1. During inference, the testing HSI is input into the
+els. Different self-attention mechanisms cross-capture local fine feature (FF) encoder–decoder network, while uniform
+background features, improving background quality from the noise is fed into the lower layer background purification
+perspective of structural feature complementarity. Further- decoder (BPD) to simulate anomaly masking and reduce the
+more, to improve the model’s reconstruction performance, we model’s visibility to anomalous targets. This dual-decoder
+introduce a synergistic optimization (SYO) loss function. By structure facilitates hierarchical background feature extraction,
+utilizing a frequency-domain loss term, it compensates for improving the detection capability for diverse anomalies and
+the limitation of reconstruction-based HAD methods that only backgrounds. In the upper layer, the Swin transformer [52],
+suppress anomalies in the spatial domain. This enhancement [53] module (SWTM) is employed as the feature extractor to
+penalizes anomalous targets more effectively in both the capture fine background features. The FF encoder features and
+spatial–spectral domain and the frequency domain through the BPD outputs are passed to the CGTM, explicitly guiding
+background-prior mapping with weighting, allowing the model attention toward background semantic information and reducto better separate anomalies from the background. ing the weight of anomalous pixels. The processed features
+ In summary, the novelty and main contributions of this are then integrated with the upper layer FF decoder outputs
+article are emphasized as follows. using the BFFM to further enhance background reconstruction.
+ In addition, an auxiliary branch is designed for anomaly
+ 1) To focus feature attention on the background during
+ separation, where anomalies features are extracted and masked
+ reconstruction, we propose an end-to-end background
+ as supplementary inputs for the fused feature maps at each
+ reconstruction method based on D3 Former. By incorpostage, thereby improving the model’s anomaly suppression
+ rating a new background purification decoding task to
+ capability. Finally, the model is iteratively optimized using
+ prevent the network from learning features of anomaan SYO loss function, ensuring the generation of accurate
+ lous pixels. The dual-decoder framework provides a
+ and realistic pure background images across different decoding
+ combined bridge for different features, enabling the
+ stages.
+ complementary diversity of features, which makes the
+ generated background more robust.
+ 2) To address the issue of anomaly contamination, we B. Dual-Decoder Structure for Background Reconstruction
+ develop an anomaly removal and masking auxiliary Conventional U-shaped networks (UNet) use a single
+ branch (ARMAB) that utilizes AE and dynamic large encoder–decoder connection, which results in significant inforconvolution kernels to blur anomalous targets, supple- mation loss when processing complex HSI. Increasing network
+ menting a comprehensive spatial–spectral background depth by stacking convolutional layers can improve feature
+ information flow. In addition, we designed an innovative extraction, but it also inevitably leads to the reconstruction of
+ cross-guided multihead attention mechanism that glob- anomalies during background generation, reducing detection
+ ally integrates multiscale background attributes, ensuring performance. To overcome these challenges, we designed a
+ that anomalies are not reconstructed. dual-decoder structure that facilitates feature sharing between
+ 3) To improve the quality of “anomaly-free” background layers and extracts a precise background without anomareconstruction, we employ an SYO loss function. By lies. BPD provides a combinatorial bridge for the diverse,
+ introducing a new frequency-domain loss, we sup- nonanomalous background features, enhancing the robustness
+ press potential anomalous components in both spatial and detail richness of the reconstructed background. In BPD,
+ and frequency domains. The interaction between the all stages of background information, along with methods
+ domains can also help preserve the texture details of the for anomaly suppression, are fully utilized, ensuring that the
+ background. anomalies in the reconstruction background are suppressed as
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Fig. 1. D3 Former for HAD. The observed HSI first undergoes the FF encoding and decoding process, and the uniform noise is fed into the lower layer BPD
+to simulate anomaly-free input. CGTM enhances feature representation in background regions, while ARMAB reduces the weight of anomalous pixels. During
+the detection stage, BFFM performs cross-stage feature fusion of background information from different layers to obtain the reconstructed “anomaly-free”
+background HSI1 , and the final detection result is acquired via the difference between the “anomaly-free” background HSI1 and the original HSI.
+
+ Then, symmetrically with the encoder, the upper decoder uses
+ two 2 × 2 stride deconvolutional layers, a 1 × 1 convolutional
+ layer, and an SWTM for deep feature map representation
+ learning. After decoding, the size of the feature map returns
+ to H × W × C.
+ The BPD uses the mapped input noise Xu ∈ RH/4×W/4×4N ,
+ after passing through the bottleneck BFFM and upsample
+ layer to B2,0 ∈ RH/2×W/2×2N . Then, through skip connections,
+ the feature maps from the encoding and decoding stages of
+ the upper layer are passed to the CGTM and BFFM for
+ feature interaction, allowing the BPD to learn more contextual
+Fig. 2. Illustration of our dual-decoder structure. information. After this stage, the final feature map generates
+ a real background X̂ ∈ RH×W×C .
+
+much as possible. This significantly improves the quality of
+background reconstruction and detection accuracy. C. Anomaly Removal and Masking Auxiliary Branch
+ Fig. 2 illustrates our dual-decoder structure based on UNet In HAD, traditional deep models may lack sufficient infordesign, featuring two parallel decoding subnetworks. To begin mation to learn the differences between anomalies and the
+with, we denote an HSI as X ∈ RH×W×C , H, W, and C background. As a result, they attempt to reconstruct every part
+represent height, width, and spectral bands, respectively. The of the input, including the anomalies. To enhance the differencoder receives the original HSI as input and uses a 3 × 3 ences between the background and anomaly target features
+convolutional layer to change the number of channels from and to encourage the model not to focus on the anomalies, we
+C to N. The feature map then goes through two SWTMs, propose to construct an ARMAB, as shown in Fig. 3, which
+followed by a 1×1 convolutional layer and a downsample layer includes the following several components.
+for shallow feature extraction. The downsample layer consists 1) Background Anomaly Separation: The previous stage
+of a 2 × 2 stride convolutional layer, which reduces the of the entire branch completes background reconstruction by
+spatial resolution of the feature map by half while doubling the using a CAE to capture local features, providing a flow
+number of channels. The sizes of the feature maps for different of local feature information about the background from a
+nodes become E1,2 ∈ RH/2×W/2×2N and E1,3 ∈ RH/4×W/4×4N , different structural perspective. In parallel, during the anomaly
+where subscript (·)i, j represents the jth feature extraction block separation process, the CAE preserves the overall details of
+of the ith encoder or decoder. The bottleneck of the model is the background and further suppresses the reconstruction of
+a single SWTM, which further extracts features while keeping anomalies by using large kernel convolutions to reduce the
+the shape of the feature map B1,0 ∈ RH/4×W/4×4N unchanged. attention on anomalous pixels. The local feature information
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+Fig. 3. Illustration of ARMAB.
+
+flow enhances the local–global interaction from different masking phase, we divide it into three parts to perform
+structural perspectives, providing supplementary information hierarchical suppression of anomalies. First, we use a separate
+for fine pure background reconstruction. The encoding block large convolution kernel along with two sets of cascaded
+consists of a 3 × 3 convolution (stride = 2) and a 1 × 1 large convolution kernels in parallel. Through hierarchical
+convolution (with batch normalization and LeakyReLU). The extraction, anomalies are flattened by the convolution calculainput of the ith encoding block can be represented as tions of the surrounding background pixels. This reduces the
+ strong distinguishability of the anomalies, achieving a blurring
+ Ei = Conv3×3 Conv1×1 (Ei−1 )
+ 
+ (1) effect. The large convolution kernels provide a wider receptive
+where 0 < i < 5. The decoding block consists of an upsample field, focusing on larger background areas, thereby “diluting”
+layer and a 1 × 1 convolution (with batch normalization and and dispersing the anomalous information within the feature
+LeakyReLU). Combined with skip connections, it preserves maps S3
+shallow features. The input of the decoding process can be
+ S3 = Concat WDw 5×5 S , W7×7 W5×5 S
+ 0 Dw Dw 0
+   
+represented as (4)
+
+ Di = Concat Ei−1 , Conv1×1 Upsample (Di−1 ) . (2)
+  
+ where WDw k×k represents 5 × 5 depth-wise convolution
+ (DwConv) and 7 × 7 DwConv.
+ The independent path of the CAE provides multiple recon- Then, the obtained feature maps are passed through a
+struction perspectives and distinguishes the background from combination of mean pooling (MEP) and max pooling (MAP)
+anomalies. As training progress, this subtraction approach for processing. This process allows MEP to reduce the relative
+increasingly highlights the anomaly regions, removing some value of anomalies and focus on the globally consistent backredundant background information while preserving the over- ground. MAP selects local background information, ensuring
+all background detail. In this way, our designed anomaly that anomalies are no longer the focal point of the global informasking mechanism utilizes the large kernel convolutions mation. Following this, a 1 × 1 convolution and an activation
+in a feature space that has been preliminarily stripped and function are applied to obtain the background selections W1
+dominated by the background, rather than struggling to iden- and W2
+tify anomalous targets in the original features. Based on the
+separated feature map, subsequent large kernel convolutions [W1 , W2 ] = Sigmoid Conv1×1 [MAE (S3 ) , MAX (S3 )] . (5)
+ 
+can effectively blur and suppress the residual anomaly components. The calculation method for the entire residual result The processed information is passed into two parallel convo-
+S is as follows: lutional structures and combined using element-wise addition
+ 2
+ Si, j = X(i, j,:) − X̂0(i, j,:) 2 (3) to reduce the prominence of anomalies in the fused feature
+ map. A channel attention mechanism is then applied to dynamwhere (·)i, j,: is the spectral vector at position (i, j). ically reduce the weights of channels containing anomalies.
+ 2) Anomaly Feature Masking: After obtaining the separated The refined output is multiplied with the feature maps from the
+feature map S, S ∈ RH×W is replicated along the spectral convolutional structures, achieving multidimensional anomaly
+dimension using channel expansion operation, transforming suppression across channel, spatial, and scale levels. This
+it into tensor S0 ∈ RH×W×C . Since anomalies are small and produces a final feature map that accurately represents backisolated pixels, which occupy only a small portion of the space. ground information, effectively masks anomalies, and provides
+We introduce an anomaly masking mechanism to eliminate the richer supplementary information for anomaly suppression
+feature space mapping of anomaly information. In the anomaly during decoding.
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ and V2 each undergo a 3 × 3 DwConv to yield K̃2 =
+ DwConv3×3 (K2 ) and Ṽ2 = DwConv3×3 (V2 ). Compared to
+ the decoding attention branch, we employ two DwConvs to
+ enhance the extraction of local abnormal features, and the subsequent operations are the same. Therefore, the computation
+ for the encoding multihead self-attention branch is as follows:
+ T !
+ Q̃i2 K̃i2
+ Att2 = Softmax
+ i
+ √ Ṽi2 . (9)
+ d
+ To apply greater weight to the decoupled background
+Fig. 4. Schematic of CGTM. information, we establish a connection between the features
+ of the encoder and decoder. The attention output from the
+ decoding branch is used as the Q, while the K are derived
+D. Cross-Guided Transformer Module from the window-partitioned and V of the encoding branch’s
+ Transformer models can strengthen features through global attention. The second combination of K1 and Att1 further
+attention. Although it performs well in capturing overall data cross-fuses the related information with the encoded feature
+information, it still has limitations, such as insensitivity to values Att2 . This leads to a cross-guided attention computation
+modeling local details and loss of complex background details. to restore background details, followed by rearrangement and
+To tackle these issues and enhance the model’s ability to dis- linear layers to integrate the multiple heads. The final attention
+tinguish between background and anomalies during training, computation is as follows:
+we introduce a new transformer CGTM in Fig. 4. T ! !!
+ First, we apply the conditional position embedding (CPE) Atti1 K̃i1
+ Attout = Linear Re Softmax √ i
+ Att2 (10)
+[54] to the lower layer decoder input through a 3 × 3 DwConv d
+layer. Then, we divide the entire module into a decoding
+multihead self-attention branch and an encoding multihead
+self-attention branch. The input lower layer decoder informa- where Re(·) indicates the rearrangement operation on the
+ 0 0 0
+tion X1 and encoder information X2 are linearly project to tensor. Finally, Attout ∈ RH ×W ×C is passed through a
+obtain the queries Q, keys K, and values V feedforward network.
+ CGTM jointly processes the inputs from the encoder and
+ Qi = Xi Wqi , Ki = Xi Wki , Vi = Xi Wvi (6) decoder, leveraging the information exchange between them
+where Wqi , Wki , and Wvi represent the projection weights for to enhance the background confidence and weaken the local
+the Q, K, and V, respectively. spatial dependencies of anomalies.
+ After the mapping is completed, the decoding multihead
+attention branch performs background smoothing recovery by E. SYO Loss
+capturing the spectral dimensional deep features of the decoding information. The obtained Q1 , K1 , and V1 is processed During iterative training, our goal is to align the background
+using nonoverlapping windows (with a size of M×M) to yield pixels in the generated image with those in the original HSI
+[Q̃1 , K̃1 , Ṽ1 ] ∈ RH W /M×M ×C . Subsequently, they are divided
+ 0 0 2 0 while suppressing the reconstruction of anomalous pixels.
+into multiple heads along the channel dimension, as follows: Inspired by GAED [38], a background-priority mapping SYO
+ loss function is adopted for HAD, calculated as follows:
+ Q̃1 = Q̃11 , Q̃21 , . . . , Q̃h1
+  
+ C
+ 2
+ K̃1 = K̃11 , K̃21 , . . . , K̃h1
+ X
+ dn =
+   
+ t i, j (c) − un (c) (11)
+ Ṽ1 = Ṽ11 , Ṽ21 , . . . , Ṽh1
+  
+ (7) c=1
+
+ where (n = 1, 2, . . . , 8) represents the number of subvolumes,
+where h represents the number of divided heads. During this
+ and t i, j (c) and un (c) denote the pixel values of the cth band at
+process, different attention heads can focus on the correlations
+ position (i, j) for the HSI and the average vector of each subbetween different spectral bands, allowing for fine background
+ volume, respectively. The spectral similarity score is computed
+representation in the spectral dimension. Then, the multihead
+ to update the pixel values and obtain the background-guided
+self-attention mechanism is computed for each head, ensuring
+ map G, as follows:
+that the model can more accurately describe the local details  2
+in the background g x,y = max e−dn . (12)
+ T ! n
+ Q̃i1 K̃i1
+ Att1 = Softmax
+ i
+ √ Ṽi1 . (8) Therefore, the reconstruction loss in the spatial–spectral
+ d domain is defined as follows:
+ In the encoding multihead attention branch, we focus more Lm + L s = mse X, GX̂ + SmoothL1 X, GX̂0
+  
+ (13)
+on the fine-grained background reconstruction of the encoded
+information. Before the nonoverlapping window division, K2 where GX̂ is the Hadamard product result of G and X̂.
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+ The background-guided map assigns higher confidence to Algorithm 1 D3 Former
+background pixels and lower weights to anomalies, reducing Input: 1) The observed HSI X ∈ RH×W×C ; 2) uniform noise
+ H W
+their influence in the loss function and suppressing anomalies. Xu ∈ R 4 × 4 ×4N .
+The mse loss function preserves HSI’s spatial continuity and Output: Final detection result R.
+spectral gradient characteristics of object edges, while the Stage 1: Training Phase;
+SmoothL1 loss function is sensitive to large gradient changes 1: X is processed by the FF encoder to extract abstract
+(e.g., anomalies) and robust to small changes (e.g., textures), background feature Ei, j .
+avoiding excessive punishment on edge details. To evaluate 2: ARMAB calculates the residual S using Eq. (3) and
+reconstruction quality, we combine mse loss and SmoothL1 performs anomaly masking on S to obtain a pure coarse
+loss to balance anomaly suppression and the robustness of background information B.
+background reconstruction in the task. 3: Ei, j and Xu are restored into background features through
+ In practical image reconstruction tasks, important anomalies the FF decoder and BPD.
+details are often concentrated in the high-frequency com- 4: During the decoding phase, B is simultaneously delivered
+ponents of the frequency domain. However, loss functions to BPD as supplementary information.
+such as mse and SmoothL1 tend to overlook these features 5: The input data and pure background are used as training
+in the frequency domain, leading to the reconstruction of targets for the reconstruction network D3 Former.
+anomalies. To solve this, we propose a new frequency-domain 6: Minimize SYO loss function guides the model to suppress
+loss [55] that transforms the image into the frequency domain anomalies.
+and compares distribution differences, improving sensitivity 7: Integrate background decoding feature Di, j from each
+to high-frequency anomalies. We combine mse, SmoothL1, stage through BFFM.
+and frequency-domain losses to optimize background recon- 8: Obtain the final reconstructed background HSI1 .
+struction and overcome the limitations of relying only on Stage 2: Detection Phase;
+high-frequency suppression. The SYO suppresses anomalies 9: Compute the reconstruction residual for each pixel in X
+in both spatial and frequency domains, while the losses also by Eq. (19).
+optimize and preserve edge and texture details. The frequencydomain representation of the input image is obtained using a
+discrete Fourier transform (DFT), as follows: F. BFFM and Detection Phase
+ H−1 W−1 
+ vj
+  In this BFFM shown in Fig. 5, the output X1 from the lower
+ −i2π ui
+ H+W
+ X X
+ X (u, v) = x (i, j) · e . (14) layer BPD and the output X3 from the upper layer FF decoder
+ i=0 j=0 are first concatenated along the channel dimension. The fused
+ feature map is then processed through a spatial attention
+ The frequency mask is applied for separation, where mechanism to enhance information interaction between differfrequencies greater than the default distance threshold of ent spatial locations, highlighting the key information in the
+0.5 represent high-frequency components with rapid spatial background. X1 and X3 are processed through depth attention
+changes, corresponding to anomalies to capture important fine-grained background details.
+ ( Next, the output of the spatial attention is added to the result
+ 1, if k f k > threshold of X3 after depth attention processing. This summed result
+ M (f) = (15)
+ 0, if k f k ≤ threshold is then element-wise multiplied with the feature map of X1
+ Xlow = X (u, v) · M̄ ( f ) , Xhigh = X (u, v) · M ( f ) after depth attention refining, enhancing important background
+ 
+ (16)
+ information while suppressing anomalous interference, generwhere k f k = ( fu2 + fv2 )1/2 is the Euclidean distance of f (u, v) ating the final output feature. The entire process maintains
+and M̄( f ) = 1 − M( f ). The final frequency domain loss is background integrity through the collaborative effect of depth
+defined as a weighted sum of the two components attention and spatial attention, ultimately producing a clean
+ background X̂.
+ 1  2 Finally, the reconstruction error is calculated to represent
+ Lf = (1 − ω) Xlow − X̂low + ω Xhigh − X̂high F
+ 
+ HW the detection result as the following equation:
+ (17)
+ 2
+ Ri, j = X(i, j,:) − X̂(i, j,:) 2 (19)
+ where (·)i, j,: is the spectral vector at position (i, j). The detailed
+where ω is the weighting parameter that assigns a lower
+ steps of D3 Former are introduced in Algorithm 1.
+weight to the high-frequency component to enhance anomaly
+suppression. By using the above designs, a larger weight
+is assigned to the background areas as much as possible, III. E XPERIMENT R ESULT AND A NALYSIS
+thereby increasing their influence in the loss calculation. The In the experiments, we validated the performance of the
+overall loss function is a joint constraint considering both D3 Former model on six real datasets. The D3 Former model
+spatial–spectral and frequency domains as follows: was implemented in Python (version 3.10.6) using the PyTorch
+ framework with PyCharm 2021.3 as the compiler. The com-
+ L = Lm + L s + L f . (18) putational environment was a computer equipped with an
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ where a, b, n ∈ RL×1 represent the spectral vectors of the
+ anomaly, background, and final mixture, respectively, while fa
+ denotes the abundance fraction of a. 25 targets were randomly
+ embedded in the subimage, with corresponding abundance fa
+ values ranging from 0.04 to 1.
+
+ B. Experimental Settings
+ We selected ten methods for comparison, including GRX
+ [9], CRD [22], FrFE [12], RCRD [23], PCA-TLRSR [58],
+ LEBSR [26], GAED [38], Auto-AD [36], PDBSNet [46], and
+ MSNet [45]. GRX is a method based on probability distribution. CRD, RCRD, and PCA-TLRSR are representation-based
+ methods. FrFE employs frequency-domain transformations
+Fig. 5. Schematic representation of BFFM. to detect anomalies. LEBSR detects anomalies by learning
+ the background end members. GAED, Auto-AD, PDBSNet,
+ and MSNet reconstruct the background in a self-supervised
+NVIDIA 3090 24-GB GPU. The datasets, shown in Fig. 6,
+ manner. For our method, the learning rate is set to 10−4 .
+include their pseudo-color images and corresponding ground
+ Training epochs and the regularization parameters ω were set
+truth (GT) values.
+ to 800, 600, 800, 600, and 1400, 0.1, 0.3, 0.3, 0.1, and 0.1
+ for the Pavia, SD, TC, GA, and Salinas datasets, respectively.
+A. Dataset Description We suggest setting the training epochs within the range of
+ 1) Pavia Dataset [33]: This real dataset was obtained from [600, 1000] to achieve more promising and stable learning
+an airborne sensor called the Reflective Optics System Imaging performance.
+Spectrometer (ROSIS), with a spatial resolution of 1.3 m and To measure the detection performance of different AD
+a wavelength range of 430–860 nm. The image has a size of methods, the receiver operating characteristic (ROC) curve is
+100 × 100 with 102 spectral bands and contains 71 anomalies. widely used for intuitive observation. We use the ROC curves
+ of (P f , Pd ) and (P f , τ) to represent overall detection accuracy
+ 2) San Diego (SD) Dataset [56]: This HSI was captured by
+ and background suppression capability, respectively. P f and
+the Airborne Visible/Infrared Imaging Spectrometer (AVIRIS)
+ Pd are related to τ, and they can be expressed as follows:
+sensor in San Diego, CA, USA, with a spatial resolution
+of 3.5 m and a wavelength range of 370–2510 nm. The T P(τ) FP(τ)
+ P(τ)
+ d = , P(τ)
+ f = (21)
+spatial dimensions are 100 × 100, with 189 spectral bands, Nano Nbkg
+excluding low signal-to-noise ratio (SNR) and absorption
+bands. Referred to as SD, this HSI identifies 58 airport pixels where TP(τ) and FP(τ) denote the number of anomalies and
+as anomalies. background pixels whose detection values are greater than a
+ 3) Texas Coast (TC) Dataset [57]: The two city datasets given threshold τ, and Nano and Nbkg are the total number of
+were captured by the AVIRIS sensor over the coast of Texas in anomalies and background pixels.
+the USA in 2010. Both of these scenes have a spatial resolution
+of 17.2 m and a size of 100 × 100 pixels. The first scene C. Experimental Results and Analysis
+contains 67 anomalous pixels and 204 spectral bands, with 1) Quantitative Comparisons: Table I shows the area
+a wavelength range of 450–1350 nm. Buildings of different under the curve (AUC) values of the ROC curves, where
+scales are considered anomalies. The second scene has 207 AUC(P f , Pd ) indicates detection accuracy, while AUC(P f , τ)
+bands, and all bands were used in each experiment. These measures background suppression capability. From the table, it
+two HSIs are referred to as TC-1 and TC-2. can be seen that our proposed D3 Former method achieves the
+ 4) Gainesville (GA) Dataset [57]: This dataset represents highest score for AUC(P f , Pd ) across six datasets. Regarding
+an urban scene captured by the AVIRIS airborne sensor the AUC(P f , τ) for this method, it scored the lowest on five
+in Gainesville, FL, USA. By removing water-absorbing and datasets, while ranking second on the remaining dataset. Over-
+SNR bands from the original data, 191 bands were retained all, D3 Former achieved the best average scores in AUC(P f , Pd )
+for experimentation. In addition, the dataset has a spatial and AUC(P f , τ) across all six datasets, owing to its effective
+resolution of 3.5 m and a size of 100×100 pixels. This dataset reconstruction of the background and suppression of anomalies
+contains 156 anomalous pixels, accounting for 1.56% of the through the dual-decoder transformer network structure, which
+entire image, which are yet to be explored. in turn augments detection rates and background suppression
+ 5) Salinas Dataset [47]: The synthetic image was derived effectiveness.
+from the AVIRIS sensor and selected a background subimage 2) Visual Comparisons: To visually reflect the detection
+from the Salinas scene. The anomalous target insertion method results, we present the detection outcomes of different AD
+was applied after using a linear mixing model and is written algorithms on six HSI datasets, as shown in Fig. 7. From
+as follows: Fig. 7, it is evident that the RX algorithm misses many anoman = fa a + (1 − fa ) b (20) lous targets across these six datasets while misclassifying a
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+Fig. 6. Pseudo-color image and GT of experimental datasets. (a) Pavia, (b) SD, (c) TC-1, (d) TC-2, (e) GA, and (f) Salinas.
+
+ TABLE I
+ AUC VALUES OF A LL C OMPARED M ETHODS ON D IFFERENT DATASETS
+
+large number of background pixels. This is because RX is detects anomalous targets but also effectively separates anomabased on simple statistical rules, which do not adapt well to lies from the background, significantly improving detection
+the complex statistical distributions of HSI data. Although the accuracy and achieving excellent background suppression.
+CRD and RCRD methods present a relatively complete back- To further qualitatively analyze the detection performance
+ground, this leads to difficulties in distinguishing anomalies of different methods, we present two ROC curves in Fig. 8.
+from the background. FrFE and PCA-TLRSR also produce For better visualization, they are displayed on a logarithmic
+many erroneous anomaly results during detection. While scale. The ROC curves of (P f , Pd ) and (P f , τ) are close to
+LEBSR and Auto-AD are able to detect anomalous targets the upper left and lower left corners, respectively, indicating
+across all datasets, the background is still quite pronounced. that the detector can achieve a high probability of detection
+In contrast, the GAED, PDBSNet, and MSNet methods effec- with low false alarms. From the ROC curve of (P f , Pd ),
+tively detect anomalies, with MSNet performing better in D3 Former shows a higher detection probability across selected
+terms of background suppression. Compared to the other datasets compared to other methods at various false alarm
+methods, the proposed D3 Former method not only successfully rates. Overall, the proposed D3 Former method demonstrates
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Fig. 7. Detection maps of different methods. (a) Pavia, (b) SD, (c) TC-1, (d) TC-2, (e) GA, and (f) Salinas.
+
+Fig. 8. ROC curves of (P f , Pd ) and (P f , τ) for different methods on (a) Pavia, (b) SD, (c) GA, and (d) Salinas datasets.
+
+superior performance on the ROC curve (P f , Pd ) compared separation effects across the datasets. A larger boundary
+to other methods, while its performance on the ROC curve between the background and anomalies indicates that anoma-
+(P f , τ) is lower than that of other methods. This indicates that lous pixels can be more easily detected, suggesting better
+our method can maintain a high detection rate and a low false detection performance of the method. In datasets such as SD
+positive rate across all datasets, thereby exhibiting consistency and TC-1, the anomalies from the RCRD and GAED methods
+in visual detection results, as shown in Fig. 8. significantly overlap with the background, indicating their
+ 3) Separability Analysis: To evaluate the separation capa- weak separation capabilities. A small background box suggests
+bility between the background and anomalies, Fig. 9 presents that the background is more concentrated, demonstrating a
+box plots based on the detection values, revealing the separa- strong background suppression effect. However, RCRD and
+bility of anomalous targets from background pixels, which is PCA-TLRSR exhibit a highly divergent background across
+used to measure detection performance. The red box plot rep- various datasets, showing significant limitations in background
+resents anomalous targets, while the blue box plot represents suppression. In contrast, D3 Former shows almost no overlap
+the background. Overall, different methods exhibit varying between the background and anomalies across the six datasets,
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+Fig. 9. Background-anomaly separability results for different methods on (a) Pavia, (b) SD, (c) TC-1, (d) TC-2, (e) GA, and (f) Salinas datasets.
+
+with the background appearing highly concentrated. These TABLE II
+results demonstrate that the method has significant advantages A BLATION S TUDY OF D UAL -D ECODER W ITH
+in background suppression and anomaly separation. D IFFERENT N OISE C ONDITIONS
+
+D. Validation of Network Structure
+ We first effectively simulate complex scenarios in HAD by
+altering the input images of the BPD in the dual-decoder. In
+addition, we introduce different network variants to conduct
+extensive experiments on classic datasets to validate the effectiveness of our proposed D3 Former.
+ 1) Distinct Inputs for BPD: We input two different images distribution of background, serving as a foundation for the
+into the encoder and BPD. One input is the original image, model to reconstruct the estimated pure background in comwhile the other input is a different noise image. This effectively bination with the structured features. The introduction of
+simulates complex scenarios in HAD and enhances the robust- uniform noise mainly prevents the model from learning
+ness of the model. To demonstrate the effectiveness of the anomalies and preliminarily establishes the background stanoise modeling approach, we introduce three different noise tistical distribution. In contrast, the Gaussian noise follows
+inputs for validation. a specific statistical distribution, which will guide the model
+ 1) w/ Gaussian: In this variant, the input to the encoder to fit Gaussian characteristics and may mistakenly learn
+ remains unchanged, while the input to the lower layer anomalies. Salt-pepper noise introduces extreme pixel-level
+ BPD is transformed into an image of Gaussian noise. values, increasing the risk of false alarms. Meanwhile, the
+ 2) w/ salt-pepper: In this variant, the input to the encoder strong directional structure of striped noise will interfere with
+ remains unchanged, while the input to the BPD is background learning.
+ transformed into an image of salt-and-pepper noise. 2) Dual-Decoder: We employ a dual-decoder structure
+ 3) w/ striped: In this variant, the input to the encoder with different inputs to extract more meaningful supplementary
+ remains unchanged, while the input to the BPD is information, enriching the communication of contextual infortransformed into an image of stripe noise. mation and enabling strong constraints on anomalies during
+ Table II shows the impact of using different noise inputs on background reconstruction. To demonstrate the effectiveness of
+detection accuracy. The results indicate that the use of uniform our dual-decoder, we introduce four different network variants
+noise leads to better detection performance. The uniform noise under mse for validation.
+is evenly distributed without prominent patterns, preventing 1) w/o BPD and ARMAB: Variant 1, we directly remove
+the model from extracting abnormal spatial–spectral features. the entire BPD part, retaining the FF encoder–decoder
+At the same time, it can simulate the uniform statistical components in the network.
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ TABLE III
+ A BLATION S TUDY OF D UAL -D ECODER S TRUCTURE W ITH D IFFERENT N ETWORK M ODULES
+
+ TABLE IV
+ A BLATION E XPERIMENTS ON S IX DATASETS
+
+ 2) w/BFFM: Variant 2, we directly remove the entire BPD
+ portion, retaining the FF encoder–decoder components
+ and BFFM.
+ 3) w/CNN: Variant 3, we modify the BPD structure by
+ adopting a standard convolutional framework, composed of convolutional layers, batch normalization, and
+ LeakyReLU.
+ 4) w/CNN and ARMAB: Variant 4, we retain the use of
+ the CNN framework for BPD and ARMAB.
+
+ Table III presents the results of the ablation study on the
+dual-decoder. When removing the entire lower layer BPD, and
+leaving only the FF encoder and decoder, the AUC(Pd , P f )
+value significantly decreases across the datasets. This suggests
+the dual-decoder structure captures more useful information,
+improving feature reconstruction. Adding BFFM alone has
+little effect on AUC(Pd , P f ), indicating that the role of the
+dual-decoder architecture is to serve as a bridge for introducing
+ Fig. 10. Output map of the reconstruction results on the SD scene. (a) Original
+diverse feature processing for ARMAB and CGTM, enabling HSI, (b) remove the BPD, (c) only use CNN, and (d) ours.
+more refined background recovery. In comparison, using the
+traditional CNN framework for the BPD results in a decrease
+in the AUC(Pd , P f ) values by 1.91%, 1.55%, 1.03%, 1.37%, Fig. 10 shows the background reconstruction results for
+1.43%, and 1.24% on the six datasets. This demonstrates the two variants and our D3 Former on the SD scene across
+that our designed dual-transformer structure in CGTM better four different spectral bands. When the BPD is removed,
+integrates features at different levels and effectively mitigates the generated background image in Fig. 10(b) prominently
+the influence of anomalous targets during background fusion. reconstructs the aircraft as an anomalous target, and the back-
+Furthermore, when adding ARMAB to the CNN framework, a ground appears quite blurry. This emphasizes the importance
+significant improvement in the AUC(Pd , P f ) value is achieved, of our dual-decoder in preserving the spatial correlation of
+further validating that ARMAB can significantly help recover the background. In Fig. 10(c), although using a traditional
+lost edge and texture details. CNN as the BPD shows a trend of suppressing anomalies,
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+the anomalies are still inevitably reconstructed. In contrast, TABLE V
+the CGTM in the dual-decoder, as illustrated in (d), can A BLATION S TUDY OF O UR D 3 F ORMER W ITH D IFFERENT
+clearly eliminate anomalies, ensuring a cleaner anomaly-free C OMBINATIONS OF L OSS F UNCTIONS
+background.
+
+E. Ablation Study
+ 1) Specific Module Ablation: To further illustrate the rationality and effectiveness of the design of each module, we
+use a dual-decoder network that only includes SWTM and
+BFFM as the baseline for D3 Former. The proposed D3 Former
+method mainly includes ARMAB, CGTM, and SYO loss, and
+ TABLE VI
+we analyze the impact of each component for the model.
+ C OMPARED W ITH SSL H AD M ETHODS
+Table IV shows the results of the overall ablation experimental
+results. We observed that using CGTM alone can enhance
+the model’s background representation capability, which led
+to higher AUC(Pd , P f ) values. The introduction of the SYO
+loss function, as a regularization mechanism in the frequency
+domain, can further suppress anomalies. Upon comparison,
+adding ARMAB alone can significantly improve detection
+accuracy for each dataset, indicating that ARMAB is effec- function with the SmoothL1 loss function can yield even better
+tive in suppressing anomalies as well as pure background performance, confirming that the smoothing property of the
+reconstruction. This is because ARMAB can explicitly model SmoothL1 loss function reduces the dominance of anomalous
+the anomaly masking mechanism and promote the model pixels. To further verify the anomaly suppression capability
+to filter out anomalies. The combination of ARMAB and of the frequency-domain loss L f , synergizing it with mse and
+CGTM results in an average AUC(Pd , P f ) value improvement SmoothL1 achieves the best detection performance. To some
+of 2.22%, as CGTM can weaken the local spatial dependencies extent, the introduction of L f loss function and the SYO
+of anomalies through cross-layer attention, making it harder loss function can balance anomaly suppression with texture
+for anomalous features to be retained during multiscale feature preservation, significantly improving the model’s performance.
+fusion. In summary, the core of our method is to combine the
+advantages of these modules through collaborative ensemble
+ F. Relationship With SSL HAD Methods
+optimization. As a result, our D3 Former achieves the highest
+AUC(Pd , P f ) value and the lowest AUC(P f , τ) value. To illustrate the relationship between our method and
+ 2) Different Loss Functions: To investigate the benefits of SSL HAD methods, a comparison of the performance of
+different loss functions, we have compared our SYO with five the recent SSL methods on three datasets is presented, as
+combinations of loss functions. shown in Table VI. Overall, the proposed D3 Former performs the best. By contrast, the NL2Net [43] focuses on
+ 1) w/mse: Combination 1, we optimize HSI1 only using the
+ spatial feature modeling, while our D3 Former introduces a
+ mse loss function.
+ frequency-domain suppression mechanism, which can sup-
+ 2) w/L f : Combination 2, we optimize HSI1 only using the
+ presses anomalies more comprehensively when reconstructing
+ frequency-domain loss function L f .
+ the background. In addition, although both D3 Former and
+ 3) w/mse+mse: Combination 3, we simultaneously con-
+ MSNet [45] adopt a multiscale structure, D3 Former introduces
+ strain both HSI1 and HSI2 using mse loss function.
+ a dual-decoder structure based on a transformer that consid-
+ 4) w/mse+SmoothL1: Combination 4, we simultaneously
+ ers feature diversity, enabling more refined reconstruction of
+ constrain both HSI1 and HSI2 using mse and SmoothL1
+ background features. Compared to other SSL methods such
+ loss functions.
+ as CSSBR [42] and SAP [41], these new frameworks (such
+ 5) w/mse+mse+L f : Combination 5, we simultaneously
+ as transfer learning) can be incorporated into our future work.
+ constrain both HSI1 and HSI2 using mse and L f loss
+ This would further improve the generalization and adaptability
+ functions.
+ of the proposed method, making it better suited for practical
+Table V reports the AUC performance for different combi- engineering applications.
+nations of loss functions. It can be observed that using the
+frequency-domain loss L f alone shows good performance in
+improving the AUC (Pd , P f ) value. This suggests that L f G. Discussion
+can suppress the high-frequency components dominated by To verify the originality and versatility of the proposed
+anomalies, while having a relatively small impact on texture D3 Former, we conduct a comparative analysis using different
+detail suppression. Applying the mse loss function to optimize background priors and applying them to various methods.
+both HSI1 and HSI2 can improve the AUC performance, Although our method borrows the background guidance map
+indicating that it plays a positive role in regulating the sup- G from GAED, it modifies it through an adaptive weighting
+plementary background information. Replacing the mse loss strategy. As shown in Table VII, comparative experiments
+5528215 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ TABLE VII R EFERENCES
+ P ERFORMANCE OF O UR D 3 F ORMER U SING [1] C.-I. Chang, “Effective anomaly space for hyperspectral anomaly
+ D IFFERENT BACKGROUND P RIORS detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no.
+ 5526624.
+ [2] J. Li, X. Wang, H. Zhao, and Y. Zhong, “Learning a cross-modality
+ anomaly detector for remote sensing imagery,” IEEE Trans. Image
+ Process., vol. 33, pp. 6607–6621, 2024.
+ [3] R. Zhao, Z. Yang, X. Meng, and F. Shao, “A novel fully convolutional
+ auto-encoder based on dual clustering and latent feature adversarial
+ consistency for hyperspectral anomaly detection,” Remote Sens., vol. 16,
+ TABLE VIII no. 4, p. 717, Feb. 2024.
+ [4] B. Tu, X. Yang, W. He, J. Li, and A. Plaza, “Hyperspectral anomaly
+ U SE OF BACKGROUND P RIORS IN D IFFERENT H AD M ETHODS detection using reconstruction fusion of quaternion frequency domain
+ analysis,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 6,
+ pp. 8358–8372, Jun. 2024.
+ [5] J. Li et al., “Deep learning in multimodal remote sensing data fusion:
+ A comprehensive review,” Int. J. Appl. Earth Observ. Geoinf., vol. 112,
+ Aug. 2022, Art. no. 102926.
+ [6] C. Li, B. Zhang, D. Hong, X. Jia, A. Plaza, and J. Chanussot, “Learning
+ disentangled priors for hyperspectral anomaly detection: A coupling
+ model-driven and data-driven paradigm,” IEEE Trans. Neural Netw.
+ Learn. Syst., vol. 36, no. 4, pp. 6883–6896, Apr. 2025.
+ [7] L. Wang, X. Wang, A. Vizziello, and P. Gamba, “RSAAE: Residual
+show that even when replacing the background guidance map self-attention-based autoencoder for hyperspectral anomaly detection,”
+ IEEE Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no. 5510614.
+G with some other simple and representative background [8] R. Zhao, B. Du, L. Zhang, and L. Zhang, “A robust background
+guidance maps, such as the classical RX [9] predetection regression based score estimation algorithm for hyperspectral anomaly
+and background weight map M [36], our model’s detection detection,” ISPRS J. Photogramm. Remote Sens., vol. 122, pp. 126–144,
+ Dec. 2016.
+accuracy remains superior, far outperforming most of the [9] I. S. Reed and X. Yu, “Adaptive multiple-band CFAR detection of an
+comparison methods in Table I. This strongly proves that the optical pattern with unknown spectral distribution,” IEEE Trans. Acoust.,
+benefits of our architecture and modules are the cornerstone Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, Oct. 1990.
+ [10] J. M. Molero, E. M. Garzon, I. Garcia, and A. Plaza, “Analysis and
+of performance. optimizations of global and local versions of the RX algorithm for
+ As shown in Table VIII, we applied the background guid- anomaly detection in hyperspectral data,” IEEE J. Sel. Topics Appl.
+ance map G from GAED to different detection frameworks, Earth Observ. Remote Sens., vol. 6, no. 2, pp. 801–814, Apr. 2013.
+ [11] S. Li, K. Zhang, P. Duan, and X. Kang, “Hyperspectral anomaly
+such as the Auto-AD [36] and MSNet [45], and the results detection with kernel isolation forest,” IEEE Trans. Geosci. Remote
+show that the detection accuracy of these detection frameworks Sens., vol. 58, no. 1, pp. 319–329, Jan. 2020.
+did not significantly improve, with only a marginal perfor- [12] R. Tao, X. Zhao, W. Li, H.-C. Li, and Q. Du, “Hyperspectral anomaly
+ detection by fractional Fourier entropy,” IEEE J. Sel. Topics Appl. Earth
+mance enhancement (compared in Table I). In addition, our Observ. Remote Sens., vol. 12, no. 12, pp. 4920–4929, Dec. 2019.
+method’s accuracy consistently exceeds that these detection [13] J. Liu, Z. Hou, W. Li, R. Tao, D. Orlando, and H. Li, “Multipixel
+frameworks equipped with the background guidance map G anomaly detection with unknown patterns for hyperspectral imagery,”
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 10, pp. 5557–5567,
+from GAED, as well as the original GAED. This clearly Oct. 2022.
+demonstrates that G is not the key to the superior performance [14] R. Zhao, B. Du, and L. Zhang, “Hyperspectral anomaly detection via
+of our D3 Former model. Instead, it is the combination of our a sparsity score estimation framework,” IEEE Trans. Geosci. Remote
+ Sens., vol. 55, no. 6, pp. 3208–3222, Jun. 2017.
+original network architecture and modules that achieves the [15] R. Zhao, B. Du, L. Zhang, and L. Zhang, “Beyond background feature
+two key goals in HAD, i.e., pure background reconstruction extraction: An anomaly detection algorithm inspired by slowly varying
+and anomaly suppression. As a result, our method outperforms signal analysis,” IEEE Trans. Geosci. Remote Sens., vol. 54, no. 3,
+ pp. 1757–1774, Mar. 2016.
+existing SOTA approaches in terms of detection performance. [16] Q. Ling, Y. Guo, Z. Lin, and W. An, “A constrained sparse representation model for hyperspectral anomaly detection,” IEEE Trans. Geosci.
+ Remote Sens., vol. 57, no. 4, pp. 2358–2371, Apr. 2019.
+ IV. C ONCLUSION [17] S. Chang and P. Ghamisi, “Nonnegative-constrained joint collaborative representation with union dictionary for hyperspectral anomaly
+ In this article, we propose a novel network called detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no.
+D3 Former for HAD. Differing from previous HAD methods, 5534913.
+ [18] R. Zhao, B. Du, and L. Zhang, “A robust nonlinear hyperspectral
+D3 Former promotes information flow interaction to model anomaly detection approach,” IEEE J. Sel. Topics Appl. Earth Observ.
+the anomaly-free background by introducing a dual-decoder Remote Sens., vol. 7, no. 4, pp. 1227–1234, Apr. 2014.
+and dual-transformer structure. Specifically, we design an [19] G. Liu, Z. Lin, S. Yan, J. Sun, Y. Yu, and Y. Ma, “Robust recovery
+ of subspace structures by low-rank representation,” IEEE Trans. Pattern
+anomaly feature cleaning auxiliary task during the pure back- Anal. Mach. Intell., vol. 35, no. 1, pp. 171–184, Jan. 2013.
+ground decoding phase and leverage CGTM to guide the [20] T. Guo, Y. Yang, L. He, C. Fu, and F. Luo, “Anomaly detection of
+clean reconstruction of the background, further diminishing hyperspectral image by coarse-to-fine tensor two-level decomposition,”
+ IEEE Geosci. Remote Sens. Lett., vol. 22, pp. 1–5, 2025.
+the representation of anomalies. In addition, by synergisti- [21] M. Xu, J. Zhang, S. Liu, and H. Sheng, “Hyperspectral anomaly
+cally optimizing the loss function, we achieve suppression detection based on adaptive background dictionary construction and
+of anomalies in both the spatial–spectral and frequency collaborative representation,” Int. J. Remote Sens., vol. 45, no. 10,
+ pp. 3349–3369, May 2024.
+domains. Extensive experimental results demonstrate that [22] W. Li and Q. Du, “Collaborative representation for hyperspectral
+D3 Former outperforms current state-of-the-art methods on anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3,
+multiple benchmarks. pp. 1463–1474, Mar. 2015.
+GUO et al.: D3 FORMER: DUAL-DECODER DUAL-TRANSFORMER RECONSTRUCTION NETWORK FOR HAD 5528215
+
+[23] Z. Wu et al., “Hyperspectral anomaly detection with relaxed collabora- [42] X. Sun, Y. Zhang, Y. Dong, and B. Du, “Contrastive self-supervised
+ tive representation,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, learning-based background reconstruction for hyperspectral anomaly
+ Art. no. 5533417. detection,” IEEE Trans. Geosci. Remote Sens., vol. 63, 2025, Art. no.
+[24] L. Li, W. Li, Q. Du, and R. Tao, “Low-rank and sparse decomposition 5504312.
+ with mixture of Gaussian for hyperspectral anomaly detection,” IEEE [43] D. Wang, L. Ren, X. Sun, L. Gao, and J. Chanussot, “Nonlocal and
+ Trans. Cybern., vol. 51, no. 9, pp. 4363–4372, Sep. 2021. local feature-coupled self-supervised network for hyperspectral anomaly
+[25] R. Feng, H. Li, L. Wang, Y. Zhong, L. Zhang, and T. Zeng, “Local spatial detection,” IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.,
+ constraint and total variation for hyperspectral anomaly detection,” IEEE vol. 18, pp. 6981–6993, 2025.
+ Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. 5512216. [44] J. Zhang et al., “A light CNN based on residual learning and background
+[26] T. Guo, L. He, F. Luo, X. Gong, L. Zhang, and X. Gao, “Learnable estimation for hyperspectral anomaly detection,” Int. J. Appl. Earth
+ background endmember with subspace representation for hyperspectral Observ. Geoinf., vol. 132, Aug. 2024, Art. no. 104069.
+ anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, [45] H. Liu, X. Su, X. Shen, and X. Zhou, “MSNet: Self-supervised
+ Art. no. 5501513. multiscale network with enhanced separation training for hyperspectral
+[27] X. He, J. Wu, Q. Ling, Z. Li, Z. Lin, and S. Zhou, “Anomaly anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+ detection for hyperspectral imagery via tensor low-rank approximation Art. no. 5520313.
+ with multiple subspace learning,” IEEE Trans. Geosci. Remote Sens., [46] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. J. Plaza,
+ vol. 61, 2023, Art. no. 5509917. “PDBSNet: Pixel-shuffle downsampling blind-spot reconstruction net-
+[28] X. Cheng et al., “Deep feature aggregation network for hyperspectral work for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote
+ anomaly detection,” IEEE Trans. Instrum. Meas., vol. 73, pp. 1–16, Sens., vol. 61, May 2023, Art. no. 5511914.
+ 2024. [47] D. Wang, L. Zhuang, L. Gao, X. Sun, X. Zhao, and A. Plaza, “Sliding
+[29] B. Du, R. Zhao, L. Zhang, and L. Zhang, “A spectral–spatial based local dual-window-inspired reconstruction network for hyperspectral anomaly
+ summation anomaly detection method for hyperspectral images,” Signal detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, Art. no.
+ Process., vol. 124, pp. 115–131, Jul. 2016. 5504115.
+[30] Z. Yang et al., “A multi-scale mask convolution-based blind-spot [48] Z. Wu and B. Wang, “Transformer-based autoencoder framework
+ network for hyperspectral anomaly detection,” Remote Sens., vol. 16, for nonlinear hyperspectral anomaly detection,” IEEE Trans. Geosci.
+ no. 16, p. 3036, Aug. 2024. Remote Sens., vol. 62, 2024, Art. no. 5508015.
+[31] W. Li, G. Wu, and Q. Du, “Transferred deep learning for anomaly [49] J. Lian, L. Wang, H. Sun, and H. Huang, “GT-HAD: Gated transformer
+ detection in hyperspectral imagery,” IEEE Geosci. Remote Sens. Lett., for hyperspectral anomaly detection,” IEEE Trans. Neural Netw. Learn.
+ vol. 14, no. 5, pp. 597–601, May 2017. Syst., vol. 36, no. 2, pp. 3631–3645, Feb. 2025.
+[32] W. Rao, Y. Qu, L. Gao, X. Sun, Y. Wu, and B. Zhang, “Transferable [50] S. Xiao, T. Zhang, Z. Xu, J. Qu, S. Hou, and W. Dong, “Anomaly detecnetwork with Siamese architecture for anomaly detection in hyperspec- tion of hyperspectral images based on transformer with spatial–spectral
+ tral images,” Int. J. Appl. Earth Observ. Geoinf., vol. 106, Feb. 2022, dual-window mask,” IEEE J. Sel. Topics Appl. Earth Observ. Remote
+ Art. no. 102669. Sens., vol. 16, pp. 1414–1426, 2023.
+[33] Z. Wu et al., “Background-guided deformable convolutional autoencoder [51] Z. He, D. He, M. Xiao, A. Lou, and G. Lai, “Convolutional
+ for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote transformer-inspired autoencoder for hyperspectral anomaly
+ Sens., vol. 61, 2023, Art. no. 5531816. detection,” IEEE Geosci. Remote Sens. Lett., vol. 20, pp. 1–5,
+[34] D. Wang, L. Gao, Y. Qu, X. Sun, and W. Liao, “Frequency-to-spectrum 2023.
+ mapping GAN for semisupervised hyperspectral anomaly detection,” [52] Z. Liu et al., “Swin transformer: Hierarchical vision transformer using
+ CAAI Trans. Intell. Technol., vol. 8, no. 4, pp. 1258–1273, Dec. 2023. shifted windows,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+[35] T. Jiang, W. Xie, Y. Li, J. Lei, and Q. Du, “Weakly supervised Oct. 2021, pp. 10012–10022.
+ discriminative learning with spectral constrained generative adversarial [53] Z. Li, Y. Wang, C. Xiao, Q. Ling, Z. Lin, and W. An, “You only
+ network for hyperspectral anomaly detection,” IEEE Trans. Neural Netw. train once: Learning a general anomaly enhancement network with ran-
+ Learn. Syst., vol. 33, no. 11, pp. 6504–6517, Nov. 2022. dom masks for hyperspectral anomaly detection,” IEEE Trans. Geosci.
+[36] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Auto-AD: Autonomous Remote Sens., vol. 61, 2023, Art. no. 5506718.
+ hyperspectral anomaly detection network based on fully convolutional [54] X. Chu, Z. Tian, B. Zhang, X. Wang, and C. Shen, “Conditinal posiautoencoder,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. tional encodings for vision transformers: Hierarchical vision transformer
+ 5503314. using shifted windows,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+[37] G. Fan, Y. Ma, X. Mei, F. Fan, J. Huang, and J. Ma, “Hyperspectral May 2023, pp. 1–19.
+ anomaly detection with robust graph autoencoders,” IEEE Trans. Geosci. [55] L. Jiang, B. Dai, W. Wu, and C. C. Loy, “Focal frequency loss for image
+ Remote Sens., vol. 60, 2022, Art. no. 5511314. reconstruction and synthesis,” in Proc. IEEE/CVF Int. Conf. Comput. Vis.
+[38] P. Xiang, S. Ali, S. K. Jung, and H. Zhou, “Hyperspectral anomaly (ICCV), Oct. 2021, pp. 13919–13929.
+ detection with guided autoencoder,” IEEE Trans. Geosci. Remote Sens., [56] X. Yang, B. Tu, Q. Li, J. Li, and A. Plaza, “Graph evolutionvol. 60, 2022, Art. no. 5538818. based vertex extraction for hyperspectral anomaly detection,” IEEE
+[39] Z. Wu et al., “SMCNet: Sparse-inspired masked convolutional network Trans. Neural Netw. Learn. Syst., vol. 35, no. 12, pp. 17372–17386,
+ for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Dec. 2024.
+ Sens., vol. 62, 2024, Art. no. 5535317. [57] X. Kang, X. Zhang, S. Li, K. Li, J. Li, and J. A. Benedik-
+[40] Z. Wu, H. Lu, M. E. Paoletti, H. Su, W. Jing, and J. M. Haut, tsson, “Hyperspectral anomaly detection with attribute and edge-
+ “KACNet: Kolmogorov-Arnold convolution network for hyperspectral preserving filters,” IEEE Trans. Geosci. Remote Sens., vol. 55, no. 10,
+ anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 63, 2025, pp. 5600–5611, Oct. 2017.
+ Art. no. 5506514. [58] M. Wang, Q. Wang, D. Hong, S. K. Roy, and J. Chanus-
+[41] Y. Liu, K. Jiang, W. Xie, J. Zhang, Y. Li, and L. Fang, “Hyperspectral sot, “Learning tensor low-rank representation for hyperspectral
+ anomaly detection with self-supervised anomaly prior,” Neural Netw., anomaly detection,” IEEE Trans. Cybern., vol. 53, no. 1, pp. 679–691,
+ vol. 187, Jul. 2025, Art. no. 107294. Jan. 2023.

@@ -1,0 +1,1417 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [406] Dual Spatio-Temporal Contrastive Learning Network With Adaptive Threshold Generation for Anomaly Detection of Electric Submersible Pump
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：406
+题名：Dual Spatio-Temporal Contrastive Learning Network With Adaptive Threshold Generation for Anomaly Detection of Electric Submersible Pump
+年份：2025
+DOI：10.1109/tim.2025.3587359
+来源：IEEE Transactions on Instrumentation and Measurement
+PDF：paper/10.1109_TIM.2025.3587359.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：入侵检测与网络异常检测、时序、日志、KPI 与云原生异常检测
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\406.txt
+- 原始字符数：65538
+- 本次发送字符数：65538
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+3548914
+
+Dual Spatio-Temporal Contrastive Learning
+Network With Adaptive Threshold Generation for
+Anomaly Detection of Electric Submersible Pump
+Kang Li , Member, IEEE, Shuang Li , Qiang Li , Zhikuan Jiao , Jun Fu , Xiaoyong Gao ,
+and Laibin Zhang
+Abstract—To improve the electric submersible pump (ESP)
+system’s anomaly monitoring performance, this article proposes
+a novel approach known as the dual spatio-temporal contrastive
+learning network with adaptive threshold generation (DSTCLATG). Unlike previous ESP process modeling methods, this
+study comprehensively considers the spatio-temporal coupling
+characteristics of ESP data and incorporates Crossformer into
+the dual-path contrastive learning (DCL) architecture to provide
+superior normal ESP process modeling. Furthermore, we design
+an ATG approach based on a random forest regressor that is
+aimed at successfully mitigating frequent false alarms resulting
+from fluctuations in ESP status. The algorithm is evaluated
+using data from four faulty wells in real oilfield scenarios,
+demonstrating its effectiveness and superiority through extensive
+comparative experiments against state-of-the-art methodologies.
+Index Terms—Anomaly detection, contrastive learning, electric
+submersible pump (ESP), process modeling, spatio-temporal
+feature extraction.
+
+I. I NTRODUCTION
+
+I
+
+N RECENT years, there has been a notable shift toward
+artificial lifting as the primary method for oil production.
+This transition is attributed to the depletion of easily accessible reservoirs and the deterioration of oil well conditions
+Received 12 April 2025; revised 12 June 2025; accepted 30 June 2025.
+Date of publication 10 July 2025; date of current version 18 July 2025.
+This work was supported in part by the State Key Program of National
+Natural Science Foundation of China under Grant 52234007; in part by
+China Postdoctoral Science Foundation under Grant GZB20230861; in part
+by the Science Foundation of China University of Petroleum, Beijing,
+under Grant 2462023YJRC036 and Grant 2462020BJRC004; in part by the
+National Natural Science Foundation of China under Grant 22178383 and
+Grant 21706282; and in part by Beijing Natural Science Foundation under
+Grant 2232021. The Associate Editor coordinating the review process was
+Dr. Marco Pau. (Corresponding author: Kang Li.)
+Kang Li is with the Department of Automation, China University of
+Petroleum, Beijing 102249, China, and also with the Key Laboratory of
+Oil and Gas Safety and Emergency Technology, Ministry of Emergency
+Management, Beijing 102249, China (e-mail: likangone@gmail.com).
+Shuang Li, Qiang Li, Zhikuan Jiao, and Xiaoyong Gao are with
+the Department of Automation, China University of Petroleum, Beijing
+102249, China (e-mail: lishuang000215@163.com; liqiang.cup@gmail.com;
+cupb.jiaozhikuan@gmail.com; x.gao@cup.edu.cn).
+Jun Fu is with the Engineering Technology Branch, CNOOC
+Energy Development Company Ltd., Tianjin 300452, China (e-mail:
+fujun8@cnooc.com.cn).
+Laibin Zhang is with the College of Safety and Ocean Engineering,
+China University of Petroleum, Beijing 102249, China, and also with
+the Key Laboratory of Oil and Gas Safety and Emergency Technology, Ministry of Emergency Management, Beijing 102249, China (e-mail:
+zhanglb@cup.edu.cn).
+Digital Object Identifier 10.1109/TIM.2025.3587359
+
+[1]. As an important artificial lifting equipment, the electric
+submersible pump (ESP) is extensively employed in various
+well types, including deep wells, directional wells, and those
+containing water, due to its strong lifting capacity, large
+displacement, and high lift [2]. However, ensuring the safe
+and reliable operation of ESPs poses significant challenges.
+These challenges stem from their intricate design, complex
+coupling mechanisms, and continuous operation in harsh oil
+well environments characterized by high temperatures, pressures, impurities, and corrosion. Like most industrial systems
+[3], [4], the failure of an ESP could trigger a cascade of
+events leading to prolonged shutdowns, resulting in substantial
+economic losses and potentially catastrophic outcomes [5].
+Therefore, it is essential to swiftly detect any irregularities
+in ESP operation to maintain the safety and reliability of the
+oil recovery process. This necessitates the implementation of
+effective monitoring strategies to mitigate risks and ensure the
+uninterrupted operation of ESPs in oil production [6].
+The initial focus of many studies has been on two key
+areas: current card detection [7], [8] and wellhead pressureholding diagnosis [9], [10]. The current card detection method
+involves assessing the fluctuation trend of the ESP’s current, typically relying on the subjective judgment of field
+engineers. While this method is straightforward and userfriendly, achieving accurate detection is often challenging due
+to its subjective assessment criteria [11]. On the other hand,
+the wellhead pressure-holding diagnosis approach involves
+increasing pipeline pressure by closing the production valve
+and then observing pressure changes to identify faults. However, this method is associated with prolonged downtime
+between stopping and resuming the pump, significantly disrupting regular production operations [12]. Both methods
+suffer from limitations, as they rely solely on a single variable
+(such as current or pressure) for ESP abnormality detection. This reliance may lead to low diagnostic accuracy and
+efficiency, hampering the effectiveness of anomaly detection
+efforts [13].
+With the rapid development of sensing technologies and
+the vast accumulation of big data, modern approaches such
+as multivariate statistical analysis and machine learning have
+emerged as powerful tools for ESP abnormality detection [6],
+[14], [15]. For instance, classic machine learning algorithms,
+such as support vector machine (SVM), K-nearest neighbor
+(KNN), neural networks (NNs), and classification and regres-
+
+1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+sion trees (CART), have been utilized to detect ESP anomalies.
+Despite their encouraging outcomes, these methods primarily
+concentrate on capturing the multivariate and nonlinear aspects
+of ESP data, ignoring its dynamics. Besides, they often require
+pre-labeling of the data, which may limit their applicability in
+real-world scenarios.
+In practice, a significant portion of the recorded ESP data
+lacks labels, which has led to growing interest in unsupervised
+detection methods [16], [17], [18], [19]. In [16], principal
+component analysis (PCA) is utilized to identify anomalies
+related to ESP broken shafts. In [17], a method combining
+PCA with individual X and moving range (XmR) is developed
+for ESP anomaly detection. In [18], an autoencoder (AE) is
+employed to detect ESP anomalies. Despite the success of
+these methods, they tend to overlook the temporal dependencies among monitoring variables. Recently, a novel approach
+known as dynamic kernel PCA with local preservation projection (LDKPCA) has been introduced for the detection of
+shaft breakage [19]. This method integrates dynamic analysis
+to effectively capture temporal correlations among variables.
+Nevertheless, LDKPCA does not serve as an enhancement to
+NNs and is unable to leverage the powerful feature extraction
+capabilities inherent in NNs.
+Although a lot of research has been done on NN-based
+dynamic modeling, such as recurrent NNs (RNNs) [20],
+gated recurrent unit (GRU) networks [21], long short-term
+memory (LSTM) networks [22], these methods still struggle
+to learn long-term dependency among variables. Notably,
+our team developed a temporal attention network (TAN)
+based on an LSTM-AE architecture, which has demonstrated
+that NN-based dynamic modeling can be effectively applied
+to ESP anomaly detection [23]. Nevertheless, the fundamental limitation in capturing complex long-term variable
+correlations persists across these methodologies. Fortunately,
+Transformer introduces a multihead attention and residual
+learning mechanism to improve the long-term dependency
+modeling performance [24]. However, Transformer and most
+of its variants focus more on relationship learning in the
+temporal dimensions while ignoring explicit correlation modeling in the spatial (variable) dimensions [25]. In fact,
+along with the correlation between variables that share the
+same physical characteristics, the ESP system also finds a
+link between neighboring variables with different properties
+in space. More recently, Crossformer [26] has been proposed and demonstrated to be capable of explicitly modeling
+spatio-temporal dependency; however, it adopts the classical
+supervised learning paradigm, which is difficult to be directly
+used in the unsupervised normal process modeling of ESP
+anomaly detection task. In the past few years, contrastive
+learning [27] has achieved sufficient performance in dealing
+with unsupervised problems due to its outstanding contrastive
+optimization strategy, which has also been successfully applied
+in anomaly detection [28], [29]. Nevertheless, these generic
+techniques fail to account for the spatio-temporal interaction of ESP variables. To our knowledge, there are rarely
+published reports of unsupervised modeling of ESP systems
+with spatio-temporal interaction of variables using contrastive
+learning. Therefore, conducting a fusion study of the aforementioned cutting-edge techniques to enhance ESP anomaly
+monitoring performance is a highly significant attempt and
+investigation.
+Furthermore, fixed thresholds (FT) are frequently used in
+traditional methods to identify anomalies. However, the FT
+is not appropriate for ESP abnormal detection tasks since
+ESP has been operating in complex well conditions for a
+considerable amount of time, and the data is severely contaminated by erratic disturbance, which would result in a lot
+of false alarms and significantly impede the production schedule. Recent research has presented several adaptive threshold
+generation (ATG) approaches to address this problem [23],
+[30], [31]. In [30], adaptive thresholds are constructed by
+combining an empirical constant with support vector regression (SVR). The empirical constant and kernel function
+employed in SVR, however, have a significant impact on its
+efficiency. In [31], the optimal relevance vector machine’s
+(RVM) probabilistic output is used to construct adaptive
+thresholds, which enable the wind turbine pitch system’s
+status monitoring to function well. Due to the probabilistic
+output’s reliance on the normal distribution assumption, which
+ESP might not meet, the application of this method for ESP
+anomaly identification is regrettably restricted. More recently,
+an XGBoost-regressor-based adaptive threshold adjustment
+(ATA) mechanism has been developed for ESP anomaly detection [23]. However, it is important to note that the XGBoost
+regressor is fundamentally a boosting algorithm, which tends
+to be more sensitive to noise and prone to overfitting. Additionally, it encompasses a complex hyperparameter system
+that necessitates meticulous tuning to achieve optimal performance. Thus, how to design an ATG method that minimizes
+sensitivity to noise while facilitating easier hyperparameter
+adjustments becomes a key challenge for ESP abnormality
+detection.
+In this article, we present a novel approach for ESP anomaly
+detection, called dual spatio-temporal contrastive learning network with ATG (DSTCL-ATG), to address the aforementioned
+issues. The main contributions of this article are summarized
+below.
+1) An integrated algorithm named DSTCL network is
+developed, which can effectively accomplish ESP normal process modeling with an excellent performance
+by introducing Crossformer’s encoder-based spatiotemporal feature extraction into dual-path contrastive
+learning (DCL) architecture.
+2) A new random-forest-regressor-based ATG method is
+investigated and used to improve frequent false alarms
+caused by erratic disturbance in the ESP system.
+3) Practical data collected from four different ESP wells in
+a real oilfield site is used to evaluate the effectiveness
+and superiority of the proposed method. The experimental results demonstrate that the proposed method
+outperforms other state-of-the-art methodologies.
+The rest of this article is structured as follows. The ESP
+system is briefly introduced in Section II. Section III elaborates
+on the proposed method. In Section IV, the effectiveness of
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+3548914
+
+III. M ETHODOLOGY
+A. Overview of the Proposed Method
+To improve ESP anomaly detection performance, it is
+necessary to consider the characteristics of multiple variables,
+nonlinearity, long-term dynamics, and uncertain disturbances
+of the ESP system. In this section, we develop a contrastive
+learning-based technique for ESP anomaly detection. The
+proposed DSTCL-ATG approach consists of two modules:
+DSTCL and ATG, as illustrated in Fig. 2. To fully account
+for the multivariate, nonlinear, and long-term dependency
+characteristics of ESP data and achieve efficient unsupervised
+modeling of ESP normal operating conditions, the DSTCL
+module builds on a dual-branch contrastive learning architecture and introduces an encoder network of Crossformer to
+extract ESP data’s spatio-temporal coupling features. Furthermore, instead of the more usual FT, the ATG module generates
+adaptive thresholds using a random forest regressor to detect
+whether ESP operating conditions are abnormal. This might
+reduce frequent false alarms caused by uncertain disturbances.
+The joint use of two modules is intended to enhance ESP
+anomaly detection capability.
+Fig. 1. Schematic representation of an ESP system [2].
+
+B. Dual Spatio-Temporal Contrastive Learning
+the proposed method is validated. Finally, the conclusion is
+given in Section V.
+II. B RIEF I NTRODUCTION OF ESP S YSTEM
+The ESP system is made up of two sections, the surface
+zone and the downhole zone, as seen in Fig. 1 [2]. Electric
+drives and pump control components, such as the power
+supply, control circuit, and pump discharge valve, are the
+primary components of the ESP system’s surface zone. These
+components sense variations in flow, frequency, current, and
+voltage. The production monitoring device, motor, oil and gas
+separator, pump, and motor protector are all part of the ESP
+system’s downhole zone. The motor is the central component
+of the system, serving as its power source. The motor protector
+keeps the motor separate from the fluid in the well. Crude oil
+enters the oil and gas separator through the pump input during
+the oil production process to accomplish gas-liquid separation.
+The separated gas enters the annulus when the oil is pumped
+to the surface zone.
+ESP system operational status can be monitored with the
+help of the downhole production monitoring system, which
+currently has the ability to gather real-time process data,
+such as pressure, temperature, vibration, pump inlet, and
+outlet pressure differential. However, nonlinear responses in
+pump performance may result from changes in fluid viscosity,
+density, and gas-to-liquid ratio [32]. Additionally, long-term
+dynamic behavior is observed as the system responds to
+changes in fluid composition, reservoir pressure, temperature,
+operating conditions, and external factors [33]. Uncertain
+disturbances can also cause non-stationary fluctuations in
+normal operating conditions. The multivariate monitoring data
+naturally exhibits these complex features, which make ESP
+anomaly detection extremely difficult.
+
+Most contrastive learning methods concentrate on acquiring feature representations by distinguishing between pairs
+of samples [34]. This characteristic renders them particularly well-suited for downstream tasks such as time-series
+classification [35]. However, the normal process modeling
+for ESP anomaly detection is fundamentally characterized
+as time-series forecasting. The primary objective here is to
+predict future operating conditions based on historical time
+windows rather than merely differentiating between instances.
+Therefore, the features learned through instance discrimination may be inadequate for achieving accurate forecasting.
+Recently, SimTS, a simple representation learning framework
+for time-series forecasting, has been proposed [36]. This
+framework employs a convolutional encoder-based DCL architecture to learn representations and performs exceptionally
+well in time-series prediction. However, beyond temporal
+correlations, variables with the same physical characteristics
+and spatially adjacent variables with distinct characteristics
+are also associated. This indicates that ESP data exhibits a
+complex spatio-temporal coupling. When applying the SimTS
+approach to describe ESP normal processes, the ESP data’s
+peculiarities are not adequately considered. Fortunately, Crossformer utilizes a dual-layer attention mechanism to effectively
+capture spatio-temporal coupling within time-series data [26].
+Consequently, we create a DSTCL module that incorporates
+the Crossformer encoder network into the DCL architecture to
+better capture spatio-temporal correlations in ESP data.
+The developed DSTCL module comprises two branches:
+one dedicated to future forecasting and the other focused
+on future encoding. The future forecasting branch aims to
+map historical ESP time-series segments into predicted future
+representations, whereas the future encoding branch serves to
+encode forthcoming time-series segments to retrieve the actual
+future representation. Unsupervised ESP process modeling can
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 2. Framework of the proposed DSTCL-ATG method.
+
+be accomplished well by minimizing the residuals between
+two distinct future representations. This lays the groundwork
+for identifying ESP anomalies based on residual-adaptive
+threshold disparities.
+To be more specific, given a raw ESP time-series data x =
+[x1 , x2 , . . . , xT ] ∈ RC×T , where C represents the number of
+variables and T denotes the length of the time series. The
+ESP data x can be partitioned into two components: historical
+segments xh = [x1 , x2 , . . . , x M ] ∈ RC×M and future segments
+x f = [x M+1 , x M+2 , . . . , xT ] ∈ RC×(T −M) , with 0 < M < T . In
+the future forecasting branch, the historical segment xh will be
+fed into an encoder network Gφ to learn the historical latent
+spatio-temporal feature representations Zh,st ∈ RC×M
+
+Zh,st = Gφ xh
+(1)
+where φ are the learnable parameters of the encoder network
+Gφ .
+In practice, the core architecture of Crossformer is employed
+here as the encoder network Gφ . The operation details are
+presented as follows. xh is first divided into L subsequences,
+represented as xh ∈ RC×L×(M/L) . Then, a multilayer perceptron
+(MLP) network is used to map them into the embedding
+sequences Xh ∈ RC×L×T d
+
+Xh = MLP xh
+(2)
+where Td represents the dimension of the embedded sequences
+along the timeline. However, the above embedding sequences
+do not mark the sequential order relation of the subsequences;
+therefore, positional embedding Eh ∈ RC×L×T d is added to X h
+to generate the tokenized embedding sequences Zh ∈ RC×L×T d
+Zh = Xh + Eh .
+
+(3)
+
+To facilitate subsequent operations, the first two dimensions
+of Zh are swapped. Zh will be rewritten as Zh ∈ RL×C×T d ,
+which will serve as the input of cross-time and cross-variable
+attention layers in the encoder network of Crossformer. More
+detailed, we define Zhl,: as the vectors of all variables at the lth
+subsequence, and Zh:,c for those of all subsequences in variable
+
+c. Each variable will be fed into the multihead self-attention
+(MSA) [24] layer with Hd heads in the cross-time stage
+
+˚
+h,time
+(4)
+Ẑ:,c = LN Zh:,c + MSAtime Zh:,c , Zh:,c , Zh:,c
+n h,time
+ h,time o
+h,time
+Z
+= LN Ẑ
++ MLP Ẑ
+(5)
+where 1 ≤ c ≤ C and LN indicate layer normalization [37].
+The MSA layer is denoted by MSA(Q, K, V), where Q, K,
+and V represent queries, keys, and values. Every variable has a
+single MSA layer. Both the MSA and MLP outputs are shown
+h,time
+by Ẑ
+and Zh,time .
+Following this step, Zh,time records the dependencies
+between time-series segments in the same variable. The
+cross-variable stage then uses Zh,time as its input to capture cross-variable dependency. In particular, several learnable
+routers initially aggregate messages from all variables utilizing
+routers as queries in MSA and all-variable vectors as keys
+and values. After that, the received messages are distributed
+among variables by routers using variable vectors as queries
+and aggregated messages as keys and values. By doing so, the
+all-to-all interactions among C variables are built
+
+
+h,time
+h,time
+h
+Bhl,: = MSAvar
+R
+,
+Z
+,
+Z
+, 1 ≤ l ≤ L (6)
+1
+l,:
+l,:
+l,:
+
+
+h,var
+Zl,: = MSAvar
+Zh,time
+, Bhl,: , Bhl,: , 1 ≤ l ≤ L
+(7)
+2
+l,:
+
+
+h,var
+h,st
+Ẑ = LN Zh,time + Z
+(8)
+ h,st
+ h,st 
+Zh,st = LN Ẑ + MLP Ẑ
+(9)
+where Rh ∈ RL×cons×T d (cons  C is a small constant) is the
+trainable router matrix that dynamically learns to aggregate
+cross-variable information. During the cross-variable attention stage, this matrix first collects global features from all
+variables, as shown in (6), then redistributes them through
+attention weights, as shown in (7). Bh ∈ RL×cons×T d represents
+h,var
+the aggregated messages from all variables. Z
+represents
+h,st
+the router’s output. Ẑ and Zh,st signify the output of residual
+connection and MLP, respectively.
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+By repeating the above cross-time and cross-variable stages
+α times, executing necessary dimension swapping, and reasonably selecting MLP parameters, the spatio-temporal feature
+representation of the historical segments Zh,st ∈ RC×M can be
+obtained. After that, a predicted MLP network Fθ is applied
+f
+to Zh,st to predict the future representation Ẑ ∈ RC×(T −M)
+
+f
+Ẑ = Fθ Zh,st
+(10)
+where θ denotes the learnable parameters of the MLP network
+Fθ .
+Similarly, in the future encoding branch, the future segments
+x f are directly encoded by the encoder network of Crossformer
+Gφ to generate the actual future representation Z f ∈ RC×(T −M)
+
+Z f = Gφ x f .
+(11)
+Note that to guarantee that the dimension is appropriate, M is
+set to 1/2T in our setup.
+f
+After obtaining the predicted future representation Ẑ and
+f
+the actual future representation Z , cosine distance dcos is
+employed to evaluate the similarity between these two representations. Based on this metric, a loss function L is
+formulated to facilitate the ESP spatio-temporal feature representation learning
+ f
+
+L (φ, θ) = −dcos Ẑ , Z f
+T
+X
+1
+=−
+T−M
+
+m=M+1
+
+f
+
+f
+Ẑc,m · Zc,m
+f
+
+Ẑc,m
+
+f
+Zc,m
+
+(12)
+
+f
+
+f
+denote the predicted future representation
+where Ẑc,m and Zc,m
+and the actual future representation of the mth time instant in
+the c spatial dimension, respectively. The notation k·k signifies
+the L2 norm.
+Considering that the same encoder network is employed
+in the real optimization process, model optimization may
+inadvertently steer the actual future representation Z f toward
+f
+the predicted future representation Ẑ , which is undesirable.
+To mitigate this issue, a stop-gradient approach [38] is implemented in the future encoding branch. This strategy ensures
+that the encoder network does not receive updates from the
+actual future representation but only anticipates features based
+on historical data.
+After training the DSTCL module, the historical latent
+spatio-temporal feature representations of ESP Zh,st will be
+obtained. An MLP network-based single-point predictor Fγ
+will be designed, where the feature representation following
+the encoded history segment Zh,st is utilized to predict the
+ESP’s single-point operational state after this history segment
+x̂ M+1 :
+
+x̂ M+1 = Fγ Zh,st
+(13)
+
+where γ denotes the learnable parameters of the predictor Fγ .
+Finally, the mean square error (mse) between the predicted
+single-point operating state x̂m and its actual operating state
+xm serves as the loss function for optimizing the single-point
+predictor
+T
+X
+1
+L (γ) = −
+k x̂m − xm k22 .
+T−M
+m=M+1
+
+(14)
+
+3548914
+
+When the model parameters have been learned, the predictor
+output x̂m w.r.t. m ∈ {M + 1, M + 2, . . . , T } can be estimated
+based on the past M observational data.
+Remark 1: Notably, the primary contribution of DSTCL lies
+in the integration of the encoder network from Crossformer
+into a DCL architecture. This approach facilitates the capture
+of spatio-temporal dependencies inherent in ESP data and
+allows for the modeling of normal ESP processes within
+an unsupervised contrastive learning paradigm, which might
+be conducive to ESP anomaly detection. In addition, two
+key distinctions exist between DSTCL and the previously
+developed TAN framework [23]. First, while TAN solely
+employs the attention mechanism along the temporal dimension, DSTCL utilizes Crossformer to implement dual attention
+mechanisms across both temporal and variable dimensions.
+Second, whereas TAN adopts an AE reconstruction architecture, DSTCL combines unsupervised contrastive learning with
+a single-point prediction architecture. This integrated approach
+enables more effective acquisition of invariant features in
+ESP processes, thereby achieving superior process modeling
+performance.
+
+C. Adaptive Threshold Generation
+The proposed DSTCL module can be used to model the
+complex ESP process, but it inevitably learns some uncertain
+disturbances in the modeling process, which will affect the
+model’s output. In this case, using residuals exceeding the
+predetermined threshold for alarms will result in many false
+alarms, as the threshold cannot adaptively change in the case
+of uncertain interference, causing significant fluctuations in the
+state of the ESP. In addition, setting the threshold too high can
+easily miss anomalies, which is very dangerous. Therefore, it
+is crucial to create an ATG method to counteract the negative
+effects of interference and improve the ESP anomaly detection
+performance.
+In general, the threshold is determined by taking the
+maximum residual value from the validation set as a fixed
+reference point. During the testing phase with sample inputs,
+it is anticipated that the model will be capable of distinguishing anomalies by employing varying thresholds tailored
+to different inputs. This necessitates that the model generate
+distinct residuals based on these diverse inputs in real time. An
+intuitive approach to achieving this goal involves establishing a
+regressor mapping between the inputs and their corresponding
+residuals. In our ATG module, we utilize a random forest
+regressor to build this relationship and train the residual
+generator using data from the validation set.
+Specifically, the residual rcval between the predicted state for
+val
+each spatial feature dimension within the validation set x̂c,m
+val
+and its corresponding ground truth xc,m is first calculated by
+ˇ val
+ˇ
+val ˇ
+rcval = ˇ x̂c,m
+− xc,m
+
+(15)
+
+val
+val
+where x̂c,m
+, xc,m
+, and rcval have been appended with the “val”
+superscripts to clarify that the computations are derived from
+the validation set. To address the scale discrepancies of
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+residuals across various spatial features, a robust normalization
+technique [39] is employed
+r̃cval =
+
+rcval − pval
+c
+qval
+c
+
+(16)
+
+val
+where pval
+c and qc are the median and inter-quartile range of
+val
+rc , respectively.
+Then, the maximum value of r̃cval across all spatial feature
+dimensions is computed
+
+rval = max r̃cval .
+c
+
+(17)
+
+To enhance the robustness of the normalized residual against
+disturbances under normal conditions, a simple moving average (SMA) approach [40] is used to generate the smoothed
+residual rval
+s
+
+val
+.
+(18)
+rval
+s = SMA r
+Ultimately, the random forest regressor Fψ is trained to create
+mappings from xh,val to rval
+s
+
+h,val
+(19)
+rval
+s = Fψ x
+C×M
+where xh,val = [x1val , x2val , . . . , xval
+represents the
+M] ∈ R
+historical segments in the validation set that serve as input
+to Fψ , rval
+denotes the smoothed residual in the validation
+s
+set that serves as output to Fψ , and ψ refers to the model
+parameters. The number of decision trees in random forest nt
+and the depth of the decision tree dt are selected according to
+the performance of anomaly detection. The optimally trained
+random forest regressor Fψ∗ will be derived by minimizing the
+mse between the predicted outputs and the ground truth, which
+will subsequently be employed to generate adaptive thresholds
+during the online detection phase.
+Remark 2: It should be noted that, in contrast to
+the XGBoost regressor-based ATA mechanism [23], which
+sequentially builds learners with increasing focus on previously misclassified (potentially noisy) samples, the proposed
+random forest regressor-based ATG module employs a bagging
+strategy that trains multiple decision trees independently on
+bootstrap samples. This ensemble approach inherently reduces
+variance by averaging predictions across diverse learners,
+thereby mitigating the influence of outliers and noisy data.
+Furthermore, the feature randomness introduced at each split
+decorrelates the trees, enhancing the model’s robustness to
+noise. These theoretical characteristics collectively make random forest a more noise-tolerant choice for adaptive threshold
+estimation in ESP anomaly detection. In addition, it requires
+adjustment of only a few key parameters (e.g., number of decision trees and maximum depth), while demonstrating smoother
+performance variation across hyperparameter configurations.
+This characteristic may significantly enhance ESP’s anomaly
+detection capabilities.
+
+D. DSTCL-ATG-Based ESP Anomaly Detection
+The flowchart for ESP anomaly detection, based on the
+DSTCL-ATG methodology, is presented in Fig. 3. As indicated
+by the red and blue dotted boxes, the proposed monitoring
+framework is organized into two distinct phases: offline training and online detection.
+
+Fig. 3. Flowchart of DSTCL-ATG-based ESP anomaly detection.
+
+In the offline training phase, the training data xtrain is initially
+input into the designed DSTCL module to learn the optimal
+model parameters θ∗ , φ∗ and γ∗ . Subsequently, historical
+segments of validation data xh,val are processed through the
+well-trained DSTCL module to obtain the predicted states x̂val .
+Following this, the smoothed residuals rval
+s will be computed
+using (15)–(18). Finally, sample pairs constructed from xh,val
+and rval
+s will be utilized to train the random forest regressorbased ATG module until the optimal parameters ψ∗ are
+achieved.
+In the online detection stage, historical segments of test
+data xh,test are first fed into the trained DSTCL module to
+obtain the predicted state x̂test . Then, the smoothed residual
+rtest
+is computed using (15)–(18) in the test set. Afterward,
+s
+the adaptive threshold Jth is generated according to (19), and
+the empirical statistical principle that nearly 99.73% of data in
+a Gaussian distribution lies within the µ±3σ range. Motivated
+by this, we incorporate a 3σval margin to enhance disturbance
+mitigation capability
+
+(20)
+Jth = Fψ∗ xh,test + 3σval
+where σval represents the standard deviation of the residual of
+the validation set.
+Finally, we will assess whether the ESP process exhibits
+any abnormalities in accordance with the following criteria:
+(
+rtest
+=⇒ abnormality
+s > Jth
+(21)
+≤
+J
+=⇒
+normality.
+rtest
+th
+s
+When an abnormal ESP operating condition is effectively
+monitored, the operator can implement appropriate measures
+to avoid potential losses. Detailed processes are summarized
+in Algorithms 1 and 2.
+IV. E XPERIMENTS
+A. Data Description
+To assess the effectiveness of the proposed method, we
+collect ESP operational data from four distinct anomalous
+wells belonging to a real production company. These wells are
+designated as #B20H3, #B09ST1, #B18ST1, and #A03ST3,
+which correspond to specific faults: emulsification, electrical
+failure, plugging, and shaft breakage, respectively. Table I
+summarizes the specific time when the exception occurred,
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+3548914
+
+TABLE I
+E XPERIMENTAL DATA D ESCRIPTION
+
+Algorithm 1 Learning Algorithm of DSTCL-ATG
+Input:
+A mini-batch Dtrain = {xtrain
+}i∈[1:N] with N time-series
+i
+samples;
+Initial model parameters φ, θ, γ, and ψ
+Output: φ∗ , θ∗ , γ∗ , and ψ∗
+# DSTCL model training
+1: for number of training iterations do
+2:
+for number of batch sizes do
+3:
+for xtrain in Dtrain do
+4:
+xh ,x f = xtrain [:, : M, :],xtrain [:, M + 1 :, :]
+5:
+Calculate Zh,st and Z f by (1) and (11)
+f
+6:
+Obtain Ẑ by (10) and stop gradient
+7:
+Compute L(φ, θ) by (12)
+8:
+end for
+9:
+end for
+10:
+Update parameters φ and θ
+11: end for
+12: Obtain the trained parameters φ∗ and θ∗
+13: Train single-point predictor F γ by (13)–(14) and obtain
+the trained parameters γ∗
+# ATG model training
+14: Calculate validation set’s residual rval
+s by (15)–(18)
+15: Learn the random forest regressor F ψ by (19)
+16: Obtain the trained parameters ψ∗
+17: return φ∗ , θ∗ , γ∗ , and ψ∗
+Algorithm 2 Anomaly Detection Based on DSTCL-ATG
+Input:
+Testing data xh,test
+Trained parameters φ∗ , θ∗ , γ∗ , and ψ∗
+Output: Detection results
+1: Calculate test set’s residual rtest
+by (15)–(18)
+s
+2: Generate adaptive threshold Jth by (20)
+3: Obtain detection results by (21);
+4: return detection results
+
+the data sampling time, the monitoring number of variables
+contained in each piece of data, etc. More details of the monitoring variables are illustrated in Table II, where variables 1-7
+correspond to the production attributes of the oil well, whereas
+variables 8-15 pertain to the operational characteristics of the
+equipment. It is noteworthy that in all datasets used in our
+research, there is no overlap between the training and test
+sets. To enhance the model’s detection effectiveness and data
+quality, raw data is scaled using the standard normalization
+criterion.
+
+TABLE II
+M ONITORING VARIABLE D ESCRIPTION
+
+B. Experimental Setup
+1) Baseline Methods: In our experiments, we compare
+the proposed method with several state-of-the-art abnormality
+detection techniques, including PCA [16], DEEP-IFOREST
+[41], MEMTO [42], NPSR [43], TAN-ATA [23], and STEN
+[44]. More details of comparative methods are presented
+below.
+1) PCA [16]: PCA facilitates the projection of
+high-dimensional ESP monitoring data into a lowdimensional subspace by maximizing the variance of
+the predictive dimensions. Ultimately, anomalies are
+detected by assessing whether the statistical properties
+of features in this low-dimensional space exceed
+predefined limits.
+2) Deep isolation forest (DEEP-IFOREST) [41]: To accomplish anomaly isolation, DEEP-IFOREST employs random axis-parallel cutting after mapping the original data
+into a random representation set using NNs and utilizes deviation-enhanced anomaly scoring to recognize
+anomalies.
+3) Memory-guided transformer (MEMTO) [42]: MEMTO
+is a reconstruction-based approach, which incorporates
+a gated memory module, a two-stage training paradigm,
+and a bi-dimensional deviation-based detection criterion
+to achieve time-series anomaly detection.
+4) TAN-ATA [23]: TAN with ATA integrates a temporalattention network built upon an LSTM-AE architecture
+with an XGBoost-regressor-based ATA mechanism,
+delivering enhanced ESP anomaly detection through this
+hybrid strategy.
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+TABLE III
+C OMPARISON R ESULTS OF D IFFERENT M ETHODS ON F OUR ESP W ELL DATASETS
+
+5) NPSR [43]: Nominality score conditioned time-series
+anomaly detection by point/sequential reconstruction
+(NPSR) is an unsupervised approach that utilizes pointbased and sequence-based reconstruction models, which
+outperforms most representative baselines for timeseries anomaly detection.
+6) Spatial-temporal normality learning (STEN) [44]: STEN
+comprises two distinct modules designed to capture
+the inherent temporal and spatial correlations present
+within sequences. By integrating these two modules,
+STEN facilitates effective modeling of normal processes,
+thereby enhancing the performance of anomaly detection.
+To be more specific, hyperparameters of the baseline methods are configured as follows. PCA uses three principal
+components. DEEP-IFOREST sets the expected proportion
+of anomalies to 0.01. MEMTO employs 32 memory items
+with an embedding dimension of 64 and initializes without
+memory item embedding. TAN-ATA implements 15 LSTM
+units in the output layer, a hidden layer dimension of 64
+500 trees in XGBoost, and a maximum tree depth of 10.
+NPSR uses a hidden dimension of 64 with one encoder layer.
+STEN adopts a temporal hidden dimension of 64, a Transformer spatial encoder, a mask ratio of 0.1, and one temporal
+layer.
+2) Evaluation Indicator: In our experiments, the performance of anomaly detection is comprehensively assessed using
+three metrics: false alarm rate (FAR), fault detection rate
+(FDR), and their geometric mean (gmean ), as advocated by
+[45]. The formulations for these three indicators are presented
+below
+FAR = Nnf /Nn
+ı
+FDR = N df N f
+p
+gmean = FDR × (1 − FAR)
+
+(22)
+(23)
+(24)
+
+where N df denotes the number of detected abnormal samples,
+while Nnf indicates the number of normal samples identified
+through false alarms. Additionally, N f and Nn represent the
+total counts of abnormal and normal samples, respectively.
+3) Implementation Details: In our studies, we employ the
+sliding window approach to acquire ESP time-series segments,
+with the window size T set to 300 and the M set to 150. In the
+DSTCL module, based on the findings from multiple experiments, the dimensions of the embedded sequences throughout
+
+the timeline Td and the number of Crossformer encoder blocks
+α are set to 64 and 1, respectively. In the Crossformer encoder
+block, L, Hd, and cons are set to 5, 4, and 10, respectively.
+The model is trained via a stochastic gradient descent (SGD)
+optimizer with a learning rate of 1e-3 and a weight decay of
+1e-4. All experiments are conducted throughout 100 epochs.
+In the ATG module, the number of decision trees nt and the
+depth of the decision tree dt are set to 100 and 10, respectively.
+All experiments in this work are implemented based on Python
+3.7 with PyTorch 1.8 and performed on Windows 11 with an
+Intel 1 Core 2 GeForce RTX3060 CPU at 2.30 GHz with 16
+GB of RAM.
+C. Comparative Analysis
+The comparative experimental results of various methods
+applied to data from four different wells are summarized in
+Table III. Generally, a smaller FAR is associated with a larger
+FDR, and a higher gmean indicates better anomaly detection
+performance. From the table, it is evident that the Deep
+IFOREST, a machine learning-based method, outperforms
+the PCA-based multivariate statistical analysis method in
+ESP anomaly detection. Additionally, the NN-based MEMTO,
+NPSR, and TAN-ATA methods surpass both PCA and Deep
+IForest in ESP anomaly monitoring performance, demonstrating that incorporating the dynamic characteristics of ESPs
+enhances detection performance. TAN-ATA, unlike MEMTO
+and NPSR, employs an adaptive threshold adjustment based
+on an XGBoost regressor to improve detection performance.
+This illustrates that the adaptive threshold method is quite
+successful. The STEN method, which takes into account both
+the spatial and temporal characteristics of the data, yields even
+better results. Notably, the proposed DSTCL-ATG method
+delivers superior performance compared to other advanced
+methods, confirming the effectiveness and advantages of
+the designed DSTCL and random-forest-regressor-based ATG
+techniques.
+D. Effects of the DSTCL
+Table IV presents the comparative results of the average
+residuals between the DSTCL model and the DCL model
+on the datasets from four ESP wells. As shown in the table,
+1 Registered trademark.
+2 Trademarked.
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+3548914
+
+TABLE IV
+C OMPARISON R ESULTS OF AVERAGE R ESIDUALS W ITH AND W ITHOUT THE C ROSSFORMER IN DSTCL ON F OUR ESP W ELL DATASETS
+
+Fig. 4. Anomaly detection performance of the proposed DSTCL-ATG method on the test set of four different datasets. (a) B20H3, (b) B09ST1, (c) B18ST1,
+and (d) A03ST3.
+
+while the average residuals of a few variables are marginally
+higher for certain wells, the residuals produced by the DSTCL
+model, enhanced by integrating the Crossformer architecture
+into the DCL framework, are consistently smaller than those
+of the DCL model. These results indicate that the proposed
+DSTCL model demonstrates superior accuracy in modeling
+the normal operational processes of ESP systems. This comparison effectively highlights the enhanced performance and
+robustness of the DSTCL model, underscoring its effectiveness
+and superiority.
+
+E. Effects of the ATG
+The anomaly detection performance of the proposed
+DSTCL-ATG method is intuitively illustrated in Fig. 4. As
+depicted in Fig. 4, when the ESP experiences an anomaly, the
+residuals exceed the adaptive threshold, triggering an alarm.
+The adaptive threshold is highly effective in mitigating false
+alarms caused by uncertain disturbances during the normal
+operation of the ESP. For instance, in the case of well #B20H3,
+the DSTCL-ATG method detected an anomaly at 1:23 AM on
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+TABLE V
+A BNORMALITY D ETECTION R ESULTS U NDER D IFFERENT T HRESHOLD S ETTINGS
+
+September 13, 2022, approximately 3 h prior to the recorded
+anomaly detection time in the field log at 4:20 AM on the same
+day. Similarly, for wells #B09ST1, #B18ST1, and #A03ST1,
+the anomaly warning times provided by the DSTCL-ATG
+method were approximately 3, 2, and 2.5 h earlier than those
+logged manually, respectively. These findings demonstrate the
+ability of the proposed method to issue anomaly warnings
+significantly earlier, enhancing operational safety and response
+efficiency.
+Moreover, we conduct comparative studies on different
+threshold-setting strategies, as shown in Table V. Although
+methods such as FT, SVR, and RVM achieve relatively high
+FDR, they result in significantly higher FAR, indicating a
+tendency to raise more false alarms under fluctuating ESP
+conditions. In addition to these traditional approaches, more
+advanced uncertainty-based methods like deep Gaussian process (DGP) [46] and Bayesian random forest (BRF) [47] also
+reach high FDR, but their FAR remain elevated. This may be
+attributed to two key factors: the increased model complexity
+introduced by the hierarchical structure of DGP and the inference variance introduced by the posterior sampling mechanism
+in BRF. Both factors may increase sensitivity to input noise
+and elevate the risk of overfitting, consequently impacting
+the stability of predictions during practical deployment. In
+contrast, the proposed lightweight random-forest-regressorbased ATG module achieves consistently high FDR while
+maintaining the lowest FAR and the highest gmean across all
+four ESP well datasets. It provides a better balance between
+detection performance and model simplicity. The use of a
+bagging-based ensemble and a relatively shallow structure
+contributes to more stable value estimation and reduced variance in threshold prediction, making ATG more suitable for
+deployment in complex ESP operational environments.
+F. Ablation Study
+The proposed DSTCL-ATG technique consists primarily
+of the DCL architecture, Crossformer encoder, and randomforest-regressor-based ATG strategy. The following ablation
+experiments were carried out to ensure that each component
+of DSTCL-ATG was effective. Here, Method 1 substitutes the
+Crossformer encoder with a multiscale CNN as the encoder
+network Gφ , without employing the ATG method. Method
+2 utilizes only the Crossformer NN as the ESP feature
+extractor and does not incorporate either the dual-branch
+contrastive learning architecture or the ATG strategy. Method 3
+
+TABLE VI
+A BLATION E XPERIMENTAL R ESULTS OF DSTCL-ATG
+
+exclusively implements the well-designed DSTCL module
+while omitting the ATG technique. Method 4 employs TAN as
+the backbone network to substitute the DSTCL module while
+integrating the random-forest-regressor-based ATG mechanism. Method 5 replaces the random forest regressor with
+the XGBoost regressor based on the proposed DSTCL-ATG.
+In contrast, the proposed DSTCL-ATG approach integrates
+DSTCL and random-forest-regressor-based ATG effectively.
+The ablation experimental method was implemented on
+well #B20H3, and the results for the FAR, FDR, and gmeans
+indicators are presented in Table VI. From the results, we can
+draw the following observations.
+1) The performance of Method 3 surpasses that of Method
+2, indicating that the Crossformer encoder is superior
+to the multiscale CNN network in capturing spatiotemporal correlations from ESP data.
+2) The superiority of Method 3 over Method 2 highlights
+the advantages of the DCL architecture.
+3) The proposed DSTCL-ATG demonstrates better performance than Method 3, revealing the effectiveness of the
+ATG strategy.
+4) DSTCL-ATG is superior to Method 4, which confirms
+that the proposed DSTCL module has greater ESP
+process modeling capability than TAN.
+5) The failure of Method 5 to DSTCL-ATG implies that
+the random-forest-regressor-based ATG performs better
+in ESP anomaly detection than the XGBoost-regressorbased ATA in TAN-ATA.
+These findings suggest that all designed modules are effective in enhancing ESP anomaly detection performance.
+Furthermore, we conduct an evaluation of the performance
+of ESP anomaly detection under various prediction (including
+five-step and ten-step forecasting) and reconstruction (including full-window reconstruction) strategies employed in the
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+3548914
+
+TABLE VII
+C OMPARISON R ESULTS OF DSTCL-ATG U SING D IFFERENT P REDICTION OR R ECONSTRUCTION S TRATEGIES ON F OUR ESP W ELL DATASETS
+
+TABLE VIII
+T IME C ONSUMPTION OF DSTCL-ATG U SING D IFFERENT P REDICTION OR R ECONSTRUCTION S TRATEGIES ON F OUR ESP W ELL DATASETS
+
+TABLE IX
+A NOMALY D ETECTION P ERFORMANCE OF DSTCL-ATG U NDER D IFFER ENT N UMBERS OF C ROSSFORMER E NCODER B LOCKS
+
+DSTCL module and statistical analysis of time consumption, whose results are presented in Tables VII and VIII,
+respectively. It can be seen that the detection performance
+and time consumption of all methods are similar, and the
+differences are almost negligible. This indicates that ESP
+anomaly detection is insensitive to different prediction or
+reconstruction strategies. Notably, single-point prediction is
+inherently simpler; unlike multistep prediction, it does not
+require consideration of step selection, and when compared to
+full-window reconstruction, it demonstrates superior overall
+performance. Therefore, our framework adopts single-point
+prediction as it strikes an optimal balance between model
+simplicity and detection performance.
+G. Hyperparameter Selection
+Model performance can be influenced by adjustments to
+the model’s hyperparameters. In this part, we examine the
+the following effects: 1) the number of Crossformer encoder
+blocks α; 2) the dimension of embedded sequences over time
+Td; 3) the number of decision trees nt; and 4) the depth of
+each decision tree dt.
+1) Effects of the Number of Crossformer Encoder Blocks:
+Given the significance of ESP spatiotemporal feature extraction, it is essential to investigate how the number of
+Crossformer encoder blocks α affects detection outcomes.
+The influence of different block numbers on the detection
+performance is investigated, and the results are shown in
+
+Fig. 5. Anomaly detection performance of DSTCL-ATG under different
+dimensions of embedded sequences over time.
+
+Table IX. It is evident that a single Crossformer encoder block
+can achieve optimal performance; however, as the number of
+blocks increases, performance tends to decline. This indicates
+that the overall performance of the model can be improved
+by judiciously selecting the number of Crossformer encoder
+blocks
+2) Effects of the Dimension of Embedded Sequences Over
+Time: The impact of the embedded sequence dimension over
+time Td is explored, with results depicted in Fig. 5. It can be
+observed that the model achieves optimal performance when
+Td is set to 64. Furthermore, variations in detection outcomes
+are minimal when altering Td, indicating that the proposed
+method exhibits a robust insensitivity to the selection of Td.
+3) Effects of the Number of Decision Trees: The impact
+of the number of decision trees nt in the random forest
+regressor on detection performance is examined. The corresponding detection results for varying numbers of decision
+trees are presented in Fig. 6. Notably, the model utilizing
+100 decision trees achieves the highest gmean . Conversely,
+when nt is set either too low or excessively high, a marked
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+real-world data from four distinct ESP failure wells, demonstrating its effectiveness and superiority. Looking ahead, future
+research will focus on advancing ESP anomaly detection
+methods that are driven by both data and domain knowledge.
+For instance, domain knowledge is incorporated into the
+optimization function of the contrastive learning framework
+via a regularization mechanism. This integration facilitates the
+influence of mechanistic knowledge on the learning process
+of the data-driven model. The robustness and generalization
+performance of the model can be assessed through experiments
+conducted in electric pump wells across various oil fields.
+
+Fig. 6. Anomaly detection performance of DSTCL-ATG under different
+numbers of decision trees.
+
+Fig. 7. Anomaly detection performance of DSTCL-ATG at different depths
+of decision tree.
+
+decline in performance occurs. This observation underscores
+that optimizing the number of decision trees nt can enhance
+model performance.
+4) Effects of the Depth of Decision Tree: The impact of the
+depth dt of each decision tree in the random forest regressor
+on the detection performance is studied. Fig. 7 displays the
+detection results with different depths of decision trees. It
+is noteworthy that the model achieved the best detection
+performance when the depth of each decision tree is set to 10.
+On the other hand, the performance shows varying degrees of
+degradation when the dt is set too low or too high, indicating
+that choosing the appropriate dt can improve the detection
+performance.
+V. C ONCLUSION
+This article proposes a novel DSTCL-ATG method for
+ESP anomaly detection. To effectively model the complex
+dynamic behaviors of ESP during normal operation, the DCL
+architecture is employed, and the Crossformer encoder is
+integrated to capture the spatio-temporal coupling characteristics of ESP data, enhancing the modeling performance.
+Furthermore, a random-forest-regressor-based ATG strategy is
+developed, enabling real-time generation of adaptive thresholds to mitigate false alarms caused by fluctuations in ESP
+states. The proposed method is rigorously validated using
+
+R EFERENCES
+[1]
+
+K. E. Brown, “Overview of artificial lift systems,” J. Petroleum Technol.,
+vol. 34, no. 10, pp. 2384–2396, Oct. 1982.
+[2] X. Liang, J. He, and L. Du, “Electrical submersible pump system
+grounding: Current practice and future trend,” IEEE Trans. Ind. Appl.,
+vol. 51, no. 6, pp. 5030–5037, Nov. 2015.
+[3] X. Yuan et al., “Variable correlation analysis-based convolutional neural
+network for far topological feature extraction and industrial predictive
+modeling,” IEEE Trans. Instrum. Meas., vol. 73, pp. 1–10, 2024.
+[4] K. Peng, J. Wang, H. Yang, and X. Qin, “A semi-supervised quality
+soft sensing method under multiple operating conditions for complex
+product manufacturing processes,” IEEE Trans. Instrum. Meas., vol. 73,
+pp. 1–14, 2024.
+[5] F. M. Varejão, L. H. Sousa Mello, M. Pellegrini Ribeiro, T. OliveiraSantos, and A. Loureiros Rodrigues, “An open source experimental
+framework and public dataset for vibration-based fault diagnosis of
+electrical submersible pumps used on offshore oil exploration,” Knowl.Based Syst., vol. 288, Mar. 2024, Art. no. 111452.
+[6] R. Abdalla, H. Samara, N. Perozo, C. P. Carvajal, and P. Jaeger,
+“Machine learning approach for predictive maintenance of the electrical submersible pumps (ESPs),” ACS Omega, vol. 7, no. 21,
+pp. 17641–17651, May 2022.
+[7] RP 11S, Recommended Practice for the Operation, Maintenance and
+Troubleshooting of Electric Submersible Pump Installations. 1st ed.,
+American Petroleum Institute, Dallas, TX, USA, May 1986.
+[8] M. O. Durham and J. F. Lea, “Survey of electrical submersible systems
+design, application, and testing,” SPE Prod. Facilities, vol. 11, no. 2,
+pp. 102–107, May 1996.
+[9] Q. Li, “The method of determining string leakage in electric pump well
+by holding pressure curve,” Petroleum Geol. Develop. Daqing, vol. 8,
+no. 2, pp. 57–59, 1989.
+[10] G. Han, M. Chen, H. Zhang, and K. Ling, “Real-time monitoring and
+diagnosis of electrical submersible pump,” in Proc. SPE Annu. Tech.
+Conf. Exhib., Sep. 2015, pp. 1–21.
+[11] B. Wang, G. Han, X. Lu, and S. Tan, “Rapid pattern recognition
+of electric submersible pump ammeter card based on artificial neural
+network,” in Proc. Int. Conf. Comput. Exp. Eng. Sci., Aug. 2022,
+pp. 39–55.
+[12] H. Guoqing and Z. Biao, “Working condition diagnosis of esp well based
+on wellhead pressure-out analysis,” Oil Drilling Prod. Technol., vol. 38,
+no. 4, pp. 514–518, 2016.
+[13] J. Yang et al., “Fault diagnosis method and application of ESP well
+based on SPC rules and real-time data fusion,” Math. Problems Eng.,
+vol. 2022, Jul. 2022, Art. no. 8497299.
+[14] J. Chen, W. Li, P. Yang, B. Chen, and S. Li, “Prediction and classification
+of faults in electric submersible pumps,” AIP Adv., vol. 12, no. 4,
+pp. 1–24, Apr. 2022.
+[15] M. B. Castellanos, A. L. Serpa, J. L. Biazussi, W. Monte Verde, and
+N. do Socorro Dias Arrifano Sassim, “Fault identification using a chain
+of decision trees in an electrical submersible pump operating in a liquidgas flow,” J. Petroleum Sci. Eng., vol. 184, Jan. 2020, Art. no. 106490.
+[16] L. Peng, G. Han, A. Landjobo Pagou, and J. Shu, “Electric submersible
+pump broken shaft fault diagnosis based on principal component
+analysis,” J. Petroleum Sci. Eng., vol. 191, Aug. 2020, Art. no. 107154.
+[17] Q. Li, J. Fu, R. Zhang, H. Liu, Y. Li, and X. Gao, “Electric submersible
+pump anomaly monitoring based on unsupervised multivariate streaming
+data analysis,” in Proc. CAA Symp. Fault Detection, Supervision Saf.
+Tech. Processes (SAFEPROCESS), Sep. 2023, pp. 1–6.
+
+LI et al.: DSTCL NETWORK WITH ADAPTIVE THRESHOLD GENERATION FOR ANOMALY DETECTION OF ESP
+
+[18] O. A. Alamu, D. A. Pandya, O. Warner, and I. Debacker, “ESP data
+analytics: Use of deep autoencoders for intelligent surveillance of
+electric submersible pumps,” in Proc. Offshore Technol. Conf., May
+2020, pp. 1–24.
+[19] X. Gao, Y. Zhang, and J. Zhou, “Improved dynamic kernel PCA
+based on local preserving projections and its application for electric
+submersible pump fault diagnosis,” Can. J. Chem. Eng., vol. 101, no. 8,
+pp. 4539–4554, 2023.
+[20] L. R. Medsker and L. Jain, “Recurrent neural networks,” Des. Appl.,
+vol. 5, nos. 64–67, p. 2, 2001.
+[21] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation
+of gated recurrent neural networks on sequence modeling,” 2014,
+arXiv:1412.3555.
+[22] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+Comput., vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
+[23] Q. Li, K. Li, X. Gao, J. Fu, and L. Zhang, “Anomaly detection based
+on temporal attention network with adaptive threshold adjustment for
+electrical submersible pump,” IEEE Trans. Instrum. Meas., vol. 73,
+pp. 1–14, 2024.
+[24] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 30, 2017, pp. 1–11.
+[25] M. Xu et al., “Spatial–temporal transformer networks for traffic flow
+forecasting,” 2020, arXiv:2001.02908.
+[26] Y. Zhang and J. Yan, “Crossformer: Transformer utilizing crossdimension dependency for multivariate time series forecasting,” in Proc.
+11th Int. Conf. Learn. Represent., 2023.
+[27] T. Chen, S. Kornblith, M. Norouzi, and G. E. Hinton, “A simple
+framework for contrastive learning of visual representations,” in Proc.
+37th Int. Conf. Mach. Learn., vol. 119, 2020, pp. 1597–1607.
+[28] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+attention contrastive representation learning for time series anomaly
+detection,” in Proc. 29th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining (KDD), 2023, pp. 3033–3045.
+[29] Z. Z. Darban, G. I. Webb, S. Pan, C. C. Aggarwal, and M. Salehi,
+“CARLA: Self-supervised contrastive representation learning for time
+series anomaly detection,” Pattern Recognit., vol. 157, Jan. 2025, Art.
+no. 110874.
+[30] H. Chen, H. Liu, X. Chu, Q. Liu, and D. Xue, “Anomaly detection
+and critical SCADA parameters identification for wind turbines based
+on LSTM-AE neural network,” Renew. Energy, vol. 172, pp. 829–840,
+Jul. 2021.
+[31] L. Wei, Z. Qian, and H. Zareipour, “Wind turbine pitch system condition monitoring and fault detection based on optimized relevance
+vector machine regression,” IEEE Trans. Sustain. Energy, vol. 11, no. 4,
+pp. 2326–2336, Oct. 2020.
+[32] D. M. M. Ricardo, G. E. C. Jiménez, J. V. Ferreira, and P. S. Meirelles,
+“Multiphase gas-flow model of an electrical submersible pump,” Oil
+Gas Sci. Technol.–Revue d’IFP Energies Nouvelles, vol. 73, p. 29, May
+2018.
+[33] J. P. Jordanou, I. Osnes, S. B. Hernes, E. Camponogara, E. A. Antonelo,
+and L. Imsland, “Nonlinear model predictive control of electrical submersible pumps based on echo state networks,” Adv. Eng. Informat.,
+vol. 52, Apr. 2022, Art. no. 101553.
+[34] Z. Wu, Y. Xiong, S. X. Yu, and D. Lin, “Unsupervised feature learning
+via non-parametric instance discrimination,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., Jun. 2018, pp. 3733–3742.
+[35] S. Hao, Z. Wang, A. D. Alexander, J. Yuan, and W. Zhang, “MICOS:
+Mixed supervised contrastive learning for multivariate time series
+classification,” Knowledge-Based Syst., vol. 260, Jan. 2023, Art. no.
+110158.
+[36] X. Zheng, X. Chen, M. Schürch, A. Mollaysa, A. Allam, and
+M. Krauthammer, “Simple contrastive representation learning for time
+series forecasting,” 2023, arXiv:2303.18205.
+[37] J. Lei Ba, J. Ryan Kiros, and G. E. Hinton, “Layer normalization,” 2016,
+arXiv:1607.06450.
+[38] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+in Proc. IEEE Comput. Soc. Conf. Comput. Vision Pattern Recognit., Jun.
+2021, pp. 15750–15758.
+[39] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021,
+vol. 35, no. 5, pp. 4027–4035.
+[40] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+T. Söderström, “Detecting spacecraft anomalies using LSTMs and
+nonparametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+Conf. Knowl. Disc. Data Min., Jul. 2018, pp. 387–395.
+
+3548914
+
+[41] H. Xu, G. Pang, Y. Wang, and Y. Wang, “Deep isolation forest for
+anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12591–12604, Dec. 2023.
+[42] J. Song, K. Kim, J. Oh, and S. Cho, “MEMTO: Memory-guided
+transformer for multivariate time series anomaly detection,” in Proc.
+Adv. Neural Inf. Process. Syst., vol. 36, 2023, pp. 57947–57963.
+[43] C.-Y. A. Lai, F.-K. Sun, Z. Gao, J. H. Lang, and D. Boning, “Nominality
+score conditioned time series anomaly detection by point/sequential
+reconstruction,” in Proc. Adv. Neural Inf. Process. Syst., vol. 36, 2024,
+pp. 1–19.
+[44] Y. Chen, H. Xu, G. Pang, H. Qiao, Y. Zhou, and M. Shang, “Selfsupervised spatial–temporal normality learning for time series anomaly
+detection,” in Proc. Joint Eur. Conf. Mach. Learn. Knowl. Discovery
+Databases. Cham, Switzerland: Springer, 2024, pp. 145–162.
+[45] K. Li, T. Zhang, W. Dong, and H. Ye, “Abnormality detection of blast
+furnace ironmaking process based on an improved diffusion convolutional gated recurrent unit network,” IEEE Trans. Instrum. Meas.,
+vol. 72, pp. 1–12, 2023.
+[46] A. Damianou and N. D. Lawrence, “Deep Gaussian processes,” in Proc.
+Artif. Intell. Statist., 2013, pp. 207–215.
+[47] J. Guo, X. Zan, L. Wang, L. Lei, C. Ou, and S. Bai, “A random forest
+regression with Bayesian optimization-based method for fatigue strength
+prediction of ferrous alloys,” Eng. Fract. Mech., vol. 293, Dec. 2023,
+Art. no. 109714.
+
+Kang Li (Member, IEEE) received the B.E. degree
+in automation from Central South University, Changsha, Hunan, China, in 2014, and the Ph.D. degree
+in control theory and control engineering from the
+Institute of Automation, Chinese Academy of Sciences (IACAS), Beijing, China, in 2019.
+He has been a Post-Doctoral Research Fellow with
+the Department of Automation, Tsinghua University,
+Beijing, since 2021. He is currently an Assistant
+Professor with the Department of Automation, China
+University of Petroleum, Beijing. His research interests include artificial intelligence and deep learning and their applications to
+data-driven fault diagnosis, human–robot interaction, and robotic vision.
+
+Shuang Li received the B.E. degree in automation
+from the School of Electrical and Information Engineering, Hunan University of Technology, Zhuzhou,
+China, in 2022. He is currently pursuing the master’s
+degree in control science and engineering with China
+University of Petroleum, Beijing, China.
+His current research interests include deep learning and artificial intelligence and their applications
+in data-driven and industrial fault diagnosis.
+
+Qiang Li received the B.E. degree in automation
+and the M.S. degree in control engineering from the
+College of Automation and Information Engineering, Sichuan University of Science and Engineering,
+Zigong, China, in 2019 and 2022, respectively. He
+is currently pursuing the Ph.D. degree in control
+science and engineering with China University of
+Petroleum, Beijing, China.
+His current research interests include deep learning and artificial intelligence and their applications
+in equipment safety maintenance and system health
+assessment.
+
+3548914
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Zhikuan Jiao received the B.E. degree in automation from the College of Information Science and
+Engineering, China University of Petroleum, Beijing, China, in 2022. He is currently pursuing the
+M.S. degree in control theory and control engineering with China University of Petroleum.
+His current research interests include deep learning and artificial intelligence and their applications
+in industrial fault diagnosis.
+
+Jun Fu received the B.E. degree in automation and
+the M.S. degree in oil and gas field development
+from China University of Petroleum (East China),
+Dongying, China, in 2007 and 2012, respectively.
+Since 2012, he has been working at the Engineering Technology Branch, CNOOC Energy Development Company Ltd., Tianjin, China, where he was
+first engaged in the design of mechanical production processes and the research and development of
+artificial lifting products. Since 2019, he has been
+a Senior Engineer in oil recovery engineering. In
+2021, he was in charge at the Design and Development Department, focusing
+on carrying out special technical improvements to extend the life of electric
+submersible pumps.
+
+Xiaoyong Gao received the B.E. degree in automation from China University of Petroleum (East
+China), Dongying, China, in 2007, and the M.S. and
+Ph.D. degrees in control science and engineering
+from Tsinghua University, Beijing, China, in 2010
+and 2014, respectively.
+He was an Exchange Visitor at the University of
+Surrey, Guildford, U.K., in 2013, and was a PostDoctoral Fellow at the Department of Automation,
+Tsinghua University, from 2014 to 2016. From 2020
+to 2024, he was an Associate Professor at the College of Information Science and Engineering/College of Artificial Intelligence,
+China University of Petroleum, Beijing. Since 2024, he has been a Professor
+with the College of Artificial Intelligence, China University of Petroleum.
+His research interests include fault prognosis, modeling of complex industrial
+processes, and scheduling optimization.
+
+Laibin Zhang received the B.E. and M.S. degrees
+in petroleum mechanical engineering and the Ph.D.
+degree in mechanical engineering from China University of Petroleum, Beijing, China, in 1982, 1985,
+and 1991, respectively.
+He is currently associated with the College of
+Safety and Ocean Engineering, China University of
+Petroleum. He is an Academician at the Chinese
+Academy of Engineering, Beijing, and the Director of the Key Laboratory of Oil and Gas Safety
+and Emergency Technology, Ministry of Emergency
+Management. His research interests include fault diagnosis and safety engineering.
+Dr. Zhang was the Vice Chairman of the China Association for Public
+Safety. He was a recipient of the Distinguished Member of the International
+Society of Petroleum Engineers and the Sun Yueqi Energy Science and
+Technology Award.
+PAPER_TEXT

@@ -1,0 +1,1263 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [388] Contrastive Self-Supervised Learning-Based Background Reconstruction for Hyperspectral Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：388
+题名：Contrastive Self-Supervised Learning-Based Background Reconstruction for Hyperspectral Anomaly Detection
+年份：2025
+DOI：10.1109/tgrs.2025.3534185
+来源：IEEE Transactions on Geoscience and Remote Sensing
+PDF：paper/10.1109_TGRS.2025.3534185.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：多媒体、医学、遥感与视频异常检测、入侵检测与网络异常检测
+相关性：中相关，分数 5
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\388.txt
+- 原始字符数：61117
+- 本次发送字符数：61117
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+5504312
+
+Contrastive Self-Supervised Learning-Based
+Background Reconstruction for Hyperspectral
+Anomaly Detection
+Xiaoming Sun, Yuxiang Zhang , Senior Member, IEEE, Yanni Dong , Senior Member, IEEE,
+and Bo Du , Senior Member, IEEE
+
+Abstract— Deep learning (DL) has received a lot of attention
+in hyperspectral anomaly detection (HAD) in recent years. While
+some progress has been made in boosting the generalization of
+DL-based HAD methods, existing methods still face limitations
+in labeled sample generation or transfer flexibility. To address
+these issues, we propose a contrastive self-supervised learningbased background reconstruction method for HAD (CSSBR).
+By constructing a self-supervised pretraining model based on
+a pixel- and patch-level masking strategy and a dual attention
+network (DAN) encoder, the pretraining model can learn general
+background representation without labeled sample generation.
+The DAN encoder is constructed by the vision transformer
+(ViT) and channel attention module (CAM) to extract the
+global context information and the correlation between spectra.
+A transfer learning model is constructed based on the DAN
+encoder and a lightweight decoder, which is simply fine-tuned by
+background reconstruction guided (BRG) loss to flexibly transfer
+the pretrained model to various HAD tasks. Experiments on
+four challenging hyperspectral datasets confirm that the CSSBR
+method outperforms other state-of-the-art methods.
+Index Terms— Background reconstruction, contrastive learning, hyperspectral anomaly detection (HAD), self-supervised
+learning (SSL).
+
+I. I NTRODUCTION
+
+H
+
+YPERSPECTRAL imaging technology records both
+spectral and spatial information of ground objects [1].
+Compared with other remote sensing images, hyperspectral
+images (HSIs) contain hundreds or even thousands of
+almost continuous spectral bands, which can provide very
+detailed spectral information [2]. Therefore, HSI can provide
+unique advantages for anomaly detection tasks. Hyperspectral
+anomaly detection (HAD) focuses on distinguishing unusual
+materials from typical backgrounds in the absence of a priori
+Received 10 November 2024; revised 11 January 2025; accepted 21 January
+2025. Date of publication 27 January 2025; date of current version
+11 February 2025. This work was supported in part by the National Natural
+Science Foundation of China under Grant 62222116, Grant 62071438, Grant
+62225113, and Grant 62171417; and in part by the Major Special Project of
+China Innovation Challenge (Ningbo) under Grant 2024T008. (Corresponding
+author: Yuxiang Zhang.)
+Xiaoming Sun and Yuxiang Zhang are with the School of Geophysics and
+Geomatics, China University of Geosciences, Wuhan 430074, China (e-mail:
+sunxiaoming@cug.edu.cn; zhangyx@cug.edu.cn).
+Yanni Dong is with the School of Resource and Environmental Sciences,
+Wuhan University, Wuhan 430079, China (e-mail: dongyanni@whu.edu.cn).
+Bo Du is with the School of Computer Science, Wuhan University, Wuhan
+430079, China (e-mail: gunspace@163.com).
+Digital Object Identifier 10.1109/TGRS.2025.3534185
+
+knowledge of anomalous targets or backgrounds [3]. In recent
+years, HAD has flourished and is widely used in medicine [4],
+oil spill detection [5], civilian rescue [6], and other fields [7].
+Over the past few decades, numerous traditional methods for
+HAD have been proposed. The most classical of these methods
+are the statistical assumption-based methods, which assume
+that the backgrounds obey a certain statistical distribution
+and consider the pixels that deviate significantly from this
+distribution as anomalies. The Reed–Xiaoli (RX) detector [8]
+is the most widely used algorithm among the statistical
+assumption-based methods, which assumes that the backgrounds obey a multivariate Gaussian distribution and utilizes
+all the pixels in the image to compute the background statistics.
+According to the different ways of background statistical
+estimation, various RX-based variants have been proposed,
+such as kernel RX [9], subspace RX [10], local RX [11],
+local adaptive iterative RX (LAIRX) [12], and two-step
+generalized likelihood ratio test (2S-GLRT) [13]. Subsequently, the representation-based methods have gradually
+garnered widespread attention, encompassing collaborative
+representation [14], [15], [16], low-rank representation [17],
+[18], [19], tensor representation [20], [21], and entropy
+representation [22]. For example, Li and Du [14] proposed
+the collaborative representation-based detector (CRD) to
+represent the pixel with the local background dictionary
+and separate anomalies from backgrounds by the recovery
+residuals. Ma et al. [23] combined the integrating fractional
+Fourier transform (FrFT) with the row-constrained low-rank
+and sparse matrix decomposition technique. Wang et al.
+[20] extended the 3-D tensor low-rank model to separate
+the background component. Tao et al. [22] combined FrFT
+and Shannon entropy to maximize the distinction between
+anomalies and backgrounds. These traditional methods are
+generally simple and extract shallow features to distinguish
+anomalies from backgrounds.
+Recently, deep learning (DL) has gained prominence in
+HAD due to its powerful capabilities of feature mining and
+feature representation. The most widely used deep neural
+networks include convolutional neural network (CNN) [24],
+[25], [26], autoencoder (AE) [27], [28], [29], and generative
+adversarial network (GAN) [30], [31], [32]. For example,
+Li et al. [33] proposed a two-stream CNN with deep support
+vector data description that incorporates feature learning and
+
+1558-0644 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+5504312
+
+anomaly detection into a unified framework. Wang et al.
+[34] proposed an autonomous HAD network based on fully
+convolutional AE (Auto-AD), which designs the adaptive
+weighted loss function and the anomaly detector in an endto-end manner. Xiang et al. [35] enhanced the ability of
+representing the background by introducing a guided model
+to the hidden layer of AE. Xie et al. [36] proposed a spectral
+adversarial feature learning method for HAD, which uses the
+adversarial AE (AAE) as its backbone and introduces the
+structure tensor matrix to adaptively calculate the contribution
+rate of each feature. Wang et al. [37] proposed an HAD
+method based on variational background inference and GAN
+(VBIGAN-AD), which establishes the relationship between
+data samples and latent samples through two subnetworks
+to capture the data distribution. It is worth noting that
+self-supervised learning (SSL) with deep neural networks
+is gaining attention in the field of HAD. Wang et al.
+[38] proposed a pixel-shuffle downsampling masked-spot
+reconstruction network (PDBSNet) in a self-supervised operating fashion for HAD, which achieves effective background
+reconstruction by means of an AE consisting of centrally
+masked and dilated convolutions. Liu et al. [39] proposed a
+self-supervised multiscale network (MSNet) for HAD with
+enhanced separation training, where the network consists
+of convolutional AEs at multiple scales. Wang et al. [40]
+proposed a self-supervised HAD transformer (SSHADFormer)
+method based on finite spatialwise attention and AE, which
+performs background reconstruction via the RGB cube
+associated with the given dataset. The DL-based methods
+described above are usually trained and tested on the same
+scene, which can learn feature representations for a specific
+scene and HAD task. The learned feature representations tend
+to work poorly when directly transferred to other scenes or
+HAD tasks, exhibiting poor generalization.
+In order to improve the generalization of DL-based methods,
+some scholars have introduced novel methods for HAD, which
+are trained in some scenes and transferred to other scenes.
+For example, Jiang et al. [41] proposed a weakly supervised
+discriminative learning method with spectrally constrained
+GAN for HAD (WeaklyAD). This method trains the model
+by the labeled samples obtained via coarse anomaly detection
+on a specific scene and transfers the trained model to the other
+scene obtained from the same sensor. Liu et al. [42] proposed a
+dual-frequency AE (DFAE) method, which introduces spectral
+domain learning to enhance the separability of backgrounds
+from anomalies. This method uses an HSI for training and
+transfers the trained model to other HSIs obtained from the
+same sensor for testing. Li et al. [43] proposed a general
+anomaly enhancement network with generative SSL (GSSL)
+for HAD, named AETNet, which was trained on a set of
+anomaly-free HSIs with block-level random masks. The best
+pretrained model was searched during the transfer learning
+stage by using global Mahalanobis distance to adapt the
+pretrained model to HAD tasks. In addition, AETNet is trained
+and tested on images of the same size, which requires complex
+window resizing when transferred to scenes of various sizes.
+According to the above analysis, while some progress has
+been made in boosting the generalization of DL-based HAD
+methods, there is still a pressing need for a DL-based HAD
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+method that can not only perform pretraining without labeled
+sample generation but also flexibly transfer the pretrained
+model to various HAD datasets without the limitation of image
+sensor and image size.
+Inspired by the SSL [44], we propose a contrastive SSL
+(CSSL)-based background reconstruction method for HAD,
+which can be labeled as contrastive self-supervised learning
+based background reconstruction method for HAD (CSSBR).
+The overall architecture of CSSBR consists of two parts: selfsupervised pretraining and transferring the pretrained model
+to HAD tasks. First, the pretraining model is constructed
+via a pixel- and patch-level random masking strategy, a dual
+attention network (DAN) encoder, and a lightweight decoder.
+The pixel- and patch-level random masking strategy is
+designed to randomly mask off some pixels or patches of the
+original HSI to obtain pixel- and patch-level random masked
+image pairs with the same semantic information, which can
+help to complete the pretraining task. The DAN encoder
+based on vision transformer (ViT) and channel attention
+module (CAM) is constructed to extract the global context
+information and the correlation between spectra. A lightweight
+decoder is introduced to reconstruct the original image
+by reverse-mapping the encoded features and the masked
+patches. The pretraining model is trained by reconstructing
+the backgrounds from the patch-level random masked image
+and contrasting between pixel- and patch-level random
+masked images. Also, the loss function based on a designed
+background reconstruction guided (BRG) loss and a crossentropy (CE) loss is introduced to guide pretraining to obtain
+background reconstruction without labeled sample generation
+and to learn general background representations for different
+downstream HAD tasks. Subsequently, the DAN encoder and
+the lightweight decoder are transferred to downstream tasks,
+and a simple fine-tuning of the lightweight decoder through
+BRG loss can obtain adaptive background reconstruction for
+various HAD tasks. Finally, anomaly detection is performed
+using reconstruction errors.
+The main contributions of our research are summarized as
+follows.
+1) A novel DAN encoder is proposed based on ViT and
+CAM, which can effectively extract the global context
+information and the correlation between spectra.
+2) A pretraining model is constructed by a CSSL-based
+background reconstruction method, where a pixel- and
+patch-level random masking strategy is designed to
+construct background reconstruction task and contrastive
+learning task to learn general background representations
+of HSI without labeled sample generation.
+3) A transfer learning model is constructed based on the
+DAN encoder and a lightweight decoder, where a BRG
+loss is proposed to fine-tune the transfer learning model
+to obtain adaptive background reconstruction without
+labeled sample generation for various HAD tasks.
+The rest of this article is organized as follows. Section II
+briefly analyzes the related work. Section III describes the
+details of the proposed CSSBR method in detail. Section IV
+analyzes and discusses the experimental results. Finally, the
+conclusions are drawn in Section V.
+
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD
+
+II. R ELATED W ORK
+A. Self-Supervised Learning
+SSL learns general feature representations of large amounts
+of unlabeled data by designing a pretext task [45]. SSL
+has been a huge success not only in computer vision (CV)
+[46], [47], [48], [49], [50] but also in natural language
+processing (NLP) [51], [52], [53] and other areas. Most of
+the mainstream SSL methods can be divided into two types:
+generative and contrastive. GSSL learns representations by
+reconstructing or generating input data [54]. Masked image
+modeling (MIM) [55] is a typical pretraining method in
+GSSL that learns general and robust representations from
+unlabeled image data by masking parts of the input image
+and predicting the masked content. On the other hand, CSSL
+aims to learn the invariance of differently augmented data to
+obtain more discriminative feature representations [56], [57].
+In recent years, some CSSL methods have been proposed
+in the CV field, such as momentum contrast (MoCo) for
+unsupervised visual representation learning [47], bootstrap
+your own latent (BYOL) [48], and knowledge distillation with
+no labels (DINO) [49]. MoCo uses a momentum encoder to
+generate positive and negative sample features and encode
+negative sample features as keys to be stored in a dynamic
+dictionary to facilitate contrastive learning. BYOL builds on
+MoCo by removing negative samples and achieving feature
+optimization through the interaction of two neural networks.
+DINO introduces knowledge distillation, uses the momentum
+average to update the teacher network through the student
+network, and uses the CE loss for training.
+GSSL has been introduced into HAD fields such as
+PDBSNet [38], MSNet [39], SSHADFormer [40], and
+AETNet [43]. Among them, only AETNet constructs a
+pretraining model via GSSL based on MIM and transfers
+the pretrained model to different HAD tasks. CSSL has been
+successfully applied in the field of HSI processing, such
+as change detection [58], target detection [56], and image
+classification [59]. To the best of our knowledge, CSSL is less
+explored for HAD tasks. Inspired by current SSL methods,
+we integrate the MIM-based GSSL approach with the CSSL
+approach to design a CSSL-based background reconstruction
+method to construct the pretraining model. Unlike previous
+methods, our method implements image masking from pixellevel and patch-level to construct background reconstruction
+task and contrastive learning task. The contrastive learning task
+is utilized to help the background reconstruction task to obtain
+general background representations without labeled sample
+generation, which can be flexibly transferred to various HAD
+datasets without the limitation of image sensor and image size.
+B. Transformer and ViT
+Transformer is a DL model designed to process sequence
+data, proposed by Vaswani et al. [60]. Transformer was
+initially designed for NLP tasks, particularly achieving
+significant success in machine translation. Unlike traditional
+recurrent neural networks (RNNs) and CNNs, transformer is
+based on the self-attention (SA) mechanism that computes
+the relationship or dependency between each element in
+
+5504312
+
+the sequence and all other elements in the sequence [61].
+It can process all elements in the sequence in parallel,
+thereby improving training efficiency. The transformer encoder
+is composed of multiple identical layers stacked, each
+including a multihead SA (MSA) mechanism sublayer and a
+fully connected (FC) feedforward network sublayer. Residual
+connections are used around the two sublayers followed by
+layer normalization [60]. ViT [61] is the first model to
+successfully apply the transformer architecture to CV tasks.
+Unlike 1-D sequential data in NLP, the data in CV are
+usually 2-D or 3-D. Therefore, ViT first splits the image
+into nonoverlapping patches of fixed size. Then, these patches
+are flattened into 1-D vectors for linear embedding. At the
+same time, position embedding is added to preserve the
+relative positional relationships between the image patches,
+thus capturing the spatial relationships of the image. Finally,
+the generated embeddings are input into the transformer
+encoder.
+ViT-based methods have been successfully applied in
+HSI processing, such as image classification [62], anomaly
+detection [43], and target detection [63]. Although ViT-based
+methods have achieved good performance in anomaly
+detection, they still face the problem of insufficient utilization
+of spectral information. We designed a novel DAN encoder
+based on ViT and CAM to improve the extraction of
+spectral features while learning spatial information. Besides,
+we construct a pretraining model based on DAN encoder to
+obtain general background representations of HSI.
+III. M ETHOD
+Our method can be divided into two parts: self-supervised
+pretraining and transferring the pretrained model to HAD
+tasks. The overall architecture of CSSBR is shown in Fig. 1.
+A. Self-Supervised Pretraining
+The pretraining model aims to learn general background
+feature representations of images by CSSL-based background
+reconstruction. The pretraining framework is divided into six
+parts, namely, pixel- and patch-level random masking strategy,
+teacher encoder, student encoder, student decoder, projection
+header, and loss function.
+1) Pixel- and Patch-Level Random Masking Strategy:
+Data augmentation plays a crucial role in SSL and is the
+key to improving the performance of model. We design a
+pixel- and patch-level random masking strategy, including
+pixel-level random masking and patch-level random masking,
+to randomly mask off some pixels or patches of the original
+HSI. Thus, we can obtain image pairs with the same semantic
+information, which helps to complete the pretraining task.
+We denote the original pretraining HSI as X ∈ Rb×h×w ,
+where b, h, and w represent the number of bands, height, and
+width, respectively. The pixel-level random masking employs
+a masking ratio of n to randomly mask some pixels of the
+original pretraining HSI, generating the pixel-level random
+masked image Xt. The number of total pixels is N =
+h × w and the number of masked pixels is N ′ = n × N .
+Patch-level random masking first follows ViT to divide the
+
+5504312
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Overall architecture of the proposed CSSBR method. (a) Pretraining. (b) Transferring to HAD.
+
+original pretraining HSI into regular nonoverlapping patches
+and then employs a masking ratio of m to randomly mask
+some patches, generating the patch-level random masked
+image Xs. The size of patch is the same as the size of
+the patch divided by the ViT in the encoder, which is
+experimentally set as p = 4 in this work. The number of
+patches is M = h/ p × w/ p and the number of masked
+patches is M ′ = m × M. Patch-level random mask images
+are used to construct the background reconstruction task,
+while pixel- and patch-level random mask images are used to
+construct the contrastive learning task. The contrastive learning
+task can help the background reconstruction task to obtain
+general background representations without labeled sample
+generation.
+2) Encoder: It consists of two components, teacher encoder
+and student encoder. Two encoders maintain the same network
+architecture via DAN backbone on different masked images to
+learn feature representations. The network architecture of DAN
+is shown in Fig. 1. The network includes a spatial branch and a
+spectral branch to extract spatial and spectral features through
+ViT and CAM. The spatial branch focuses on extracting the
+global context information, and the spectral branch focuses on
+capturing the correlation between spectra.
+The spatial branch uses a three-layer transformer with three
+heads. First, the input HSI is divided into nonoverlapping
+patches. Second, these patches are flattened and the flattened
+patches are mapped using linear projection to obtain patch
+embeddings. Finally, the full patch embedding is used as input
+to learn the latent feature representation and obtain a spatial
+feature vector.
+The spectral branch consists of three CAMs, which first
+downscales the spectrum with band number of b by using
+
+a 1 × 1 convolutional layer to remove redundant information,
+generating a new spectrum with band number of b′ . The
+correlation between the remaining spectral bands is then
+captured by three CAMs. In order to concatenate with the
+output spatial features of the spatial branch, an adaptive
+average pooling (AAP) layer operation is performed at the
+end of the spectral branch to obtain a spectral feature vector.
+The structure of CAM is shown in Fig. 1. First, we reshape
+′
+′
+the input feature A ∈ Rb ×h×w to Rb ×N , multiply matrix A
+with the transpose of A, and input their result to a softmax
+′
+′
+layer. Thus, we obtain the channel attention map C ∈ Rb ×b ,
+which can be expressed as follows:
+
+exp Ai ATj
+c ji = Pb′
+(1)
+
+T
+i=1 exp Ai A j
+where c ji measures the ith channel’s impact on the jth
+channel and Ai and A j are the ith and jth row of matrix
+A, respectively. Then, we perform a matrix multiplication
+between the channel attention map C and the reshaped input
+′
+feature A and reshape their result to Rb ×h×w . Subsequently,
+we multiply the result by the learnable scale parameter β to
+perform an element-wise sum operation with the input feature
+A to obtain the final output
+′
+
+Ij = β
+
+b
+X
+
+(c ji Ai ) + A j
+
+(2)
+
+i=1
+
+where I j is the jth row of matrix I and represents the final
+feature of each channel, which can be expressed as a weighted
+sum of the features of all channels and the original features.
+In other words, CAM helps to capture the long-distance
+
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD
+
+correlation between spectral features and improve spectral
+feature extraction.
+Finally, the features obtained from the spatial and
+spectral branches are concatenated and the final feature is
+320 dimensions, where the spatial and spectral branches output
+features with dimensions of 192 and 128, respectively.
+3) Teacher Encoder: The teacher encoder takes pixel-level
+random masked images as input. The teacher encoder is
+constructed based on the state of the student encoder in the
+past iterations. A parameter update is performed between the
+teacher encoder and the student encoder via the exponential
+moving average (EMA), with update rule θt ← λ θt +(1−λ )θs .
+θt and θs are the parameters of the teacher encoder and the
+student encoder, respectively. λ follows a cosine schedule from
+0.9995 to 1 during the training period.
+4) Student Encoder: The student encoder takes patch-level
+random masked images as input and is trained by cropping the
+input and inserting learnable embeddings. Thus, the student
+encoder can learn a potential feature representation of the
+masked image, which is then used to reconstruct the original
+signal of the masked patches. The trained student encoder will
+be transferred to HAD tasks as a feature extractor.
+5) Student Decoder: The student decoder consists of
+three convolutional layers, where each layer contains a 2-D
+convolutional operation with a kernel size of 3 × 3 and a step
+size of 1. Bilinear interpolation is used for upsampling after the
+first two 2-D convolution operations to recover a reconstructed
+image of the same spatial resolution as the encoded image. The
+student decoder finally converts the encoded features back into
+the original feature space to reconstruct the original HSI from
+the masked image. Since the student decoder is a sequence of
+convolutional layers rather than ViT and CAM, the decoder
+is a lightweight structure in order to reduce computational
+consumption in pretraining and transferring learning.
+6) Projection Head: The projection head consists of a
+three-layer multilayer perceptron (MLP), where the first two
+layers use the Gaussian error linear unit (GELU) activation
+function in order to introduce nonlinear transformations, and
+the last layer is a linear layer without activation function but
+with an L 2 normalization layer and a weight normalized FC
+layer with Z dimensions. The projection head is added after
+both the student encoder and the teacher encoder to map the
+features output from two encoders into a space suitable for
+contrastive learning. The projection head behind the teacher’s
+encoder is also updated by EMA.
+We denote student encoder, student decoder, and teacher
+encoder as Eθs , Dθs , and Eθt , respectively. For the input of
+pixel-level random masked image Xt and patch-level random
+masked image Xs, both encoder networks finally output
+probability distributions on Z dimensions named Ps and Pt ,
+which can be expressed as follows:
+exp(Dθs (Eθs (Xs)(i) )/τs )
+Ps (Xs)(i) = P Z
+(z)
+z=1 exp(Dθs (Eθs (Xs) )/τs )
+exp(Eθt (Xt)(i) /τt )
+Pt (Xt)(i) = P Z
+(z)
+z=1 exp(Eθt (Xt) /τt )
+
+(3)
+(4)
+
+5504312
+
+where the temperature parameter τ is commonly used in
+knowledge distillation to control the clarity of the output
+distribution. The dimension Z of the probability distributions
+output by the encoder networks is set to 1024.
+7) Loss Function: Considering that the pretraining framework involves contrastive learning task and reconstruction
+task, the widely used CE loss and mean square error (mse)
+loss can be integrated to train the pretraining model. The
+CE loss can constrain the training of contrastive learning
+network by aligning the final output probability distributions
+of the teacher encoder and the student encoder to learn
+discriminative features. The mse loss can constrain the training
+of reconstruction network to ensure image reconstruction
+quality. With the integration of CE loss and mse loss, the
+pretraining framework can capture not only discriminative
+features between masked image pairs with the same semantic
+information but also overall features of the patch-level masked
+image, thus achieving good feature representations of HSI.
+However, the learned feature representations of the whole
+image are not enough for HAD tasks, where we usually
+extract background features to distinguish anomalies from
+backgrounds. Inspired by total variation (TV) loss [64],
+we propose a BRG loss based on mse loss and TV loss
+to boost the background feature learning by guiding the
+training of reconstruction network to strengthen background
+reconstruction.
+The TV loss considers the difference between the pixels
+and their surrounding pixels in the image, aiming to smooth
+the image by reducing local variations between pixels. The
+background is dominant in terms of the pixels number and
+there is less spectral feature variation between neighboring
+pixels within the same background category. In contrast, the
+anomalies are usually smaller and sparser, showing marked
+spectral feature differences from the surrounding background.
+Based on the above facts, the BRG loss can enhance the
+smoothness of the reconstructed background by constraining
+the differences between neighboring pixels. Thereby, the BRG
+loss can improve the reconstruction network’s ability to extract
+background features.
+The BRG loss can be calculated as follows:
+h
+
+w
+
+L mse =
+
+1 XX
+(x i, j − x̃ i, j )T (x i, j − x̃ i, j )
+hw i=1 j=1
+
+L TV =
+
+h w−1
+X
+X
+1
+x̃ i, j − x̃ i, j+1
+h(w − 1)b i=1 j=1
+
+(5)
+
+h−1 w
+
++
+
+XX
+1
+x̃ i, j − x̃ i+1, j
+(h − 1)wb i=1 j=1
+
+L BRG = L mse + L TV
+
+(6)
+(7)
+
+where x i, j ∈ Rb×1 and x̃ i, j ∈ Rb×1 denote the spectral vectors
+of pixel with spatial position (i, j) in the original pretraining
+HSI and the reconstructed pretraining HSI, respectively.
+L mse represents the mse loss between the original HSI and
+the reconstructed HSI. L TV represents the TV loss, which
+calculates the average difference between the pixels and their
+surrounding pixels in the reconstructed image.
+
+5504312
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+The CE loss and BRG loss constitute the total loss for the
+pretraining phase, which is calculated as follows:
+L CE = min H (Pt (Xt), Ps (Xs))
+
+(8)
+
+L Total = L BRG + L CE
+
+(9)
+
+θs
+
+where H (a, b) = −a log b and L CE represents the CE loss,
+which calculates the difference between the output probability
+distributions of student encoder and teacher encoder.
+
+Fig. 2.
+
+Partial images of pretraining dataset HAD100.
+
+B. Transfer Learning
+This section describes how to efficiently transfer the
+pretrained model to various HAD tasks without labeled
+samples. The transfer learning model contains four parts,
+namely, encoder, fine-tuning decoder, loss function, and
+anomaly detection.
+1) Encoder: We transfer the pretrained student encoder
+to downstream HAD task. Feature extraction is performed
+on the testing image via the pretrained student encoder,
+producing low-dimensional, abstract, and general background
+representation. We denote the testing HSI as Y ∈ R B×H ×W ,
+where B, H , and W represent the number of bands, height,
+and width, respectively.
+2) Fine-Tuning Decoder: To reconstruct the background
+for the testing image, we transfer the student decoder to
+downstream HAD task to reverse-map the encoded features
+into the original feature space. During the fine-tuning process,
+the encoder parameters are not updated, which can obtain a
+general background representation and improve the efficiency
+of fine-tuning. Due to the limited pretraining images, the
+data distribution of the downstream image may be different
+from that of the pretraining images. Therefore, the decoder
+should be continuously updated based on the parameters
+obtained from pretraining according to the testing image,
+which makes the model better adapted to the specific HAD
+task and improves the ability of background reconstruction.
+3) Loss Function: In order to enable the reconstruction
+model to better reconstruct the background of a specific testing
+image, we perform a simple fine-tuning through the BRG
+loss to efficiently transfer the pretrained encoder and the
+lightweight decoder to a variety of HAD tasks without labeled
+samples.
+4) Anomaly Detection: Once the reconstruction model is
+fine-tuned through BRG loss, each testing image is fed into
+the pretrained encoder and the fine-tuned decoder, producing
+a reconstructed background image. If the tested pixel is
+background, the reconstruction error between the testing image
+and the reconstructed image is likely to be small; otherwise,
+the reconstruction error is likely to be large. The anomaly
+detection result can be obtained as follows:
+Di, j = yi, j − ỹi, j 2
+
+(10)
+
+where y ∈ R B×1 and ỹ ∈ R B×1 denote the spectral vectors of
+the tested pixel with spatial position (i, j) in the testing image
+and its reconstructed image, respectively; and Di, j denotes
+the anomaly probability of the tested pixel, which ultimately
+constitutes the anomaly detection map.
+
+Fig. 3. Pseudo-color images and ground-truth maps of the testing datasets.
+(a) Pavia. (b) Texas Coast. (c) Cri. (d) EI Segundo.
+
+IV. E XPERIMENT
+A. Experiment Details
+1) Experimental Datasets: In this work, one hyperspectral
+dataset HAD100 with a large scale is used for pretraining,
+and four hyperspectral datasets, Pavia, Texas Coast, Cri, and
+EI Segundo, are used for downstream HAD tasks. Details of
+each dataset are given as follows.
+1) HAD100 Dataset [43]: It was acquired by the Airborne
+Visible/Infrared Imaging Spectrometer-Next Generation
+(AVIRIS-NG) sensor with a total of 100 images, some of
+which are shown in Fig. 2. The images were uniformly
+cropped into patches of size 64 × 64 with a spectral
+range of 377–2500 nm. Original band 425 and 276 bands
+reserved. Considering that the dataset includes not
+only type-rich background features such as grasslands,
+deserts, and lakes but also different anomalous targets
+such as vehicles, boats, and buildings, the dataset is used
+for pretraining.
+2) Pavia Dataset [17]: It was acquired over the northern
+Italy city of Pavia using the Reflective Optics System
+Imaging Spectrometer (ROSIS) sensor. Fig. 3(a) shows
+the pseudo-color image and the ground-truth map. The
+data size is 108 × 120 pixels with a spatial resolution of
+1.3 m. The spectral coverage spans from 430 to 860 nm,
+encompassing 102 bands after the elimination of noise
+bands and water vapor absorption bands. The anomalies
+are vehicles and piers on the bridge, consisting of
+43 anomalous pixels.
+3) Texas Coast Dataset [65]: It was acquired over the
+coastal region of Texas in the United States using
+the AVIRIS sensor. Fig. 3(b) shows the pseudo-color
+image and the ground-truth map. The data size is
+100 × 100 pixels with a spatial resolution of 17.2 m.
+The spectral coverage spans from 450 to 1350 nm,
+
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD
+
+5504312
+
+Fig. 4. Detection maps of different methods. (a) Ground-truth maps of Pavia, Texas Coast, Cri, and EI Segundo datasets. (b) GRX. (c) 2S-GLRT. (d) CRD.
+(e) FEBPAD. (f) Auto-AD. (g) GAED. (h) PDBSNet. (i) MSNet. (j) AETNet. (k) CSSBR.
+
+encompassing 207 bands. The anomalies are buildings,
+consisting of 155 anomalous pixels.
+4) Cri Dataset [66]: It was acquired by the Nuance Cri
+hyperspectral sensor. Fig. 3(c) shows the pseudo-color
+image and the ground-truth map. The size of the data
+is 400 × 400 pixels. The spectral coverage spans
+from 650 to 1100 nm, encompassing 46 bands. The
+anomalies are stones, consisting of 1254 anomalous
+pixels.
+5) EI Segundo Dataset [67]: It was acquired by the
+AVIRIS sensor in the EI Segundo area, CA, USA.
+Fig. 3(d) shows the pseudo-color image and the groundtruth map. The data size is 250 × 300 pixels with
+a spatial resolution of 7.1 m. The spectral coverage
+spans from 366 to 2496 nm, encompassing 224 bands.
+The anomalies are tanks and towers in the oil refinery,
+consisting of 2048 anomalous pixels.
+2) Experimental Settings: To validate the effectiveness of
+the proposed method CSSBR, we compare it with nine
+HAD methods, including four traditional methods, GRX [8],
+2S-GLRT [13], CRD [14], and FEBPAD [23], and five
+DL methods, Auto-AD [34], GAED [35], PDBSNet [38],
+MSNet [39], and AETNet [43]. Through experiments and
+referencing the original paper, all the comparison methods
+used the optimal parameters.
+For the pretraining network in the CSSBR method, we use
+the AdamW optimizer and train for 100 epochs, with the
+learning rate increasing linearly to 0.0001 within the first ten
+epochs, followed by decaying the learning rate using a cosine
+schedule. Temperature τs is 0.1, and a cosine warm-up from
+0.04 to 0.07 is used for τt within the first 30 epochs. The
+batch size and patch size are set to 16 and 4, respectively. The
+patch-level random masking ratio and the pixel-level random
+masking ratio are both set to 90% for all datasets.
+In the fine-tuning network, the AdamW optimizer is still
+utilized with a learning rate of 0.0001 and 200 epochs. The
+patch size is still set to 4. All experiments are based on
+the PyTorch framework in the 64-bit Windows 10 operating
+
+system, NVIDIA GeForce RTX3060 graphics processing unit
+(GPU) with 16 GB of memory.
+3) Evaluation Metrics: In order to assess the anomaly
+detection performance of different methods, we use a
+variety of evaluation metrics, namely, detection map, receiver
+operating characteristic (ROC) curve, area under the curve
+(AUC), separability map, and run time.
+The detection map is segmented using different thresholds
+(τ ) to obtain different false alarm rates (Pf ) and probability
+of detection (Pd ). We use the ROC curves of (Pf , Pd ) and
+(τ , Pd ) to evaluate the effectiveness of anomaly detector and
+the anomaly detection ability, respectively. The closer the ROC
+curve of (Pf , Pd ) is to the top-left corner, the better the
+effectiveness of anomaly detector. The closer the ROC curve
+of (τ , Pd ) is to the top-right corner, the higher the anomaly
+detection ability.
+The AUC value indicates the area under the ROC curve, and
+we use a variety of AUC values for overall evaluation [68],
+[69]. Specifically, higher values of AUC(Pf ,Pd ) indicate better
+detector effectiveness. Higher values of AUC(τ,Pd ) indicate
+better anomaly detection ability. Lower values of AUC(τ,Pf )
+indicate better background suppression performance. AUCJAD
+is AUC(Pf ,Pd ) + AUC(τ,Pd ) , which further indicates the anomaly
+detection ability. AUCADBS is AUC(τ,Pd ) − AUC(τ,Pf ) , which
+indicates the anomaly detection and background suppression performance. AUCOAD is the sum of AUC(τ,Pd ) and
+1 − AUC(τ,Pf ) , which is the second AUCADBS metric derived
+from the classification point of view and indicates the overall
+anomaly detection performance. AUCSBPR is computed by
+AUC(τ,Pd ) /(1−AUC(τ,Pf ) ), which is also an effective detection
+metric derived from a widely used idea in communications or
+signal processing.
+B. Detection Performance Analysis
+In this section, we compare the detection performance of the
+proposed CSSBR method with other methods on four different
+hyperspectral datasets. To mitigate the effects of random
+factors, all experiments were run five times consecutively. The
+value of the third-ranked AUC(Pf ,Pd ) and its corresponding
+
+5504312
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Fig. 5.
+
+ROC curves of (Pf , Pd ) for different methods on four datasets. (a) Pavia. (b) Texas Coast. (c) Cri. (d) EI Segundo.
+
+Fig. 6.
+
+ROC curves of (τ , Pd ) for different methods on four datasets. (a) Pavia. (b) Texas Coast. (c) Cri. (d) EI Segundo.
+
+values of other evaluation metrics were taken as the final
+results. The experiment’s purpose is to demonstrate the
+effectiveness of our pretrained model in transferring to various
+HAD tasks.
+Fig. 4 shows the detection maps of different methods on
+four datasets. The results show that CSSBR is able to detect
+all the anomalies and highlight the anomalies in the first three
+datasets, for example, the right anomalies in Texas Coast
+dataset and the top-right and bottom-right anomalies in the Cri
+dataset are well detected and highlighted. Besides, CSSBR is
+able to detect more anomalies in the EI Segundo dataset in
+comparison to the other methods.
+Fig. 5 shows the ROC curves of (Pf , Pd ) for different
+methods on four datasets. On Pavia, Texas Coast, and EI
+Segundo datasets, the ROC curves of (Pf , Pd ) for CSSBR are
+essentially located above that of the other methods. On the
+Cri dataset, CSSBR has the highest probability of detection
+when the false alarm rate is greater than 0.03. The results
+generally show that CSSBR exhibits a better effectiveness of
+detector.
+Fig. 6 shows the ROC curves of (τ , Pd ) for different
+methods on four datasets. On all four datasets, the ROC curves
+of (τ , Pd ) for CSSBR are basically located above that of the
+other methods. The results show that CSSBR exhibits a higher
+anomaly detection ability than other comparison methods on
+four datasets.
+Table I shows the AUC values for different methods on four
+datasets, where the optimal values are shown in bold. CSSBR
+was optimal for most AUC values in all datasets. Specifically,
+the AUC(Pf ,Pd ) values of CSSBR are the highest on all datasets,
+validating the effectiveness of the proposed method in anomaly
+detection. The AUC(τ,Pd ) and AUCJAD values of CSSBR are
+the highest on all the datasets, indicating that the proposed
+
+method has a strong anomaly detection ability. Even though
+AUC(τ,Pf ) values of CSSBR are not optimal, the AUCADBS ,
+AUCOAD , and AUCSBPR values of CSSBR are the highest in
+all the datasets, indicating that the proposed method is able
+to achieve better overall results in highlighting the anomalies
+and suppressing the background. In summary, in terms of
+various AUC values, CSSBR is generally superior to other
+methods.
+Fig. 7 shows the separability maps for different methods
+on four datasets, which can visually reflect the separation
+of anomalies and backgrounds. On all the datasets, CSSBR
+exhibits larger spacing between the anomaly box and the
+background box compared to the other methods, indicating that
+CSSBR is able to separate anomalies from backgrounds well.
+In addition, the center line of the anomaly box of CSSBR has
+a higher position and the bottom of the anomaly box is higher
+on all datasets compared to the other methods, indicating that
+CSSBR highlights the anomalies well. In summary, in terms
+of separability maps, CSSBR outperforms other methods in
+distinguishing anomalies from backgrounds.
+Table II shows the run times of different methods on
+four datasets, where the run time represents the total time
+of performing the downstream task. The average run time
+indicates the time efficiency of each method on various
+datasets. Compared to traditional methods 2S-GLRT and CRD,
+CSSBR requires a shorter average runtime. Compared to all
+DL-based methods, CSSBR requires the shortest average run
+time. Due to the freezing of the encoder, the number of
+parameters in the downstream task is significantly reduced,
+thus improving the time efficiency of the CSSBR method.
+By comparing the proposed CSSBR method and the other
+methods on four different hyperspectral datasets, in terms
+of detection map, ROC curve, AUC value, separability
+
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD
+
+5504312
+
+TABLE I
+AUC VALUES FOR D IFFERENT M ETHODS ON F OUR DATASETS
+
+Fig. 7.
+
+Separability maps for different methods on four datasets. (a) Pavia. (b) Texas Coast. (c) Cri. (d) EI Segundo.
+
+maps, and run time, we can draw a general conclusion that
+CSSBR outperforms the comparison methods, validating the
+
+effectiveness of transferring the pretrained model to various
+HAD tasks.
+
+5504312
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+TABLE II
+RUN T IMES ( IN S ECONDS ) FOR D IFFERENT M ETHODS ON F OUR DATASETS
+
+TABLE III
+A BLATION S TUDIES ON P RETRAINING P HASE
+
+Fig. 8. Parameter analysis on four datasets. (a) Pixel-level and (b) patch-level
+random masking ratio.
+
+C. Parameter Analysis
+In this section, we discuss the impact of two important
+parameters of the CSSBR method on the HAD performance.
+The two important parameters are pixel-level random masking
+ratio n and patch-level random masking ratio m. The
+experiments are conducted on four datasets with the evaluation
+metric of AUC(Pf ,Pd ) value.
+First, the pixel-level random masking ratio n was set
+according to the range [10%, 20%, 30%, 40%, 50%, 60%,
+70%, 80%, 90%], and the AUC(Pf ,Pd ) values for the four
+datasets are shown in Fig. 8(a). On Pavia, Texas Coast, and
+EI Segundo datasets, the AUC(Pf ,Pd ) values hardly change as
+n increases. On the Cri dataset, the AUC(Pf ,Pd ) values show
+a slowly increasing trend with increasing n, and the best
+detection result is achieved at n = 90%. Considering the
+overall performance of the four datasets, we set the pixel-level
+random masking ratio n as 90%.
+Subsequently, the patch-level random masking ratio m was
+set according to the range [10%, 20%, 30%, 40%, 50%,
+60%, 70%, 80%, 90%], and the AUC(Pf ,Pd ) values for the
+four datasets are shown in Fig. 8(b). On Pavia, Texas Coast,
+and EI Segundo datasets, the AUC(Pf ,Pd ) values show an
+overall increasing trend as m increases. On the Cri dataset,
+AUC(Pf ,Pd ) values show a decreasing and then increasing trend
+as m increases, but the change of AUC(Pf ,Pd ) values does not
+exceed 0.45%. Considering the overall performance of the four
+datasets, we set m to 90%.
+D. Ablation Study
+This section discusses the effectiveness of self-supervised
+pretraining, DAN, and BRG loss.
+First, we discuss the effectiveness of self-supervised
+pretraining. Specifically, we compare the performance of
+three cases: 1) without using the pretraining model (UnPretrained); 2) using the pretraining model based on the
+
+MIM-based GSSL approach (GSSL-Pretrained); and 3) using
+the proposed self-supervised pretraining model (CSSBRPretrained). We aim to verify that the proposed pretraining
+model integrating the MIM-based GSSL approach and the
+CSSL approach enables CSSBR to learn general background
+representations for various downstream HAD tasks. The
+AUC(Pf ,Pd ) values and run times are shown in Table III, with
+the optimal value in bold. With the proposed pretraining
+model, the AUC(Pf ,Pd ) values are better on most datasets,
+especially on Cri dataset. The run times are reduced
+on all datasets compared to the case without using the
+pretraining model. The experimental results illustrate that the
+general background representations learned by the proposed
+pretraining model can be quickly and efficiently transferred to
+various HAD tasks.
+Subsequently, we discuss the effectiveness of the DAN.
+Specifically, we compare the performance of CAM, ViT, and
+DAN. The AUC(Pf ,Pd ) values are shown in Table IV. DAN has
+better AUC(Pf ,Pd ) values on most datasets compared to CAM
+or ViT. The results show that DAN based on CAM and ViT
+can indeed improve the feature extraction effect and enhance
+the anomaly detection performance.
+Finally, we discuss the effectiveness of the BRG loss.
+Specifically, we use either the BRG loss or the mse loss
+to guide the training of the reconstruction networks in both
+the pretraining phase and the transferring learning phase.
+The AUC(Pf ,Pd ) values are shown in Table IV, with the
+optimal value in bold. The AUC(Pf ,Pd ) values are improved
+by 0.01%, 0.12%, and 0.46% on the Texas Coast, Cri, and
+EI Segundo datasets, respectively. The results show that BRG
+loss improves the anomaly detection performance.
+
+SUN et al.: CONTRASTIVE SELF-SUPERVISED LEARNING-BASED BACKGROUND RECONSTRUCTION FOR HAD
+
+TABLE IV
+A BLATION S TUDIES ON D IFFERENT C OMPONENTS
+
+V. C ONCLUSION
+In this article, a CSSBR method is proposed for HAD.
+By constructing a self-supervised pretraining model based
+on a pixel- and patch-level masking strategy and a DAN
+encoder, the pretraining model can learn general background
+representation without labeled sample generation. The DAN
+encoder is constructed by ViT and CAM to extract the
+global context information and the correlation between spectra.
+The transfer learning model is constructed based on a DAN
+encoder and a lightweight decoder, which is simply fine-tuned
+through BRG loss and efficiently transferred to a variety of
+HAD tasks. Experiments on four challenging hyperspectral
+datasets validate that the CSSBR method is capable of
+performing various anomaly detection tasks with leading
+detection performance and high detection efficiency.
+However, the proposed CSSBR method is still deficient
+in background suppression. This may be due to the limited
+number of pretraining images and the deviation of the
+background distribution between the downstream dataset
+and the pretraining dataset, resulting in limited background
+suppression performance. We will continue to investigate how
+to improve the background suppression performance.
+ACKNOWLEDGMENT
+The authors would like to gratefully thank all the editors
+and anonymous reviewers for their careful reading and helpful
+remarks.
+R EFERENCES
+[1] X. Hu et al., “Hyperspectral anomaly detection using deep learning: A
+review,” Remote Sens., vol. 14, no. 9, p. 1973, Apr. 2022.
+[2] Y. Zhang, Y. Dong, K. Wu, and T. Chen, “Hyperspectral anomaly
+detection with OTSU-based isolation forest,” IEEE J. Sel. Topics Appl.
+Earth Observ. Remote Sens., vol. 14, pp. 9079–9088, 2021.
+
+5504312
+
+[3] G. Shaw and D. Manolakis, “Signal processing for hyperspectral image
+exploitation,” IEEE Signal Process. Mag., vol. 19, no. 1, pp. 12–16,
+Jan. 2002.
+[4] X. Hadoux et al., “Non-invasive in vivo hyperspectral imaging of
+the retina for potential biomarker use in Alzheimer’s disease,” Nature
+Commun., vol. 10, no. 1, Sep. 2019, Art. no. 4227.
+[5] P. Duan, X. Kang, P. Ghamisi, and S. Li, “Hyperspectral remote sensing
+benchmark database for oil spill detection with an isolation forest-guided
+unsupervised detector,” IEEE Trans. Geosci. Remote Sens., vol. 61, 2023,
+Art. no. 5509711.
+[6] H. K. Jusoff, “Pixel-based airborne hyperspectral sensing technique for
+search- and-rescue of the missing RMAF NURI helicopter in Genting–
+Sempah, Malaysia,” Disaster Prevention Manag., Int. J., vol. 19, no. 1,
+pp. 87–101, Feb. 2010.
+[7] M. Borengasser, W. S. Hungate, and R. Watkins, Hyperspectral Remote
+Sensing-Principles and Applications. Boca Raton, FL, USA: CRC Press,
+2007, 2007.
+[8] I. S. Reed and X. Yu, “Adaptive multiple-band CFAR detection of an
+optical pattern with unknown spectral distribution,” IEEE Trans. Acoust.,
+Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, Aug. 1990.
+[9] H. Kwon and N. M. Nasrabadi, “Kernel RX-algorithm: A nonlinear
+anomaly detector for hyperspectral imagery,” IEEE Trans. Geosci.
+Remote Sens., vol. 43, no. 2, pp. 388–397, Feb. 2005.
+[10] A. Schaum, “Joint subspace detection of hyperspectral targets,” in Proc.
+IEEE Aerosp. Conf., Dec. 2004, pp. 1818–1824.
+[11] J. M. Molero, E. M. Garzón, I. García, and A. Plaza, “Analysis and
+optimizations of global and local versions of the RX algorithm for
+anomaly detection in hyperspectral data,” IEEE J. Sel. Topics Appl. Earth
+Observ. Remote Sens., vol. 6, no. 2, pp. 801–814, Apr. 2013.
+[12] Y. P. Taitano, B. A. Geier, and K. W. Bauer, “A locally adaptable
+iterative RX detector,” EURASIP J. Adv. Signal Process., vol. 2010,
+no. 1, Dec. 2010, Art. no. 341908.
+[13] J. Liu, Z. Hou, W. Li, R. Tao, D. Orlando, and H. Li, “Multipixel
+anomaly detection with unknown patterns for hyperspectral imagery,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 10, pp. 5557–5567,
+Oct. 2022.
+[14] W. Li and Q. Du, “Collaborative representation for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3,
+pp. 1463–1474, Mar. 2015.
+[15] R. Wang, H. Hu, F. He, F. Nie, S. Cai, and Z. Ming, “Self-weighted
+collaborative representation for hyperspectral anomaly detection,” Signal
+Process., vol. 177, Dec. 2020, Art. no. 107718.
+[16] Z. Hou, W. Li, R. Tao, P. Ma, and W. Shi, “Collaborative representation
+with background purification and saliency weight for hyperspectral
+anomaly detection,” Sci. China Inf. Sci., vol. 65, no. 1, pp. 1–12,
+Jan. 2022.
+[17] Y. Zhang, B. Du, L. Zhang, and S. Wang, “A low-rank and sparse matrix
+decomposition-based Mahalanobis distance method for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 54, no. 3,
+pp. 1376–1389, Mar. 2016.
+[18] Y. Qu et al., “Hyperspectral anomaly detection through spectral
+unmixing and dictionary-based low-rank decomposition,” IEEE Trans.
+Geosci. Remote Sens., vol. 56, no. 8, pp. 4391–4405, Aug. 2018.
+[19] L. Li, W. Li, Q. Du, and R. Tao, “Low-rank and sparse decomposition
+with mixture of Gaussian for hyperspectral anomaly detection,” IEEE
+Trans. Cybern., vol. 51, no. 9, pp. 4363–4372, Sep. 2021.
+[20] M. Wang, Q. Wang, D. Hong, S. K. Roy, and J. Chanussot, “Learning
+tensor low-rank representation for hyperspectral anomaly detection,”
+IEEE Trans. Cybern., vol. 53, no. 1, pp. 679–691, Jan. 2023.
+[21] X. Zhang, G. Wen, and W. Dai, “A tensor decomposition-based anomaly
+detection algorithm for hyperspectral image,” IEEE Trans. Geosci.
+Remote Sens., vol. 54, no. 10, pp. 5801–5820, Oct. 2016.
+[22] R. Tao, X. Zhao, W. Li, H.-C. Li, and Q. Du, “Hyperspectral anomaly
+detection by fractional Fourier entropy,” IEEE J. Sel. Topics Appl. Earth
+Observ. Remote Sens., vol. 12, no. 12, pp. 4920–4929, Dec. 2019.
+[23] Y. Ma, G. Fan, Q. Jin, J. Huang, X. Mei, and J. Ma, “Hyperspectral
+anomaly detection via integration of feature extraction and background
+purification,” IEEE Geosci. Remote Sens. Lett., vol. 18, no. 8,
+pp. 1436–1440, Aug. 2021.
+[24] Z. Yang et al., “A multi-scale mask convolution-based blind-spot
+network for hyperspectral anomaly detection,” Remote Sens., vol. 16,
+no. 16, p. 3036, Aug. 2024.
+[25] L. Zhang and B. Cheng, “Fractional Fourier transform and transferred
+CNN based on tensor for hyperspectral anomaly detection,” IEEE
+Geosci. Remote Sens. Lett., vol. 19, 2022, Art. no. 5505505.
+
+5504312
+
+[26] W. Liu et al., “UADNet: A joint unmixing and anomaly detection
+network based on deep clustering for hyperspectral image,” IEEE Trans.
+Geosci. Remote Sens., vol. 62, 2024, Art. no. 5511419.
+[27] R. Zhao, Z. Yang, X. Meng, and F. Shao, “A novel fully convolutional
+auto-encoder based on dual clustering and latent feature adversarial
+consistency for hyperspectral anomaly detection,” Remote Sens., vol. 16,
+no. 4, p. 717, Feb. 2024.
+[28] L. Gao, D. Wang, L. Zhuang, X. Sun, M. Huang, and A. Plaza,
+“BS3 LNet: A new blind-spot self-supervised learning network for
+hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5504218.
+[29] D. Wang, L. Zhuang, L. Gao, X. Sun, X. Zhao, and A. Plaza,
+“Sliding dual-window-inspired reconstruction network for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+Art. no. 5504115.
+[30] I. J. Goodfellow et al., “Generative adversarial networks,” Commun.
+ACM, vol. 63, no. 11, pp. 139–144, 2020.
+[31] J. Zhong, W. Xie, Y. Li, J. Lei, and Q. Du, “Characterization of
+background-anomaly separability with generative adversarial network
+for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 59, no. 7, pp. 6017–6028, Jul. 2021.
+[32] J. Wang, S. Guo, Z. Hua, R. Huang, J. Hu, and M. Gong, “CL-CaGAN:
+Capsule differential adversarial continual learning for cross-domain
+hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 62, 2024, Art. no. 5517315.
+[33] K. Li et al., “Spectral–spatial deep support vector data description for
+hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5522316.
+[34] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Auto-AD: Autonomous
+hyperspectral anomaly detection network based on fully convolutional
+autoencoder,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5503314.
+[35] P. Xiang, S. Ali, S. K. Jung, and H. Zhou, “Hyperspectral anomaly
+detection with guided autoencoder,” IEEE Trans. Geosci. Remote Sens.,
+vol. 60, 2022, Art. no. 5538818.
+[36] W. Xie, B. Liu, Y. Li, J. Lei, C.-I. Chang, and G. He, “Spectral
+adversarial feature learning for anomaly detection in hyperspectral
+imagery,” IEEE Trans. Geosci. Remote Sens., vol. 58, no. 4,
+pp. 2352–2365, Apr. 2020.
+[37] Z. Wang, X. Wang, K. Tan, B. Han, J. Ding, and Z. Liu, “Hyperspectral
+anomaly detection based on variational background inference and
+generative adversarial network,” Pattern Recognit., vol. 143, Nov. 2023,
+Art. no. 109795.
+[38] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and
+A. J. Plaza, “PDBSNet: Pixel-shuffle downsampling blind-spot
+reconstruction network for hyperspectral anomaly detection,” IEEE
+Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no. 5511914.
+[39] H. Liu, X. Su, X. Shen, and X. Zhou, “MSNet: Self-supervised
+multiscale network with enhanced separation training for hyperspectral
+anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+Art. no. 5520313.
+[40] Z. Wang, D. Ma, G. Yue, B. Li, R. Cong, and Z. Wu, “Self-supervised
+hyperspectral anomaly detection based on finite spatialwise attention,”
+IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, Art. no. 5502918.
+[41] T. Jiang, W. Xie, Y. Li, J. Lei, and Q. Du, “Weakly supervised
+discriminative learning with spectral constrained generative adversarial
+network for hyperspectral anomaly detection,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 33, no. 11, pp. 6504–6517, Nov. 2022.
+[42] Y. Liu, W. Xie, Y. Li, Z. Li, and Q. Du, “Dual-frequency autoencoder for
+anomaly detection in transformed hyperspectral imagery,” IEEE Trans.
+Geosci. Remote Sens., vol. 60, 2022, Art. no. 5523613.
+[43] Z. Li, Y. Wang, C. Xiao, Q. Ling, Z. Lin, and W. An, “You only train
+once: Learning a general anomaly enhancement network with random
+masks for hyperspectral anomaly detection,” IEEE Trans. Geosci.
+Remote Sens., vol. 61, 2023, Art. no. 5506718.
+[44] X. Liu et al., “Self-supervised learning: Generative or contrastive,” IEEE
+Trans. Knowl. Data Eng., vol. 35, no. 1, pp. 857–876, Jan. 2021.
+[45] I. Misra and L. van der Maaten, “Self-supervised learning of pretextinvariant representations,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2020, pp. 6706–6716.
+[46] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 15979–15988.
+
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+[47] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum
+contrast for unsupervised visual representation learning,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020,
+pp. 9726–9735.
+[48] J.-B. Grill et al., “Bootstrap your own latent: A new approach to selfsupervised learning,” 2020, arXiv:2006.07733.
+[49] M. Caron et al., “Emerging properties in self-supervised vision
+transformers,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+Oct. 2021, pp. 9630–9640.
+[50] T. Chen, S. Kornblith, M. Norouzi, and G. E. Hinton, “A
+simple framework for contrastive learning of visual representations,” in Proc. Intern. Conf. Mach. Learn. (ICML), Jul. 2020,
+pp. 1597–1607.
+[51] M. Lee, “A mathematical interpretation of autoregressive generative pretrained transformer and self-supervised learning,” Mathematics, vol. 11,
+no. 11, p. 2451, May 2023.
+[52] H. Fang, S. Wang, M. Zhou, J. Ding, and P. Xie, “CERT:
+Contrastive self-supervised learning for language understanding,” 2020,
+arXiv:2005.12766.
+[53] Z. Wu, S. Wang, J. Gu, M. Khabsa, F. Sun, and H. Ma,
+“CLEAR: Contrastive learning for sentence representation,” 2020,
+arXiv:2012.15466.
+[54] X. Chen, Y. Zhang, Y. Dong, and B. Du, “Generative selfsupervised learning with spectral–spatial masking for hyperspectral
+target detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+Art. no. 5522713.
+[55] H. Bao, L. Dong, S. Piao, and F. Wei, “BEiT: BERT pre-training of
+image transformers,” 2021, arXiv:2106.08254.
+[56] X. Chen, Y. Zhang, Y. Dong, and B. Du, “Spatial–spectral contrastive
+self-supervised learning with dual path networks for hyperspectral
+target detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+Art. no. 5515612.
+[57] Y. Wang, C. M. Albrecht, N. A. A. Braham, L. Mou, and X. X. Zhu,
+“Self-supervised learning in remote sensing: A review,” IEEE Geosci.
+Remote Sens. Mag., vol. 10, no. 4, pp. 213–247, Dec. 2022.
+[58] M. Hu, C. Wu, and L. Zhang, “HyperNet: Self-supervised hyperspectral
+spatial–spectral feature understanding network for hyperspectral change
+detection,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5543017.
+[59] X. Cao, H. Lin, S. Guo, T. Xiong, and L. Jiao, “Transformer-based
+masked autoencoder with contrastive loss for hyperspectral image
+classification,” IEEE Trans. Geosci. Remote Sens., vol. 61, 2023,
+Art. no. 5524312.
+[60] A. Vaswani et al., “Attention is all you need,” 2017, arXiv:1706.03762.
+[61] A. Dosovitskiy et al., “An image is worth 16x16 words: Transformers
+for image recognition at scale,” 2020, arXiv:2010.11929.
+[62] D. Ibañez, R. Fernandez-Beltran, F. Pla, and N. Yokoya, “Masked
+auto-encoding spectral–spatial transformer for hyperspectral image
+classification,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022,
+Art. no. 5542614.
+[63] D. Shen, X. Ma, W. Kong, J. Liu, J. Wang, and H. Wang, “Hyperspectral
+target detection based on interpretable representation network,” IEEE
+Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no. 5519416.
+[64] L. I. Rudin, S. Osher, and E. Fatemi, “Nonlinear total variation based
+noise removal algorithms,” Phys. D, Nonlinear Phenomena, vol. 60,
+nos. 1–4, pp. 259–268, 1992.
+[65] L. Gao, X. Sun, X. Sun, L. Zhuang, Q. Du, and B. Zhang, “Hyperspectral
+anomaly detection based on chessboard topology,” IEEE Trans. Geosci.
+Remote Sens., vol. 61, 2023, Art. no. 5505016.
+[66] Y. Ma, S. Cai, and J. Zhou, “Adaptive reference-related graph embedding
+for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+vol. 61, 2023, Art. no. 5504514.
+[67] S. Liu, M. Song, B. Xue, C.-I. Chang, and M. Zhang, “Hyperspectral
+real-time local anomaly detection based on finite Markov via line-byline processing,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+Art. no. 5503520.
+[68] C.-I. Chang, “Comprehensive analysis of receiver operating characteristic (ROC) curves for hyperspectral anomaly detection,” IEEE Trans.
+Geosci. Remote Sens., vol. 60, 2022, Art. no. 5541124.
+[69] C.-I. Chang, S. Chen, S. Zhong, and Y. Shi, “Exploration of
+data scene characterization and 3D ROC evaluation for hyperspectral anomaly detection,” Remote Sens., vol. 16, no. 1, p. 135,
+Dec. 2023.
+PAPER_TEXT

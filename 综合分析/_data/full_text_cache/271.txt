@@ -1,0 +1,735 @@
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024 4013
+
+ No More Data Silos: Unified Microservice Failure
+ Diagnosis With Temporal Knowledge Graph
+ Shenglin Zhang , Member, IEEE, Yongxin Zhao , Sibo Xia , Shirui Wei , Yongqian Sun , Member, IEEE,
+ Chenyu Zhao, Shiyu Ma , Junhua Kuang, Bolin Zhu , Lemeng Pan , Yicheng Guo ,
+ and Dan Pei , Senior Member, IEEE
+
+ Abstract—Microservices improve the scalability and flexibil- I. INTRODUCTION
+ity of monolithic architectures to accommodate the evolution of
+ ICROSERVICES have gained significant attention in
+software systems, but the complexity and dynamics of microservices challenge system reliability. Ensuring microservice quality
+requires efficient failure diagnosis, including detection and triage.
+ M the last few years in both industry and academia [1].
+ However, the complexity and dynamism of microservice sys-
+Failure detection involves identifying anomalous behavior within tems pose unique challenges for maintenance [2]. When a
+the system, while triage entails classifying the failure type and
+directing it to the engineering team for resolution. Unfortunately,
+ microservice system fails, the failure will propagate along the
+current approaches reliant on single-modal monitoring data, such interaction network between microservices, posing significant
+as metrics, logs, or traces, cannot capture all failures and neglect challenges and pressures for operators. Failures will negatively
+interconnections among multimodal data, leading to erroneous di- impact user experience and cause enormous losses for service
+agnoses. Recent multimodal data fusion studies struggle to achieve providers if they are not quickly diagnosed and mitigated [3],
+deep integration, limiting diagnostic accuracy due to insufficiently
+captured interdependencies. Therefore, we propose UniDiag, which
+ [4]. To ensure high availability and minimize service downtime,
+leverages temporal knowledge graphs to fuse multimodal data for prompt diagnosis, encompassing both detection and triage, is
+effective failure diagnosis. UniDiag applies a simple yet effective crucial [5], [6]. This allows operators to respond efficiently to
+stream-based anomaly detection method to reduce computational failures, mitigating their impact and restoring service functioncost and a novel microservice-oriented graph embedding method ality as quickly as possible. Proactive failure detection can alert
+to represent the state of systems comprehensively. To assess the
+performance of UniDiag, we conduct extensive evaluation experioperators timely, and accurate failure triage can not only provide
+ments using datasets from two benchmark microservice systems, operators with suggestions for mitigation measures (Table I)
+demonstrating its superiority over existing methods and affirming but also minimize the cost associated with reassignment, which
+the efficacy of multimodal data fusion. Additionally, we have pub- refers to the process of re-allocating the initially assigned mitigalicly made the code and data available to facilitate further research. tion measures to the potentially more appropriate measures [5].
+ Index Terms—Microservice, failure diagnosis, multimodal data, Therefore, rapid and accurate failure diagnosis is indispensable
+knowledge graph. for effectively maintaining microservice systems.
+ Received 18 June 2024; revised 19 September 2024; accepted 16 October A microservice system is an architecture composed of mul-
+2024. Date of publication 31 October 2024; date of current version 30 De- tiple microservices, with each microservice having multiple
+cember 2024. This work was supported in part by the Advanced Research
+Project of China under Grant 31511010501, and in part by the National Natural instances. To monitor the status of microservice systems in real-
+Science Foundation of China under Grant 62272249, Grant 62302244, and Grant time and achieve rapid failure diagnosis, operators often contin-
+62072264. (Corresponding author: Yongqian Sun.) uously collect three modalities of monitoring data (i.e., metrics,
+ Shenglin Zhang is with the College of Software, Haihe Laboratory of Information Technology Application Innovation (HL-IT), Nankai University, Tianjin logs, traces) for each microservice instance [7]. Fig. 1 shows
+300192, China (e-mail: zhangsl@nankai.edu.cn). the three modalities of data in a microservice system. Metrics
+ Yongxin Zhao, Sibo Xia, Shiyu Ma, and Junhua Kuang are with the Nankai include system-level metrics (e.g., CPU utilization, memory
+University, Tianjin 300192, China (e-mail: zyx_nkcs@mail.nankai.edu.cn;
+xiath@mail.nankai.edu.cn; mashiyu@mail.nankai.edu.cn; 2013157@mail. utilization, and network throughput) and user-perceived metrics
+nankai.edu.cn). (e.g., average response time, error rate, and page view count),
+ Shirui Wei is with the University of the Chinese Academy of Sciences, Beijing presented as time series. Logs are semi-structured text that
+101408, China (e-mail: weishirui23@mails.ucas.ac.cn).
+ Yongqian Sun is with the College of Software, Tianjin Key Laboratory of records various events and system runtime status. Traces are
+Software Experience and Human Computer Interaction (TKL-SEHCI), Nankai in the tree structure recording information about user requests
+University, Tianjin 300192, China (e-mail: sunyongqian@nankai.edu.cn). like instances and service calls, and each call forms a span.
+ Chenyu Zhao is with the Alibaba Group, Beijing 100020, China (e-mail:
+zhaochenyu@mail.nankai.edu.cn). For example, as shown in Fig. 1, after a failure occurs, the
+ Bolin Zhu is with the Nanjing University, Nanjing 210093, China (e-mail: “system.cpu.pct_utilization” metric sharply rises, and simultabolinzhu@smail.nju.edu.cn). neously microservice instances S1 and S2 generate anomalous
+ Lemeng Pan and Yicheng Guo are with the Huawei Technologies
+Co., Ltd., Shenzhen 518129, China (e-mail: panlemeng@huawei.com; log messages, with a significant increase in response time in
+guoyicheng3@huawei.com). related traces.
+ Dan Pei is with the Department of Computer Science, Tsinghua University, Over the years, many single-modal data-based failure diag-
+Beijing 100190, China (e-mail: peidan@tsinghua.edu.cn).
+ Digital Object Identifier 10.1109/TSC.2024.3489444 nosis approaches for microservice systems have been proposed
+
+ 1939-1374 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+4014 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+ TABLE I
+ ANOMALOUS MANIFESTATIONS OF MULTIMODAL DATA ARE DERIVED FROM AN EXTENSIVE EMPIRICAL ANALYSIS OF FAILURE CASES, AND MITIGATION
+ MEASURES FOR EACH FAILURE TYPE ARE BASED ON THEIR UNDERLYING ROOT CAUSES [21]
+
+Fig. 1. An example of the multimodal data of a microservice system during a failure. Fig. 1(a) shows two metrics: the blue line in the figure represents the original
+value of the metric, and the red line represents an anomalous fragment. Fig. 1(b) shows eight logs; the red ones are anomalous. Fig. 1(c) shows a trace where a node
+represents a microservice instance, an edge from a caller to a callee denotes a span, and the red span is anomalous because of its excessively high response time.
+
+(e.g., metrics [8], [9], [10], logs [11], [12], [13], or traces [14]). learning frameworks in these existing methods introduces a
+However, these approaches usually lead to a large number of significant dependency on labeled data, restricting their flexibilmisdiagnoses due to the inherent limitations of the characteris- ity and generalization capabilities, particularly when confronted
+tics of the data used: with novel failure patterns or evolving system architectures.
+ Limitations of Metrics: Metrics can react rapidly to changes Much research has demonstrated that knowledge graph (KG)
+in system performance [15], reflecting various failure modes is a potent technique for combining multimodal informavia higher or lower values. However, the over-sensitivity of the tion [22], [23]. It can capture entity characteristics for subsequent
+metrics may produce false alarms [15], [16]. For example, in failure detection and triage. Therefore, we try to apply KG to
+scenarios where memory is effectively released, notwithstanding fuse multimodal data for failure diagnosis (i.e., failure detection
+a potentially decreased memory utilization may be lower than and triage). However, applying KG to achieve failure diagnosis
+normal level, it does not indicate a system failure. through multimodal data faces the following challenges:
+ Limitations of Logs: Since logs are semi-structured text gen- 1) The immense volume of monitoring data generated by mierated by logging statements in software source code [17], they croservices systems [2], makes it challenging to integrate
+rely significantly on developers’ domain knowledge. Conse- all the data into the KG in the form of entities and relations.
+quently, certain nuanced performance issues, such as anomalous Furthermore, as aforementioned, the multimodal data is
+memory utilization, may not be adequately reflected in the logs, heterogeneous. The fusion of these heterogeneous data in
+rendering it impossible to diagnose “Resource underprovision- a KG poses significant challenges.
+ing” failures (Table I). 2) The relations between entities in the KG manifest as a
+ Limitations of Traces: The information reflecting calls be- heterogeneous composition, capturing not only the states
+tween microservice instances does not provide information of distinct events within a given microservice instance but
+about what is happening inside the instance [18]. This lack of also the intricate interactions and resource-sharing across
+information makes it unfeasible to diagnose “System component different instances. Moreover, the temporal variations in
+damage” failures through tracing alone (Table I). instance states and the dynamic fluctuations in the num-
+ Due to the above limitations, recent studies have explored ber of instances [24], [25] present notable obstacles in
+multimodal data fusion for enhanced failure diagnosis [19], [20]. effectively acquiring temporal and heterogeneous struc-
+However, these approaches often fall short of achieving suffi- tural information from a KG. Furthermore, deriving graph
+ciently deep integration of heterogeneous data sources. This lim- representations from dynamic node embeddings adds to
+itation in effectively capturing the complex interdependencies the complexity of the challenge.
+between different modalities consequently hinders diagnostic In this paper, we propose UniDiag, a novel approach for
+accuracy. Furthermore, the predominant reliance on supervised integrating the multimodal data in microservice systems and
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4015
+
+conducting failure diagnosis. It first fuses multimodal data using failure types. Yuan et al. [12] use supervised methods to extract
+a temporal knowledge graph (TKG), which is constructed by features from anomalous logs and correlate them with failure
+temporally stacking KG snapshots to capture system dynam- behaviors, requiring extensive manual labeling.
+ics [26]. This method enables the effective fusion of multi- MEPFL [14] predicts errors and failure types for trace inmodal data. Subsequently, a novel microservice-oriented graph stances based on system trace data. However, methods like those
+embedding (MOGE) method is employed to generate graph in [31], [32], [33] using traces for anomaly detection or root
+representations of the TKG, encoding its rich structural and cause localization do not specify failure types.
+temporal information. The main contributions of this paper are Several studies integrate multimodal data for anomaly deas follows: tection or root cause localization [18], [19], [20], [34], [35],
+ 1) UniDiag considers the heterogeneity and correlation of [36], [37]. CloudRCA [20] combines metrics and logs with a
+ three modalities of data (i.e., metrics, logs, and traces) Knowledge-informed Hierarchical Bayesian Network for root
+ and combines these data with TKG. To the best of our cause analysis. MicroCBR [34] embeds anomaly event seknowledge, we are among the first to apply the KG-based quences into a failure knowledge graph for case retrieval and
+ method to fuse the three modalities of data for failure failure triage. DiagFusion [19] uses embedding techniques and
+ diagnosis. a Graph Neural Network to determine failure types. Eadro [18]
+ 2) To decrease the number of entities present in KG and fuse models intra-service dynamics and inter-service dependencies
+ the heterogeneous data, we propose a simple yet effective using traces, logs, and KPIs for anomaly detection and root
+ stream-based anomaly detection method, addressing the cause localization. TAD [35] employs a Transformer encoder
+ first challenge. model to identify failures and utilizes tracing chains to pinpoint
+ 3) To obtain the comprehensive state representation of a faulty services. HeMiRCA [36] utilizes Spearman correlation
+ microservice system, we propose a novel MOGE method, to localize hierarchical root causes. MULAN [37] localizes root
+ integrating the Relation-aware Graph Convolutional Net- causes by co-learning a causal graph from metrics and logs.
+ work (R-GCN) [27], Gate Recurrent Unit (GRU) [28] and However, none of these approaches, including Eadro, TAD,
+ second-order pooling (SOPOOL) [29], which addresses HeMiRCA, and MULAN offer comprehensive triage of failure
+ the second challenge. R-GCN and GRU effectively cap- types in microservice systems.
+ ture the heterogeneous structural and temporal information of entities and relations in the TKG, respectively. III. MOTIVATION AND PROBLEM STATEMENT
+ Furthermore, we utilize SOPOOL to learn a comprehensive graph representation of dynamically changing KGs A. Motivation
+ by leveraging the node embeddings. Our goal is to recommend to the operators the occurrence
+ 4) We assess the efficacy and efficiency of UniDiag by and type of failure based on the latest multimodal data to help
+ conducting experiments on two benchmark microservice- operators quickly take the correct mitigation measures. We refer
+ generated datasets. Our findings reveal that UniDiag to this as failure diagnosis, which includes failure detection
+ achieves online diagnosis within 0.6 seconds and exhibits and triage, which facilitates a more comprehensive identificarobust generalization across diverse microservice systems. tion and comprehension of diverse failure types [5], [6], [38].
+ Furthermore, we observe that UniDiag outperforms the Table I lists typical failures encountered in microservice sysbaseline methods, as evidenced by an average F1 -score tems, showcasing the corresponding manifestations of these
+ of 0.869 and 0.723 for failure diagnosis on the respective failures on multimodal data and the corresponding mitigation
+ datasets, representing a significant improvement of 0.117 measures. The failure types are designated based on their unand 0.04 compared to the best-performing baseline meth- derlying root causes [21]. Nevertheless, the primary objective
+ ods, respectively. Beyond achieving superior performance of our research in this study centers on failure diagnosis rather
+ on known failure types, UniDiag demonstrates promis- than the subsequent remediation of failures.
+ ing capabilities for diagnosing previously unseen failure Our examination of 164 microservice system failure cases coltypes, highlighting its potential for real-world deployment lected from benchmark microservice systems (see Section VI-A
+ scenarios. To ensure better reproducibility, we have made for more details) determined that the fusion of multimodal data
+ our code and data publicly available [30]. holds crucial significance in detecting and triaging failures.
+ During failures, anomalies can be observed in metrics [8],
+ [9], [10], logs [11], [12], and traces [31]. Moreover, different
+ II. RELATED WORK types of failures exhibit distinct anomalous patterns across these
+ Various methodologies exist for diagnosing failures through multimodal data [18].
+metric analysis. For instance, iSQUAD [8] labels root causes and 1) The Role of Metric in Failure Diagnosis: As shown in
+features for different failure clusters, while PatternMatcher [9] Fig. 1(a), the metric data is defined as x = {x1 , x2 , . . . , xT },
+employs coarse-grained anomaly detection and a pattern classi- where T is the observation window length and xt ∈ R represents
+fier to identify anomalous patterns. DéjàVu [10] trains a model the observation at time t. Metrics are crucial for gauging proper
+using historical failures and system dependencies. system functioning. When a microservice instance experiences
+ Log analysis is also pivotal for diagnosing microservice sys- failures, the associated metrics (e.g., memory utilization, disk
+tem failures. LogCluster [11] clusters log sequences to determine I/O, CPU utilization, and network throughput) frequently exhibit
+4016 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+abnormal patterns. Therefore, operators must remain vigilant in orchestration and dynamic interactions. Failure diagnosis is
+continuously monitoring the metrics. the core of microservice system maintenance, which enables
+ 2) The Role of Log in Failure Diagnosis: As shown in operators to resolve failures effectively.
+Fig. 1(b), a log message often contains multiple fields, including Our goal is to recommend to the operators the occurrence
+timestamp, node ID, and detailed information, etc. The detailed and type of failure based on the latest multimodal system
+information field is unstructured and usually contains constants monitoring data to help operators quickly take the correct reand variables. The constants are fixed texts the developers set covery measures. We refer to this as failure diagnosis, which
+to describe system event entities and relations. In contrast, the includes failure detection and triage. The detection and triage
+variables carry dynamic runtime information (e.g., IP address, of failures facilitate a more comprehensive identification and
+file name, status code, etc.) [17]. Various log parsing algo- comprehension of diverse failure types, thereby enabling the
+rithms, such as Drain [39] and FT-tree [40], can automatically implementation of suitable remedial actions [5], [6], [38]. For
+distinguish the constants and the variables, and generate log example, metrics, logs, and traces are the most direct signals
+templates (constants) and parameters (variables). System states that characterize underlying failures [43]. Table I lists typical
+and significant events at various critical points are the main failures encountered in microservice systems, showcasing the
+function of logs [41]. Diagnosing microservice system failures corresponding manifestations of these failures on multimodal
+can be effectively facilitated by analyzing the diverse anomalous data and the corresponding remedial measures. The failure types
+behaviors manifested in logs. are designated based on their underlying root causes [21]. Never-
+ 3) The Role of Trace in Failure Diagnosis: The microser- theless, the primary objective of our research in this study centers
+vice systems encompass a significant volume of asynchronous on failure diagnosis rather than the subsequent remediation of
+interactions between instances of microservices, which involve failures.
+intricate invocation chains [2]. As shown in Fig. 1(c), the mutual
+invocations between instances can be represented as trace trees,
+ IV. PRELIMINARIES
+where one invocation request corresponds to one trace. Each
+span corresponds to one service invocation, having a span ID A. Temporal Knowledge Graph
+and a parent ID to reconstruct the calling relations between A TKG incorporates temporal information into a static KG by
+individual spans [42]. The trace data, which contains response extending the triple (h, r, t) into a quadruple (h, r, t, τ ), where h
+time, status codes, and request frequency, etc., can be crucial represents the head entity, t represents the tail entity, r represents
+indicators for failures [14]. the relation, τ provides additional temporal information about
+ 4) Multimodal Data Fusion: For instance, consider a “Net- the fact of the triple, indicating that the fact is valid at time
+work device breakdown” failure may result in increased network τ . KG can effectively combine multimodal data, and since
+packet errors for affected services. While metrics alone might metrics, logs, and traces change dynamically over time, using
+indicate anomalies, identifying the failure type remains chal- TKG allows for the accurate representation of the microservice
+lenging without additional contextual information. By integrat- system’s state.
+ing metrics with traces, which expose disrupted communication
+paths between services, operators can more precisely diagnose
+the underlying network device failure. B. R-GCN
+ In light of the above observations, a novel approach for the fu- To capture the multiple relations in the graph, R-GCN [27]
+sion of multimodal data to enable effective failure diagnosis has models different relations for the central node separately while
+been conceptualized. This has culminated in the development of adding self-looping features for feature fusion and continuously
+UniDiag. updating the representation of the central node. In KGs, different
+ It is worth noting that in our study, data collection is con- edge types convey distinct information, and the direction of
+ducted with distinct granularity levels to capture comprehensive edges plays a crucial role in determining the underlying facts.
+insights. Metrics and logs are collected at the microservice in- Therefore, in our work, we employ R-GCN to capture not only
+stance level, gaining a detailed understanding of the performance the states of individual events within a specific microservice
+and the events within individual microservice instances, re- instance but also the intricate relations among diverse instances.
+spectively. Meanwhile, traces are collected at the microservices
+system level, revealing intricate interactions and dependencies
+among the microservices and facilitating a holistic understand- C. GRU
+ing of the whole system. This multi-faceted analysis, encom- Recurrent Neural Network (RNN) [44] is a powerful model
+passing various levels of data granularity, enables UniDiag to for processing sequential data [45]. However, it cannot solve
+deliver a comprehensive assessment of the microservices system problems such as long-term memory and gradients in backpropand empowers accurate failure diagnosis. agation. Long-Short Term Memory (LSTM) [46] and GRU [28]
+ have been proposed to address this issue. GRU and LSTM
+ are similar in functional performance in many cases [47], but
+B. Problem Statement
+ compared to LSTM, GRU has fewer parameters and is more
+ The fine-grained decomposition of microservices makes the computationally efficient. Therefore, we choose GRU in Unisystem susceptible to performance issues due to highly complex Diag.
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4017
+
+Fig. 2. The framework of UniDiag.
+
+ V. APPROACH adeptly capturing the dynamic nature of microservices. Their
+ ability to accommodate updates ensures real-time accuracy,
+A. Overview
+ which is essential for effective monitoring in rapidly evolving
+ As shown in Fig. 2, UniDiag has two parts: offline training and environments. UniDiag applies TKGs to enhance the fusion of
+online diagnosis. In the offline training stage, UniDiag consists heterogeneous multimodal data. The TKGs can be viewed as a
+of three main steps: series of sub-KGs, i.e., G = (Gτ −k+1 , . . . , Gτ −1 , Gτ ), where
+ 1) Multimodal Temporal Knowledge Graph Construction Gτ is the KG at time τ . We try to utilize all instances, metrics,
+ (Section V-B): To address the first challenge of KG, we and log templates in the microservice system as nodes in Gτ .
+ introduce a stream-based anomaly detection module. It Serializing Multimodal Data: As shown on the left side of
+ first serializes the multimodal data into streams based on Fig. 3, we need to serialize multimodal data of each microservice
+ their characteristics, and then conducts anomaly detection instance to obtain multimodal information at each time point.
+ for each stream. To deal with the dynamically changing 1) Metric Serialization: Metrics appear in the form of time sedata, UniDiag builds a TKG based on the topological ries with a serialized structure. Therefore, UniDiag adopts
+ relations of microservice systems. standard preprocessing steps such as normalization.
+ 2) MOGE (Section V-C): To address the second challenge, 2) Log Serialization: Logs, as semi-structured text, encap-
+ UniDiag combines R-GCN, GRU, and SOPOOL. R-GCN sulate crucial information regarding system events [17].
+ leverages its ability to handle multi-relational graphs to UniDiag employs the Drain algorithm [39] to extract fixed
+ learn the structural information within the TKG. GRU, on text segments, referred to as log templates, which preserve
+ the other hand, captures long sequence dependencies to the core semantic content essential for effective analylearn the temporal information within the TKG. Lastly, sis [48]. Utilizing the sliding window technique, UniDiag
+ SOPOOL pools the TKG to capture high-level features segments the logs and quantifies the occurrence frequency
+ within the graph. of each log template per minute. These frequencies are
+ 3) Failure Diagnosis (Section V-D): A hierarchical cluster- subsequently transformed into time series data, aligning
+ ing approach is used to perform failure diagnosis on the with metrics for comprehensive analysis.
+ learned graph embeddings to obtain a number of clusters. 3) Trace Serialization: UniDiag concentrates on three pivotal
+ Then, UniDiag presents these clusters to operators who metrics for traces: response time (RT), error count (EC),
+ investigate and assign corresponding normal or failure and query count (QC) [32]. These metrics are essential for
+ types to each cluster. identifying anomalies related to performance, reliability,
+ In the online diagnosis (Section V-E) stage, UniDiag converts and traffic [32]. Specifically, to ensure a comprehensive
+the data into a graph representation vector and diagnoses the evaluation, we divide the data into one-minute time winfailure type based on the trained model (Section V-D). dows and obtain the values of the three critical metrics
+ within each window. Accordingly, we generate three time
+ series for each tuple <caller, callee>, each reflecting
+B. Multimodal Temporal Knowledge Graph Construction the average response time, query count, and error count,
+ KG representations, characterized by their structured nodes respectively.
+and edges, elucidate the relationships among diverse data Capturing Microservice Dependencies: Understanding the
+sources within microservice systems. This structured approach intricate dependencies between microservices is crucial for efenhances the comprehension of complex dependencies and fective failure diagnosing [19]. These dependencies primarily
+facilitates the analysis of failure patterns. Temporal Knowl- consist of function calling and resource contention [49]. To
+edge Graphs (TKGs) offer significant flexibility and scalability, accurately model these interdependencies, we integrate traces
+4018 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+Fig. 3. Multimodal data serialization, stream-based anomaly detection, and construction of TKGs (u_low: unexpected low, e_high: excessively high).
+
+and deployment data. Specifically, we aggregate trace data to the trace-related metrics are anomalous or not. For instance,
+represent the invocation relations between microservices, adding the quadruple representation for calls between two microservice
+a directed edge in the KG from each caller to its corresponding instances S1 and S2 is expressed as (S1 , anomalously calls, S2 ,
+callee. Additionally, when two instances are co-deployed ac- τ ). Moreover, the relation between microservice instance S1 and
+cording to the deployment data, we introduce a directed edge in host H1 is presented as (S1 , deploys at, H1 , τ ). Finally, UniDiag
+the KG from the instance to the physical host associated with builds a comprehensive KG (τ ) based on the serialized data
+the deployment data. and the topological relation between microservice instances.
+ Transforming Time Series Data into Events: The intuitive idea UniDiag stacks the KGs of each moment together to form a
+is to regard the invocation and deployment relations between graph stream (i.e., a TKG).
+instances, the value of metrics data, the number of log templates, and the value of three vital trace-related metrics data C. Microservice-Oriented Graph Embedding
+as edges. However, this will bring excessively high calculation To learn the nodes and edges information in TKG, UniDiag
+and storage costs for subsequent tasks, making real-time failure uses entity and relation embedding. We apply R-GCN and GRU
+diagnosis impractical. Therefore, UniDiag applies a stream- to take into account the structural and temporal information of
+based anomaly detection approach to transform these time series entities and relations, respectively.
+into events and capture the underlying characteristics of the Capture Structural Dependency: Each graph in the TKG
+multimodal data. As shown in the middle part of Fig. 3, we contains rich facts, and the interconnection between entities
+adopt the 3-sigma rule to classify the time series data as normal, demonstrates a structural dependency. Exploiting the structural
+excessively high, and unexpectedly low every minute, then the dependency enables the central entity to aggregate information
+type of the edge is set accordingly. Specifically, the edge settings from its surrounding neighbors and enhance the learning of enin Gτ are as follows: tity representations. UniDiag uses L-layer relation-aware GCN
+ The edge of an instance-type object represents whether it is as an evolutionary unit to model the concurrent facts of structural
+a normal or anomalous call, and this classification depends on dependency information. Each entity et,τ obtains information
+whether the current values of the three key trace-related metrics from itself, its connected neighboring entities eh,τ , and the
+are normal, excessively high, or unexpectedly low. Moreover, relation r at time τ , and passes down to the next layer
+the edge of a metric-type (log-template-type) object represents ⎛ ⎞
+whether the current metric (log) data is normal, excessively high, 1   
+or unexpectedly low. UniDiag stores this information on the t,τ = f
+ ek+1 ⎝ γ1k ekh,τ + rτ + γ2kekt,τ ⎠ ,
+ δt
+edges of the KG. (h,r),∃(h,r,t)∈ϑτ
+ Constructing the TKG: At time τ , UniDiag utilizes the output (1)
+obtained from stream-based anomaly detection to derive the where ϑτ is the set of facts at timestamp τ , k ∈ [0, L − 1], ekh,τ ,
+quadruples required for constructing a TKG. For example, the rτ , ekt,τ denote the k th layer embeddings of entities h, relation r,
+representation of a quadruple between microservice instance S1 and entities t at time τ , respectively. γ1k and γ2k are the parameters
+and metric m1 is indicated as (S1 , has a normal value of, m1 , τ ), for aggregating features and self-loop in the k th layer. ekh,τ + rt
+whereas the representation of a quadruple between microservice represents the relational translation between the head entity and
+instance S1 and log template l1 is denoted as (S1 , has an exces- the tail entity under relation r. δt is a normalization constant,
+sively high number of, l1 , τ ). Concerning trace data, we utilize equal to the in-degree of entity t. f (·) is the RReLU activation
+“anomalously calls” and “normally calls” to identify whether function.
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4019
+
+ Capture Temporal Information: A TKG contains information We train the MOGE model with the KG inference task of
+about the dynamic evolution of KGs over time. UniDiag uti- the TKG. Specifically, the inference is performed on the KG of
+lizes two temporal gating components to model the sequential the next moment based on the KG of the current moment, and
+information of entities and relations, respectively. a cross-entropy loss is computed according to the result of the
+ The embedding of all entities at time τ is determined by the inferred and the actual KG of the next moment.
+final layer output of the relation-aware GCN at time τ and the
+entity embedding representation at time τ − 1. Formally,
+ D. Failure Diagnosis
+ Eτ = Uτ ◦ EτL + (1 − Uτ ) ◦ Eτ −1 , (2)
+ UniDiag trains failure diagnosis models using various failure
+where E ∈ R|E|∗d denotes the entity embedding matrix, E is features. Initially, the number of clusters n is set based on
+the set of entities, and d is the dimension of the embeddings. ◦ operators’ prior knowledge. UniDiag then clusters the embedded
+denotes the Hadamard product. The temporal gate Uτ ∈ R|E|×d representations of multimodal TKGs according to n. The farthest
+conducts nonlinear transformation. distance between cluster centers defines the distance threshold
+ The embedding of a relation at time τ is influenced by Eτ −1 d.
+and er,τ , which can be formulated as We employ hierarchical agglomerative clustering (HAC) for
+  the following reasons: (1) it uses a “bottom-up” approach to
+ rτ = [pooling (Eτ −1 , er,τ ) ; r ] , (3)
+ identify hierarchical relations; (2) it is easy to define and flexible
+where r is the embedding of relation r, er,τ is the set of r-related with distance similarities and rules; (3) it handles clusters of
+entities, pooling denotes the mean pooling operation, and [; ] different sizes; and (4) it is widely used in failure diagnosis [13],
+denotes the vector concatenation operation. [50], [51]. Operators label each cluster with a specific failure
+ UniDiag uses the GRU component to obtain the embedding type using a typical case, thus reducing annotation effort by
+of all relations labeling only the typical case closest to each cluster center.
+ Rτ = GRU (Rτ −1 , Rτ ) , (4)
+ E. Online Diagnosis and Update
+where R ∈ R|R|∗d denotes the relation embedding matrix, and
+R is the set of relations. For a new window’s multimodal data, UniDiag calculates the
+ Our goal is to diagnose failures in the entire microservice distance between the failure’s embedding and the existing cluster
+system, so we need to learn the graph embeddings of the KG at centers, mapping the failure to the nearest cluster. If the distance
+each moment to perform downstream diagnostic tasks. Because is less than d, the failure is classified according to the nearest
+microservice instances are dynamically created and deleted in cluster center. Otherwise, a new cluster is created and labeled by
+the microservice system, the deployment and invocation relation operators, who then update UniDiag accordingly. Discrepancies
+also change dynamically [24], [25]. That is, the KGs in the between UniDiag’s diagnosis and operators’ verification result
+constructed TKG can be different, which brings challenges for in cluster set updates, enhancing performance.
+subsequent failure detection and triage. Moreover, there is no UniDiag is initially deployed in a limited number of scenarios
+inherent ordering relation among the nodes in the graph, and we and gradually expanded as it stabilizes. Failures identified in
+get the same output by using any order of node representation one scenario can inform diagnoses in other scenarios, allowing
+as input. operators to build a comprehensive knowledge base of failure
+ SOPOOL [29] collects second-order statistics from the infor- types. This enables quick labeling of new failures, thereby
+mation of all nodes. It captures the correlations among features improving diagnosis efficiency and mitigation.
+and topology information in graph representation learning [29].
+In this way, it can help UniDiag address the above challenge.
+ F. Computational Complexity Analysis
+Therefore, UniDiag uses SOPOOL to obtain a graph representation based on node representation. UniDiag transforms the To evaluate the computational efficiency of UniDiag, we
+entity embedding matrix E using a linear mapping to obtain the conduct a complexity analysis of two critical components:
+embedding of the graph Multimodal Temporal Knowledge Graph Construction and
+ Microservice-Oriented Graph Embedding. In the Multimodal
+ SOP OOL(E) = E T Eμ, (5)
+ Temporal Knowledge Graph Construction phase, the time comwhere μ ∈ R is a trainable vector.
+ d
+ plexity for serializing multimodal data is determined by the
+ These graph embeddings, encapsulating the rich informa- number of data entries at each timestamp. Constructing the
+tional content of three distinct monitoring data (metrics, logs, knowledge graph entails the insertion of nodes and edges.
+and traces) gathered during microservice system operation, ef- Assuming the number of nodes is |Eall | and the number of
+fectively capture the nuanced patterns embedded within each edges is |Rall |, the complexity is O(|Eall | + |Rall |). In the
+modality. This comprehensive representation, derived from the Microservice-Oriented Graph Embedding phase, the time comfusion of heterogeneous data sources, enables a more discrim- plexity for capturing structural dependencies is O(|F|L), where
+inating differentiation between various failure types, thereby |F| denotes the maximum number of concurrent facts within
+facilitating increased accuracy in downstream failure diagnosis the knowledge graph. Additionally, the time complexity for
+tasks. capturing temporal information is O(|Esub ||R|), where |Esub | is
+4020 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+ TABLE II Baselines: We compare UniDiag with the following base-
+ DATASET INFORMATION
+ line methods: iSQUAD [8], DéjàVu [10], LogCluster [11],
+ Cloud19 [12], MEPFL [14], CloudRCA [20], MicroCBR [34],
+ and DiagFusion [19], which are based on either single-modal or
+ multimodal data. We implement these methods referring to the
+ codes provided by the original papers. For the papers without
+ open-source codes, we set the hyperparameters according to the
+ descriptions provided in the respective papers.
+ Evaluation Metrics: In the task of failure diagnosis, distinct
+ labels are assigned to each type of failure. Hence, to assess
+ multi-label tasks, we utilize the extensively employed evaluation
+ metrics known as Weighted Average Precision, Weighted Averthe maximum number of entities involved in the relationships, age Recall, and Weighted Average F1 -score [55]. For each label,
+and |R| is the size of the relation set. we perform calculations to determine the respective precision =
+ T P/(T P + F P ), recall = T P/(T P + F N ), and F1 -score =
+ VI. EVALUATION 2 × precision × recall/(precision + recall), with True Positives (T P ), False Positives (F P ), and False Negatives (F N ).
+ We aim to answer the following research questions (RQs): Subsequently, these metrics are averaged by applying weighting
+ RQ1: How effective does UniDiag perform in failure diagno- based on the support, representing the number of true cases
+sis? associated with each label.
+ RQ2: Does each component contribute to UniDiag? Furthermore, in the ablation experiments, we employ two
+ RQ3: Does each data modality contribute to UniDiag? widely acknowledged metrics, namely Normalized Mutual In-
+ RQ4: Is UniDiag computationally efficient? formation (NMI) [56] and Clustering Accuracy (ACC) [57],
+ RQ5: What is the impact of different hyperparameter settings? to evaluate the performance of UniDiag. NMI is a commonly
+ used evaluation metric for clustering results, which measures the
+A. Experimental Setup consistency between clustering results and ground-truth class
+ Dataset: To evaluate UniDiag, we conduct extensive exper- labels. Formally,
+iments using two datasets, D1 and D2, sourced from distinct C×|Ti ∩Qj |
+microservice systems with varying business contexts and ar- 2× i j |Ti ∩ Qj | × log |Ti |×|Qj |
+chitectures. Table II details the datasets. Both datasets are split NMI = − ,
+ |Ti | |Qj |
+ i |Ti |×log + j |Qj |×log
+into training (the initial 70% of failure cases) and testing (the C C
+remaining 30%) sets based on their start time. (6)
+ Dataset 1 (D1), derived from CloudWise’s Generic AIOps where C is the total number of cases, Ti and Qj denote the ith
+Atlas (GAIA)1 , serves as a benchmark for microservice failure class of the ground truth and the jth cluster generated by the
+diagnosis [19], [52], [53], [54]. GAIA data, primarily from clustering algorithm, respectively.
+CloudWise’s MicroSS simulation system, encompasses com- ACC elucidates the correspondence between clustering reprehensive monitoring data and simulated failures. We test four sults and ground-truth class labels by quantifying the degree
+types of failures: “Memory resource underprovisioning”, “Sys- to which each cluster encompasses data points belonging to the
+tem component damage”, “Filesystem misconfigurations”, and respective ground-truth class. ACC can be calculated as follows:
+“Access control errors”.
+ 1 
+ C
+ Dataset 2 (D2) originates from a simulated e-commerce ap- ACC(x, x̂) = δ (xc = x̂c ) , (7)
+plication utilizing microservices. It includes a variety of real fail- C c=1
+ure injections to replicate e-commerce operational challenges.
+ where x and x̂ denote the actual class labels of the results and the
+This dataset encompasses dynamic service topologies, real-time
+ labels that match the ground truth best, respectively. δ denotes
+traces, metrics, and logs. We test five types of failures: “CPU rethe Kronecker delta.
+source underprovisioning”, “Memory resource underprovisioning”, “Disk resource underprovisioning”, “System component
+ B. Overall Performance (RQ1)
+damage”, and “Container resource quota violations”.
+ Implementation: UniDiag is implemented in PyTorch, and all Table III presents the number of labeled samples (failures
+of the experiments are conducted on a Linux Server with 64 needing labeling) and the overall performance comparison on
+16C32T Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz, two the two datasets. The quantity of labeled data for each baseline
+NVIDIA(R) Tesla(R) V100S, and 187.5 GB RAM. As for the is tailored to its specific requirements. We empirically determine
+hyperparameters, the number of layers and the hidden size in the optimal number of labeled samples for methods without
+R-GCN are 2 and 50, respectively. The dimension of graph explicit labeling needs by conducting multiple experiments with
+embedding is 100. varying labeled sample numbers, selecting the best configuration. Notably, the labeled samples are only a subset of the training
+ 1 https://github.com/CloudWise-OpenSource/GAIA-DataSet data, while larger datasets are used for training and testing to
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4021
+
+ TABLE III
+ EFFECTIVENESS AND EFFICIENCY OF FAILURE DIAGNOSIS
+
+ensure comprehensive learning and robust evaluation. A key as the microservice architecture evolves and develops, new types
+distinction is that MEPFL [14] labels anomalous traces, unlike of failures, that is, undiscovered types of failures that have never
+other methods that label failure cases. Table III details the num- occurred or occurred less frequently in the past, often manifest
+ber of traces needing labeling for MEPFL. UniDiag outperforms within the microservice systems.
+all baselines on both datasets, achieving an impressive Weighted To evaluate UniDiag’s robustness in diagnosing new failure
+Average F1 -score of 0.869 and 0.723, respectively. types, we select distinct failure types from diverse datasets
+ iSQUAD [8] diagnoses failures using ground truths from and excluded associated samples from the training set. Given
+similar failures but lacks historical failure integration, risking that supervised methods cannot diagnose new failure types and
+errors from noise and fluctuations. DéjàVu [10] trains a model MicroCBR can only match new cases with existing types, we
+with historical failures and Failure Dependency Graphs (FDGs), used iSQUAD and LogCluster as baselines. As listed in Table IV,
+requiring many labeled cases. Both methods rely on metric data, by averaging the results of each new failure type diagnosis on the
+lacking comprehensive features, resulting in poor performance. same dataset, we calculate the precision, recall, and F1 -score.
+LogCluster [11] struggles to parse log entries into meaningful UniDiag significantly outperforms the other methods. iSQUAD
+events, missing semantic information. Cloud19 [12] fails to and LogCluster, limited to single-modal data, fail to detect some
+address polysemy and uses a limited context window, missing failures, resulting in numerous false positives and negatives. In
+broader contextual information and leading to suboptimal per- contrast, UniDiag’s fusion of three modalities of monitoring data
+formance. captures unique features from each modality, leading to com-
+ MEPFL [14] uses a supervised learning model through traces, prehensive representation learning for each failure type. This
+relying on labeling all anomalous trace patterns. demonstrates that multimodal data fusion enhances UniDiag’s
+ CloudRCA [20] combines logs and metrics but ignores the performance.
+microservice system’s topology, missing crucial features. It also
+requires many labeled historical failure cases, and insufficient C. Contribution of Key Components (RQ2)
+training samples harm its performance. In contrast, UniDiag
+excels in failure diagnosis, achieving a significantly higher To show the effectiveness of UniDiag’s key techniques (i.e., ,
+Weighted Average F1 -score than existing methods. entity embedding, graph embedding, and clustering), we creat
+ UniDiag demonstrates superior performance in failure diag- five variants (C1-C5) by substituting these techniques with comnosis compared to MicroCBR [34] and DiagFusion [19] by mon or state-of-the-art alternatives: (1) C1 uses RE-NET [58]
+integrating both normal and failure data, thereby capturing a instead of MOGE for learning entity embedding. (2) C2 uses
+holistic view of the system state and mitigating information loss. TANGO [59] instead of MOGE for learning entity embedding.
+Unlike MicroCBR, which is constrained by its reliance on failure (3) C3 uses mean pooling instead of MOGE for learning graph
+data alone, and DiagFusion, which depends heavily on labeled embedding. (4) C4 uses DBSCAN instead of HAC. (5) C5 uses
+historical cases, UniDiag employs TKG and MOGE to provide K-means instead of HAC.
+a comprehensive temporal representation of the microservice Table V demonstrates that UniDiag outperforms all variants
+system’s state, effectively modeling complex dependencies and on two datasets, underscoring the significance of each compointeractions. nent. Substituting MOGE with RE-NET (C1) or TANGO (C2)
+ RT and invocation paths reflect anomalous patterns in trace results in decreased performance. RE-NET’s use of subgraph
+data, while EC and QC are key for detecting reliability and traffic aggregators and GRUs neglects the structural dependencies and
+failures. MicroCBR uses only RT for anomaly detection, and static attributes in TKGs, leading to the potential loss or mix-
+DiagFusion uses RT and EC, potentially leading to inaccurate ing of historical facts. TANGO’s Neural Ordinary Differential
+diagnoses. In contrast, UniDiag uses invocation paths, RT, EC, Equations (NODE) [60] are better suited for continuous time
+and QC to construct a knowledge graph, incorporating rich domains and fail to capture patterns in the discrete snapshots of
+information for more accurate failure diagnosis. TKGs amidst frequent microservice changes.
+ Frequent failure scenarios in historical data can be swiftly and Replacing MOGE with mean pooling (C3) degrades peraccurately identified through observation and practice. However, formance as traditional pooling methods (e.g., mean pooling)
+4022 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+ TABLE IV
+ EFFECTIVENESS OF THE MODELS DEALING WITH NEW TYPES OF FAILURES
+
+ TABLE V differently. Traces contribute the least in D1 and D2, as indicated
+ EXPERIMENTAL RESULTS OF ABLATION STUDY
+ by the minor performance drop in UniDiag w/o T , due to limited
+ trace records and fluctuating RT and QC. Conversely, UniDiag
+ w/o M shows significant performance degradation, aligning
+ with observations in Table I.
+ In conclusion, integrating all three data modalities significantly enhances UniDiag’s effectiveness, highlighting the crucial role of diverse data in improving failure diagnosis.
+
+ E. Computational Efficiency (RQ4)
+ Table III compares the running times of UniDiag with other
+ baseline methods, covering both offline training and online diagnosis durations. Notably, UniDiag achieves an average online
+ diagnosis time of 0.6s, meeting real-time diagnostic demands,
+ TABLE VI given that data collection intervals for D1 and D2 are at least
+ CONTRIBUTIONS OF DIVERSE DATA SOURCES 30s. However, UniDiag has longer offline training times due to
+ the entity embedding process, which is influenced by the size
+ and complexity of the KG and the GCN. Despite this, UniDiag
+ minimizes the need for frequent retraining.
+ To test UniDiag’s efficiency on larger datasets, we constructed
+ a KG with 2,553 entities and 3,807,420 edges by replicating
+ nodes and attributes from D1. UniDiag achieved an average
+ offline training time of 5.12h and an average online diagnosis
+ time of 4.73s, demonstrating suitability for real-world deployment. These results confirm UniDiag’s robust performance on
+ large-scale datasets.
+cannot effectively characterize features. SOPOOL, by modeling
+general graph information correlations, captures long-distance F. Effect of Hyperparameters (RQ5)
+feature information more effectively.
+ We discuss the impact of UniDiag’s three hyperparameters
+ Substituting HAC with DBSCAN or K-means (C4 & C5) also
+ and different training set sizes. Fig. 4 shows how NMI, ACC,
+reduces performance. HAC is robust to random initial values
+ and Weighted Average F1 -score vary with these parameters.
+and can identify outliers in KGs. DBSCAN, a density-based
+ The Number of Layers in Entity Embedding: UniDiag’s permethod, is insensitive to noise and outliers, making it unsuitable
+ formance declines as the number of GCN layers increases from 1
+for failure detection. K-means struggles with non-spherical and
+ to 5, with optimal results achieved at 2 or 3 layers. An excessive
+varied-sized clusters, and the choice of initial cluster centers
+ number of layers causes node representations to converge and
+significantly affects the results.
+ lose distinction.
+ Graph Embedding Dimension: Optimal performance is ob-
+D. Contribution of Each Modality (RQ3)
+ served at a graph embedding dimension of 100. Larger dimen-
+ We conduct ablation experiments to examine the contributions sions risk sparsity, over-fitting, and increased computational
+of different data sources by creating the following variants: complexity, but they may be suitable for complex microservice
+(1) UniDiagw/o M drops metrics while inputs logs and traces. systems.
+(2) UniDiagw/o L drops logs while inputs metrics and traces. The Number of Clusters: Increasing the number of clusters
+(3) UniDiagw/o T drops traces while inputs metrics and logs. enhances the utilization of training data; however, too many
+ Table VI indicates that UniDiag’s effectiveness depends on clusters raise the labeling effort. We select 15 and 20 clusters
+the integration of all data modalities, with each contributing for D1 and D2, respectively.
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4023
+
+Fig. 4. Hyperparameters sensitivity on UniDiag.
+
+ The Size of the Training Set: We evaluated UniDiag with experimental tests and iteratively optimized the approach. The
+training set sizes of 30%, 40%, 50%, 60%, and 70%, using the results presented are averages of multiple trials.
+remaining 30% for testing. Fig. 4 demonstrates that UniDiag Externally, there are two primary threats. First, the limachieves a high Weighted Average F1 -score even with a limited ited scale of our datasets compared to real-world microservice
+number of failure cases, proving its effectiveness in real-world systems in production environments restricts generalizability.
+scenarios with constrained historical data. These datasets might not fully represent all microservice systems. Nevertheless, we believe our approach is sufficiently
+ VII. DISCUSSION general. We plan to collaborate with a top-tier Internet service
+ provider to deploy UniDiag and validate its effectiveness in
+A. Lessons Learned real-world scenarios. Second, our datasets may not capture
+ 1) Data Collection Granularity: Currently, most IT enter- all failure types compared to industry-collected data. Future
+prises collect data at minute-level granularity, typically every work will involve evaluating our approach on a broader range
+1 or 5 minutes [61], [62]. This granularity generally does not of microservice systems, incorporating larger-scale real-world
+significantly impact the model’s effectiveness. In our approach, cases with diverse failure types to address this limitation.
+once the metric granularity is set, logs and traces must be aligned
+with the metrics. C. Limitations
+ 2) Effectiveness: UniDiag demonstrates superior effective- Based on the conducted experiments, we draw attention to
+ness in failure diagnosis by integrating comprehensive multi- two primary limitations of UniDiag, as follows:
+modal data and leveraging TKGs to capture the full system 1) While UniDiag is designed to leverage metrics, logs, and
+state over time. Unlike other methods that rely on limited data traces for comprehensive failure diagnosis, it remains rosources, insufficient labeled data, or simplistic models, UniDiag bust even when data from some modalities are unavailable.
+incorporates a broader range of features, which ensures accurate This is crucial since acquiring synchronized multimodal
+diagnosis in microservice systems. data can be challenging in certain microservice deploy-
+ 3) Flexibility: UniDiag’s flexibility is driven by its dynamic ments. Although UniDiag can function with missing data
+TKG updates and incremental learning. The system continu- sources due to its loosely-coupled nature, providing all
+ously adapts to new data, integrating evolving failure patterns data types maximizes its effectiveness. Open-source toolkand architectural changes without requiring full retraining, en- its such as cAdvisor [63] for metrics, Elasticsearch [64]
+suring it remains effective in diagnosing emerging failures as for logs, and Jaeger [65] for tracing facilitate monitoring
+the environment evolves. data collection in microservice systems. These tools sim-
+ 4) Scalability: UniDiag exhibits a high degree of adaptabil- plify equipping microservices with comprehensive data
+ity to the dynamic nature of microservice architectures. As mi- collection capabilities [18].
+croservice instances are created or destroyed, UniDiag requires 2) UniDiag relies on a data-driven approach. If specific failonly the addition or removal of the corresponding entities and ures do not manifest anomalies in the collected data, accurelations within the TKG. The workflow of UniDiag is inherently rate diagnosis becomes challenging. This issue is common
+general and does not rely on any specific data modality, thereby and also recognized in MEPFL [14] and SCWarn [16].
+maintaining its effectiveness even in production environments
+where not all three modalities of data are concurrently moni- VIII. CONCLUSION
+tored.
+ Recognizing the limitations of relying solely on single-modal
+ data, which may fail to capture a substantial amount of crucial
+B. Threats to Validity
+ information, we present UniDiag as a novel approach for failure
+ Regarding internal validity threats, the primary concern is the diagnosis. UniDiag fuses multimodal data, including metrics,
+implementation process. To address this, we conducted repeated logs, and traces, using TKG. It includes a three-step process:
+4024 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+(1) effective fusion of metrics, logs, and traces through TKGs, [17] S. He, P. He, Z. Chen, T. Yang, Y. Su, and M. R. Lyu, “A survey on
+(2) utilization of MOGE for entity embedding and graph em- automated log analysis for reliability engineering,” ACM Comput. Surv.,
+ vol. 54, no. 6, pp. 1–37, 2021.
+bedding, and (3) training of the failure diagnosis model to detect [18] C. Lee, T. Yang, Z. Chen, Y. Su, and M. R. Lyu, “Eadro: An end-to-end
+failures and identify failure types accurately. We have conducted troubleshooting framework for microservices on multi-source data,” in
+extensive evaluation experiments on two datasets to validate the Proc. IEEE/ACM 45th Int. Conf. Softw. Eng., Los Alamitos, CA, 2023,
+ pp. 1750–1762.
+efficacy, efficiency, and generalization of UniDiag. The empiri- [19] S. Zhang et al., “Robust failure diagnosis of microservice system through
+cal findings affirm the robustness and effectiveness of UniDiag multimodal data,” IEEE Trans. Serv. Comput., vol. 16, no. 6, pp. 3851–
+in achieving accurate and efficient failure diagnosis. Moreover, 3864, Nov./Dec. 2023.
+ [20] Y. Zhang et al., “CloudRCA: A root cause analysis framework for cloud
+to overcome the limitations of the data-driven approach, a computing platforms,” in Proc. 30th ACM Int. Conf. Inf. Knowl. Manage.,
+contextual analysis module could effectively analyze external New York, NY, 2021, pp. 4373–4382.
+factors, such as deployment changes and system updates, which [21] P. Dogga, K. Narasimhan, A. Sivaraman, S. Saini, G. Varghese, and R. Netravali, “Revelio: ML-generated debugging queries for finding root causes
+might provide additional clues about potential failures for more in distributed systems,” Proc. Mach. Learn. Syst., vol. 4, pp. 601–622,
+accurate failure diagnosis. 2022.
+ [22] C. Deng et al., “GAKG: A multimodal geoscience academic knowledge
+ graph,” in Proc. 30th ACM Int. Conf. Inf. Knowl. Manage., New York, NY,
+ REFERENCES 2021, pp. 4445–4454.
+ [23] A. V. Kannan et al., “Multimodal knowledge graph for deep learning papers
+ [1] T. Colanzi et al., “Are we speaking the industry language? The practice and and code,” in Proc. 29th ACM Int. Conf. Inf. Knowl. Manage., New York,
+ literature of modernizing legacy systems with microservices,” in Proc. 15th NY, 2020, pp. 3417–3420.
+ Braz. Symp. Softw. Compon. Architectures Reuse, New York, NY, 2021, [24] X. Li, Y. Chen, and Z. Lin, “Towards automated inter-service authorization
+ pp. 61–70. for microservice applications,” in Proc. ACM SIGCOMM 2019 Conf.
+ [2] X. Zhou et al., “Fault analysis and debugging of microservice systems: Posters Demos, New York, NY, 2019, pp. 3–5.
+ Industrial survey, benchmark system, and empirical study,” IEEE Trans. [25] S. Chakraborty, S. Garg, S. Agarwal, A. Chauhan, and S. K. Saini,
+ Softw. Eng., vol. 47, no. 2, pp. 243–260, Feb. 2021. “CausIL: Causal graph for instance level microservice data,” in Proc. ACM
+ [3] A. Mahimkar, C. E. de Andrade, R. Sinha, and G. Rana, “A composition Web Conf., New York, NY, 2023, pp. 2905–2915.
+ framework for change management,” in Proc. 2021 ACM SIGCOMM [26] R. Trivedi, H. Dai, Y. Wang, and L. Song, “Know-evolve: Deep temporal
+ Conf., New York, NY, 2021, pp. 788–806. reasoning for dynamic knowledge graphs,” in Proc. 34th Int. Conf. Mach.
+ [4] J. Y. Chung, C. Joe-Wong, S. Ha, J. W.-K. Hong, and M. Chiang, “CYRUS: Learn., New York, NY:PMLR, 2017, pp. 3462–3471.
+ Towards client-defined cloud storage,” in Proc. 10th Eur. Conf. Comput. [27] M. Schlichtkrull, T. N. Kipf, P. Bloem, R. v. d. Berg, I. Titov, and
+ Syst., New York, NY, 2015, pp. 1–16. M. Welling, “Modeling relational data with graph convolutional net-
+ [5] J. Chen et al., “An empirical investigation of incident triage for online works,” in Proc. Eur. Semantic Web Conf., Berlin: Springer-Verlag, 2018,
+ service systems,” in Proc. IEEE/ACM 41st Int. Conf. Softw. Eng.: Softw. pp. 593–607.
+ Eng. Pract., Los Alamitos, CA, 2019, pp. 111–120. [28] K. Cho et al., “Learning phrase representations using RNN encoder-
+ [6] J. Chen et al., “Continuous incident triage for large-scale online service decoder for statistical machine translation,” in Proc. Conf. Empir. Methods
+ systems,” in Proc. 34th IEEE/ACM Int. Conf. Autom. Softw. Eng., Los Natural Lang. Process., Stroudsburg, PA: Association for Computational
+ Alamitos, CA, 2019, pp. 364–375. Linguistics, 2014, pp. 1724–1734.
+ [7] Y. Meng et al., “Localizing failure root causes in a microservice through [29] Z. Wang and S. Ji, “Second-order pooling for graph neural networks,”
+ causality inference,” in Proc. IEEE/ACM 28th Int. Symp. Qual. Serv., Los IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 6, pp. 6870–6880,
+ Alamitos, CA, 2020, pp. 1–10. Jun. 2023.
+ [8] M. Ma et al., “Diagnosing root causes of intermittent slow queries in [30] UniDiag, “Open source repository of unidiag,” 2024. [Online]. Available:
+ cloud databases,” Proc. VLDB Endowment, vol. 13, no. 8, pp. 1176–1189, https://github.com/AIOps-Lab-NKU/UniDiag.git
+ 2020. [31] P. Liu et al., “Unsupervised detection of microservice trace anoma-
+ [9] C. Wu et al., “Identifying root-cause metrics for incident diagnosis in lies through service-level deep Bayesian networks,” in Proc. IEEE
+ online service systems,” in Proc. IEEE 32nd Int. Symp. Softw. Rel. Eng., 31st Int. Symp. Softw. Rel. Eng., Los Alamitos, CA, 2020,
+ Los Alamitos, CA, 2021, pp. 91–102. pp. 48–58.
+[10] Z. Li et al., “Actionable and interpretable fault localization for recur- [32] D. Liu et al., “MicroHECL: High-efficient root cause localization in largering failures in online service systems,” in Proc. 30th ACM Joint Eur. scale microservice systems,” in Proc. IEEE/ACM 43rd Int. Conf. Softw.
+ Softw. Eng. Conf. Symp. Found. Softw. Eng., New York, NY, 2022, Eng.: Softw. Eng. Pract., Los Alamitos, CA, 2021, pp. 338–347.
+ pp. 996–1008. [33] Z. Li et al., “Practical root cause localization for microservice systems
+[11] Q. Lin, H. Zhang, J.-G. Lou, Y. Zhang, and X. Chen, “Log cluster- via trace analysis,” in Proc. IEEE/ACM 29th Int. Symp. Qual. Serv., Los
+ ing based problem identification for online service systems,” in Proc. Alamitos, CA, 2021, pp. 1–10.
+ IEEE/ACM 38th Int. Conf. Softw. Eng. Companion, Los Alamitos, CA, [34] F. Liu et al., “MicroCBR: Case-based reasoning on spatio-temporal fault
+ 2016, pp. 102–111. knowledge graph for microservices troubleshooting,” in Proc. Int. Conf.
+[12] Y. Yuan, W. Shi, B. Liang, and B. Qin, “An approach to cloud execution Case-Based Reasoning, Berlin: Springer-Verlag, 2022, pp. 224–239.
+ failure diagnosis based on exception logs in OpenStack,” in Proc. IEEE [35] J. Wang, Y. Li, Q. Qi, Y. Lu, and B. Wu, “Multilayered fault detection
+ 12th Int. Conf. Cloud Comput., Los Alamitos, CA, 2019, pp. 124–131. and localization with transformer for microservice systems,” IEEE Trans.
+[13] X. Zhang et al., “Onion: Identifying incident-indicating logs for cloud Rel., vol. 73, no. 3, pp. 1502–1515, Sep. 2024.
+ systems,” in Proc. 29th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp. [36] Z. Zhu, C. Lee, X. Tang, and P. He, “HeMiRCA: Fine-grained root cause
+ Found. Softw. Eng., New York, NY, 2021, pp. 1253–1263. analysis for microservices with heterogeneous data sources,” ACM Trans.
+[14] X. Zhou et al., “Latent error prediction and fault localization for microser- Softw. Eng. Methodol., Jul. 2024, doi: 10.1145/3674726.
+ vice applications by learning from system trace logs,” in Proc. 27th ACM [37] L. Zheng, Z. Chen, J. He, and H. Chen, “MULAN: Multi-modal causal
+ Joint Meeting Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., New York, structure learning and root cause analysis for microservice systems,” in
+ NY, 2019, pp. 683–694. Proc. ACM Web Conf., New York, NY, USA, 2024, pp. 4107–4116.
+[15] C. Lee, T. Yang, Z. Chen, Y. Su, Y. Yang, and M. R. Lyu, “Heterogeneous [38] A. Workshop, “2022 CCF AiOps challenge,” 2022. [Online]. Available:
+ anomaly detection for software systems via semi-supervised cross-modal https://workshop.aiops.org
+ attention,” in Proc. IEEE/ACM 45th Int. Conf. Softw. Eng., Los Alamitos, [39] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing
+ CA, 2023, pp. 1724–1736. approach with fixed depth tree,” in Proc. 2017 IEEE Int. Conf. Web Serv.,
+[16] N. Zhao et al., “Identifying bad software changes via multimodal anomaly Los Alamitos, CA, 2017, pp. 33–40.
+ detection for online service systems,” in Proc. 29th ACM Joint Meeting [40] S. Zhang et al., “Syslog processing for switch failure diagnosis and
+ Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., New York, NY, 2021, prediction in datacenter networks,” in Proc. IEEE/ACM 25th Int. Symp.
+ pp. 527–539. Qual. Serv., Los Alamitos, CA, 2017, pp. 1–10.
+ZHANG et al.: NO MORE DATA SILOS: UNIFIED MICROSERVICE FAILURE DIAGNOSIS WITH TEMPORAL KNOWLEDGE GRAPH 4025
+
+[41] J. Kulkarni, S. Joshi, S. Bapat, and K. Jambhali, “Analysis of system logs Shenglin Zhang (Member, IEEE) received the BS
+ for pattern detection and anomaly prediction,” in Proc. Int. Conf. Comput. degree in network engineering from the School of
+ Sci. Appl., Berlin:Springer-Verlag, 2020, pp. 427–436. Computer Science and Technology, Xidian Univer-
+[42] B. H. Sigelman et al., “Dapper, A large-scale distributed systems tracing sity, Xi’an, China, in 2012, and the PhD degree in
+ infrastructure,” Google, Inc., Tech. Rep., 2010. computer science from the Department of Computer
+[43] Z. Chen et al., “Adaptive performance anomaly detection for online service Science and Technology, Tsinghua University, Beisystems via pattern sketching,” in Proc. 44th Int. Conf. Softw. Eng., New jing, China, in 2017. He is currently an associate
+ York, NY, 2022, pp. 61–72. professor with the College of Software, Nankai Uni-
+[44] S. Kim, S. An, P. Chikontwe, and S. H. Park, “Bidirectional versity, Tianjin, China. His current research interests
+ RNN-based few shot learning for 3D medical image segmenta- include failure detection, diagnosis, and prediction
+ tion,” in Proc. AAAI Conf. Artif. Intell., Palo Alto, CA:AAAI, 2021, for service management.
+ pp. 1808–1816.
+[45] M. S. Murshed, C. Murphy, D. Hou, N. Khan, G. Ananthanarayanan, and F.
+ Hussain, “Machine learning at the network edge: A survey,” ACM Comput.
+ Surv., vol. 54, no. 8, pp. 1–37, 2021. Yongxin Zhao received the BS and MS degrees in
+[46] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural software engineering from the College of Software,
+ Comput., vol. 9, no. 8, pp. 1735–1780, 1997. Nankai University, Tianjin, China, in 2021 and 2024,
+[47] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation of respectively. She is currently working toward the PhD
+ gated recurrent neural networks on sequence modeling,” in Proc. Neural degree with the College of Software, Nankai Univer-
+ Inf. Process. Syst. Workshop Deep Learn., 2014. sity. Her research interests include failure detection
+[48] N. Zhao et al., “An empirical investigation of practical log anomaly and failure diagnosis.
+ detection for online service systems,” in Proc. 29th ACM Joint Meeting
+ Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., New York, NY, 2021,
+ pp. 1404–1415.
+[49] Y. Wang et al., “Fast outage analysis of large-scale production clouds with
+ service correlation mining,” in Proc. IEEE/ACM 43rd Int. Conf. Softw.
+ Eng., Los Alamitos, CA, 2021, pp. 885–896.
+ Sibo Xia received the BS degree in software engineer-
+[50] Y. Sun et al., “Efficient and robust KPI outlier detection for large-scale
+ ing from the College of Software, Nankai University,
+ datacenters,” IEEE Trans. Comput., vol. 72, no. 10, pp. 2858–2871,
+ Tianjin, China, in 2022. He is currently working
+ Oct. 2023. toward the PhD degree with the College of Soft-
+[51] Y. Fu, M. Yan, Z. Xu, X. Xia, X. Zhang, and D. Yang, “An empirical study
+ ware, Nankai University. His research interests inof the impact of log parsers on the performance of log-based anomaly
+ clude anomaly detection and failure diagnosis.
+ detection,” Empir. Softw. Eng., vol. 28, no. 1, 2023, Art. no. 6.
+[52] Y. Sui et al., “LogKG: Log failure diagnosis through knowledge
+ graph,” IEEE Trans. Serv. Comput., vol. 16, no. 5, pp. 3493–3507,
+ Sep./Oct. 2023.
+[53] S. Zhang et al., “Efficient and robust trace anomaly detection for large-scale
+ microservice systems,” in Proc. IEEE 34th Int. Symp. Softw. Rel. Eng., Los
+ Alamitos, CA, 2023, pp. 69–79. Shirui Wei received the BS degree in software engi-
+[54] C. Zhao et al., “Robust multimodal failure detection for microservice neering from the College of Software, Nankai Universystems,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discov. Data Mining, sity, Tianjin, China, in 2023. She is currently working
+ New York, NY, 2023, pp. 5639–5649. toward the master’s degree with the National As-
+[55] B. M. Sundheim, “Overview of the fourth message understanding evalu- tronomical Observatories, Chinese Academy of Sciation and conference,” Naval Command Control and Ocean Surveillance ences, Beijing, China. Her research interests include
+ Center RDT and E DIV, San Diego CA, USA, Tech. Rep., 1992. astroinformatics and virtual observatories.
+[56] L. Danon, A. Diaz-Guilera, J. Duch, and A. Arenas, “Comparing community structure identification,” J. Stat. Mechanics: Theory Exp., vol. 2005,
+ no. 09, 2005, Art. no. P09008.
+[57] N. Zhao, L. Zhang, B. Du, Q. Zhang, J. You, and D. Tao, “Robust dual
+ clustering with adaptive manifold regularization,” IEEE Trans. Knowl.
+ Data Eng., vol. 29, no. 11, pp. 2498–2509, Nov. 2017. Yongqian Sun (Member, IEEE) received the BS de-
+[58] W. Jin, M. Qu, X. Jin, and X. Ren, “Recurrent event network: Autore- gree in statistical specialty from Northwestern Polygressive structure inferenceover temporal knowledge graphs,” in Proc. technical University, Xi’an, China, in 2012, and the
+ 2020 Conf. Empir. Methods Natural Lang. Process., Stroudsburg, PA: PhD degree in computer science from the Depart-
+ Association for Computational Linguistics, 2020, pp. 6669–6683. ment of Computer Science and Technology, Tsinghua
+[59] Z. Han, Z. Ding, Y. Ma, Y. Gu, and V. Tresp, “Learning neural ordinary University, Beijing, China, in 2018. He is currently
+ equations for forecasting future links on temporal knowledge graphs,” in an associate professor with the College of Software,
+ Proc. 2021 Conf. Empir. Methods Natural Lang. Process., Stroudsburg, Nankai University, Tianjin, China. His research inter-
+ PA:Association for Computational Linguistics, 2021, pp. 8352–8364. ests include anomaly detection and root cause local-
+[60] R. Das et al., “Go for a walk and arrive at the answer: Reasoning over ization in service management.
+ paths in knowledge bases using reinforcement learning,” in Proc. Int. Conf.
+ Learn. Representations, 2018, pp. 1–18.
+[61] Z. Li, Y. Zhao, R. Liu, and D. Pei, “Robust and rapid clustering of KPIs
+ for large-scale anomaly detection,” in Proc. IEEE/ACM 26th Int. Symp. Chenyu Zhao received the BS and MS degrees in
+ Qual. Serv., Los Alamitos, CA, 2018, pp. 1–10.
+ software engineering from the College of Software,
+[62] Z. Li, W. Chen, and D. Pei, “Robust and unsupervised KPI anomaly
+ Nankai University, Tianjin, China, in 2020 and 2023,
+ detection based on conditional variational autoencoder,” in Proc. IEEE
+ respectively. Her research interests are focused on
+ 37th Int. Perform. Comput. Commun. Conf., Los Alamitos, CA, 2018, anomaly detection and root cause analysis.
+ pp. 1–9.
+[63] Google, “Container advisor,” 2024. [Online]. Available: https://github.
+ com/google/cadvisor
+[64] Elastic, “Elasticsearch,” 2024. [Online]. Available: https://www.elastic.co/
+[65] C. N. C. Foundation, “Jaeger,” 2024. [Online]. Available: https://www.
+ jaegertracing.io/
+4026 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 17, NO. 6, NOVEMBER/DECEMBER 2024
+
+ Shiyu Ma received the BS degree in software engi- Lemeng Pan received the PhD degree in statistics
+ neering from the College of Software, Nankai Univer- from the University of Maryland College Park, Marysity, Tianjin, China, in 2022. She is currently work- land. He is currently a research scientist with Huawei
+ ing toward the master’s degree with the College of Technologies Company, Ltd.
+ Software, Nankai University. Her research interests
+ include failure diagnosis and root-cause localization.
+
+ Yicheng Guo received the BS degree in particle and
+ nuclear physics from the University of Science and
+ Junhua Kuang received the BS degree in software Technology of China, in 2014, and the PhD degree in
+ engineering from the College of Software, Nankai particle and nuclear physics from the Department of
+ University, Tianjin, China, in 2024. He is currently Modern Physics, University of Science and Technolworking toward the master’s degree with the College ogy of China, Hefei, China, in 2019. He is currently a
+ of Software, Nankai University. His research interests senior engineer with Huawei Technologies Company,
+ include anomaly detection and anomaly localization. Ltd.
+
+ Dan Pei (Senior Member, IEEE) received the BE
+ and MS degrees in computer science from the De-
+ Bolin Zhu received the BS degree in software engi- partment of Computer Science and Technology, Tsneering from the College of Software, Nankai Univer- inghua University, Beijing, China, in 1997 and 2000,
+ sity, Tianjin, China, in 2023. He is currently working respectively, and the PhD degree in computer scitoward the master’s degree with the Computer Sci- ence from the Computer Science Department, Unience and Technology Department, Nanjing Univer- versity of California, Los Angeles (UCLA), in 2005.
+ sity. His research interests include the reasoning of He is currently an associate professor with the Delarge language models. partment of Computer Science and Technology, Tsinghua University. His research interests include network and service management in general. He is an
+ ACM senior member.

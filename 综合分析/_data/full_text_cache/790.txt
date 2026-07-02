@@ -1,0 +1,531 @@
+1076 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ RISK-4-AUTO: Residually Interconnected and
+ Superimposed Kolmogorov-Arnold Networks for
+ Automotive Network Traffic Classification
+ Anurag Dutta , Graduate Student Member, IEEE, Sangita Roy , Member, IEEE,
+ and Rajat Subhra Chakraborty , Senior Member, IEEE
+
+ Abstract—In modern automobiles, a Controller Area Network reliability, and the ability to present a consistent system-
+(CAN) bus facilitates communication among all electronic state snapshot to all ECUs [3]. The CAN data frame format
+control units for critical safety functions, including steering, and the protocol for the CAN-bus communication schemes
+braking, and fuel injection. However, due to the lack of
+security features, it may be vulnerable to malicious bus traffic- ensure excellent message integrity, and thus CAN is very wellbased attacks that cause the automobile to malfunction. Such suited for environments with inherently high electromagnetic
+malicious bus traffic can be the result of either external interference and electrical noise, e.g., vehicles and industrial
+fabricated messages or direct injection through the on-board production environments.
+diagnostic port, highlighting the need for an effective intru- However, the protocol lacks any in-built cryptographic
+sion detection system to efficiently identify suspicious network
+flows and potential intrusions. This work introduces Residually mechanism to ensure message confidentiality and sender
+Interconnected and Superimposed Kolmogorov-Arnold Networks authenticity [3]. As a result, the communication between ECUs
+(RISK-4-AUTO), a set of four deep neural network architec- is vulnerable to being hijacked by any attacker, resulting in
+tures for intrusion detection targeting in-vehicle network traffic severe automobile malfunctions, sufficient to wreak havoc on
+classification. RISK-4-AUTO models, when applied on three the road, and posing a threat to lives and infrastructures.
+hexadecimally identifiable sequence-based open-source datasets
+(collected through direct injection in the on-board diagnostic Malicious CAN messages capable of causing malfunction of
+port), outperform six state-of-the-art vehicular network intrusion the ECUs can be generated in two major ways [3]:
+detection systems (as per their accuracies) by ≈1.0163% for 1) Through direct physical injection of fabricated CAN
+all-class classification and ≈2.5535% on focused (single-class) messages [4] on the CAN-bus via the on-board diagnosmalicious flow detection. Additionally, RISK-4-AUTO enjoys a tic port of the vehicle, or,
+significantly lower overhead than existing state-of-the-art models,
+and is suitable for real-time deployment in resource-constrained 2) via fabricated messages injected to the CAN-bus by a
+automotive environments. telematics device [5] capable of wireless communication
+ with external agents. This threat is exacerbated by the
+ Index Terms—Controller area network (CAN), in-vehicle security, Kolmogorov-Arnold Network (KAN), network forensics, existence of wireless communication technology and
+network traffic classification. standards (e.g., IEEE 802.11p [6], [7]) for vehicular
+ communication.
+ A modern vehicle has an extensive attack surface with numer-
+ I. I NTRODUCTION ous and diverse attack vectors. For example, it has been
+ ODERN automobiles depend entirely on embed- recently demonstrated that Android infotainment units etc. can
+M ded electronic devices, commonly termed Electronic
+Control Units (ECUs) [1] for critical functions like steering,
+ also serve as attack vectors [8].
+ To counter these threats, efficient and accurate Intrusion
+fuel injection, braking, etc. These ECUs communicate through Detection System (IDS) needs to be deployed, which monitors
+Controller Area Network (CAN) bus systems following the the CAN-bus in real-time, and in case of any suspicious
+ISO 11898 standard [2]. The communication over a CAN- traffic, immediately quarantines (or flushes, if needed) such
+bus follows a broadcast mechanism to ensure efficiency, data frames. Efficient specialized IDS for vehicular network
+ traffic have been proposed in several recent works. Tariq et al.
+ Received 14 January 2025; revised 12 June 2025 and 5 October 2025; combined the heuristics of Reinforcement Learning with
+accepted 22 October 2025. Date of publication 24 October 2025; date Recurrent Neural Networks (RNN) [9], and later in another
+of current version 29 December 2025. The associate editor coordinating
+the review of this article and approving it for publication was Y. Diao.
+ work made use of Convolutional Long Short-Term Memory
+(Corresponding author: Rajat Subhra Chakraborty.) (Conv-LSTM) network for classification of network traf-
+ Anurag Dutta and Rajat Subhra Chakraborty are with the Department fic on a CAN-bus [10]. Similarly, Song et al. suggested
+of Computer Science and Engineering, Indian Institute of Technology
+Kharagpur, Kharagpur 721302, India (e-mail: anuragdutta@ieee.org;
+ using Deep Convolutional Neural Network (DCNN) [3], and
+rschakraborty@cse.iitkgp.ac.in). Javed et al. hybridized Convolution Neural Network (CNN)
+ Sangita Roy is with the Department of Computer Science and Engineering, with Attention-based Gated Recurrent Unit (GRU) [11].
+Thapar Institute of Engineering and Technology, Patiala 147004, India (e-mail:
+sangita.roy@thapar.edu).
+ Seo et al. added to the pool by using Generative Adversarial
+ Digital Object Identifier 10.1109/TNSM.2025.3625404 Network (GAN) for data augmentation, and further improving
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+DUTTA et al.: RISK-4-A UTO 1077
+
+ Further, we evaluated the models (on each of the three
+ datasets) for their ability to distinguish between injected
+ and normal flow of traffic from every malicious flow category (focused detection), where for each of those attacks
+ corresponding to the three HCRL datasets, one or more RISK-
+ 4-AUTO models achieved a perfect (i.e., 100% accurate)
+ classification.
+ The rest of the paper is organized as follows: Section II
+ presents some notable works from the existing literature that
+ aligns the research problem, and our contributions. Section III
+ discusses the preliminaries necessary for proposing the RISK-
+ 4-AUTO Intrusion Detection Systems for automotive network
+ classification. Section V presents the supervised framework,
+ the adopted mini-FlowPic algorithm for histogram generation,
+ the three HCRL datasets and the four proposed deep neural
+ network architectures. Section VI describes the experimental
+Fig. 1. Some examples of the generated two-dimensional visual represen- setup, and the experimental results to evaluate the effectiveness
+tation of spatial and temporal characteristics of in-vehicle network traffic of the RISK-4-AUTO IDS models. Finally, Section VII
+from the HCRL-Car Hacking Dataset. The horizontal axis represents
+normalized frame arrival timestamps (in seconds), and the vertical axis concludes the research.
+representing the corresponding frame sizes (in bytes).
+
+the prediction efficiency [12]. Ashraf et al. proposed a II. R ELATED W ORKS AND O UR C ONTRIBUTIONS
+novel architecture, LSTM-Autoencoder-IDS (LSTMIDS) [13], This section reviews some works from the existing literature
+which to the best of our knowledge, reports the best classifi- on the topic under consideration, some of which have been
+cation performance till date. mentioned already in Section I.
+ In this paper, we introduce Residually Interconnected and Tariq et al. combined reinforcement learning-based adaptive
+Superimposed Kolmogorov-Arnold Networks (RISK-4- threshold adjustment with rule-based heuristics (e.g., message
+AUTO), a novel combination of four deep learning-based IDS. rate, ID validity) with a Recurrent Neural Network to learn
+RISK-4-AUTO models combines Residual Neural Network temporal attack signatures [9]. They also suggested using a
+(ResNet) [14], [15], [16] and Kolmogorov-Arnold Network reward-driven fine-tuning to update anomaly thresholds online,
+(KAN) [17], [18], [19], for malicious in-vehicular network thus improving the adaptability, and generalizability to new
+traffic classification, in particular those resulting from direct (unidentified) traffic patterns. One major limitation of this
+injection attacks. The RISK-4-AUTO IDS models make use of technique is the complexity of reward shaping, as poorly
+visual classification techniques to distinguish among different designed reward functions can lead to increased false positive
+frames for a given network flow. rates. Also, from a practical point of view, training RNNs for
+ Fig. 1 exemplifies such a visual representation for three automotive intrusion detection typically requires substantial
+classes (one benign, two malicious) from the HCRL-Car volumes of labeled data, which makes both the turn-around
+Hacking Dataset (in-vehicle network traffic), with the time, and developmental cost high. In a follow-up work [10],
+horizontal axis representing normalized frame arrival times- they proposed CAN-Transfer, where pre-trained Convolutiontamps (in seconds), and the vertical axis representing the LSTM (Conv-LSTM) was used on CAN dataset. Herein,
+corresponding frame sizes (in bytes). It can be observed the Convolutional layers extracted spatial feature patterns
+visually from the figure that the benign flow of traffic is from CAN message representations, and the LSTM captured
+densely, uniformly, and more importantly periodically well- temporal dependencies. Although it achieved the-then state-ofdistributed, whereas the injected flow is either sparsely (due to the-art accuracy in intrusion detection, the accuracy depends
+anomalous timing characteristics) or non-uniformly distributed on the volume of data available for fine-tuning the modules;
+(due to sudden spikes in message size, frequency, etc). The in case of scarce data availability, performance degrades.
+deep learning models learn the underlying patterns from Song et al. suggested using Deep Convolutional Neural
+these visual representations in a supervised manner. Later, the Network (DCNN) [3] for mapping CAN frames to 2D
+trained models are applied to distinguish between different images (time vs. ID axes), eliminating the need for manclasses of in-vehicle network traffic flows. Fig. 2 depicts the ual feature engineering and ensuring low false negative
+three phases. and therefore lower overall error rates. This technique’s
+ All of the four proposed models under RISK-4-AUTO effectiveness was significantly influenced by the volume
+achieved superior performance compared to the state-of-the- and quality of labeled training data available for training
+art (S-O-T-A), when applied on the HCRL network traffic the network. Further, the underlying network architecture
+datasets [20], [21], [22]. For example, the best classification under this DCNN involves large depth of convolutional
+accuracy achieved by RISK-4-AUTO was 99.76% for distin- layers, which increases the inference time, compared to
+guishing five (four malicious and one benign) different types shallow-networks. Javed et al. proposed CANIntelliIDS [11],
+of network flows of the HCRL-Car Hacking Dataset, where they hybridized Convolution Neural Network (CNN)
+compared to the previous best-reported accuracy of 99.01%. with Attention-based Gated Recurrent Unit (AGRU). The
+1078 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 2. Pictorial demonstration for the workflow of the RISK-4-AUTO framework. The methodology has three phases: (I) capturing the CAN bus traffic
+session from the ECUs of any automobile; (II) employing a “Session Plotter” (Algorithm 1) for generation of two-dimensional histograms, and annotating
+them based on the “Flag” field present in the session header, and, (III) finally, the malicious traffic classification is performed in a supervised manner using
+Kolmogorov-Arnold Network.
+
+CNN backbone performed spatial feature extraction, and a very large volume of data, in contrast to [9], [10]. They
+Attention-augmented GRU focused on class-specific salient map the time-series to histograms (refer to Algorithm 1),
+features. They further reported ≈10% improvement on increasing information gain per data-instance. Besides, unlike
+mixed-attack benchmarks, compared to prior models. Despite state-of-the-art models which have very-deep networks
+achieving state-of-the-art accuracy, a major shortcoming of for classification [3], RISK-4-AUTO models have limited
+CANIntelliIDS was its memory overhead during inference residually-connected convolutional layers (one-two; refer to
+due to attention mechanisms. Seo et al. proposed GIDS [12], Fig. 3) and thus offers faster inference, with no memory
+where the CAN traffic data was augmented using spectral- or computational overhead arising from additional model
+normalized GAN. It further increased the model robustness complexity (like attention mechanism [11], coordinationto noise and often generalizable to newer samples, without latency [23] etc). Additionally, RISK-4-AUTO achieves
+explicit training. However, GAN based augmentation may (in ≈1.0163% improvement for all-class classification, and
+some instances) generate unrealistic samples (as the generation ≈2.5535% on focused (single-class) malicious flow detecis unconstrained), which cause the training to be unstable. tion, besides relatively low inference time, in comparison
+Additionally, the synthetic samples make the detection module to lightweight detection systems from the literature
+vulnerable to rote-learning, by memorizing the GAN generated like [10], [24]. This is also one of most important
+patterns. Yang et al. proposed MTH-IDS [23] (a three-tier requirement for implementation of any model on a
+detection architecture) combining signature-based filtering at resource-constrained environment.
+the edge, anomaly detection in fog, and global correlation in
+the cloud. It hybridizes a lightweight rule-based check with
+a deep-autoencoder and random-forest as an ensemble model III. BACKGROUND : V ISUAL R EPRESENTATION OF
+balancing speed and detection depth. It is also vulnerable to N ETWORK T RAFFIC , R ES N ET AND KAN
+communication latency due to multi-tier coordination. A. FlowPic for Visual Representation of Network Packets
+ Araujo-Filho et al. [24] implement a machine learning-
+ “FlowPic” [25], [26] was one of the early contributions
+based Intrusion Prevention System (IPS), using isolation
+ towards visual representation-based techniques for network
+forest algorithms on CAN frame payload data to achieve
+ traffic identification. Shapira et al. in their contribution
+real-time attack detection and prevention within timing condevised a methodology to convert network traffic time series
+straints on resource-constrained hardware. Ashraf proposed
+ (continuous) data to their (discrete) visual representation,
+LSTM-Autoencoder-IDS (LSTMIDS) [13], trains an LSTMas histograms. By normalizing both arrival times and sizes
+autoencoder on benign CAN sequences (only), and flags the
+ into a fixed [0, # MTU − 1] range and binning into an
+frames whose reconstruction error exceeds a threshold as
+ (# MTU × # MTU) grid, FlowPic yields a grayscale image
+anomalies. Till date, it achieves state-of-the-art accuracy with
+ capturing spatiotemporal traffic patterns. In their seminal
+≈99% accuracy on select benchmark datasets.
+ work, Shapira et al. considered MTU = 1500, which
+ was updated to 64, 128, 256 respectively in their follow-
+A. Our Contributions up work, mini-FlowPic [27]. Inspired by the performance
+ The proposed RISK-4-AUTO models outperform the limi- boost, we inherit mini-FlowPic with dimension 64 × 64
+tations of the existing state-of-the-art, as they do not require in Section V.
+DUTTA et al.: RISK-4-A UTO 1079
+
+Fig. 3. Proposed architectures of RISK-4-AUTO Intrusion Detection Systems for malicious automotive traffic classification through visualization.
+
+B. Residual Neural Network (ResNet) C. Kolmogorov-Arnold Network (KAN)
+ AlexNet [28] was the first CNN-based architecture that got Kolmogorov Arnold Network (KAN) was introduced in [17]
+mass attention, particularly after it’s astonishing performance to overcome the limitations of the existing Multi-layer
+at the ImageNet 2012 competition [29], [30], [31]. Perceptrons (MLPs). MLPs decide the numerical values of
+Subsequently, every other model that aimed to outperform the node weights using fixed activation functions, whereas
+AlexNet relied on using more layers of computation as a KAN updates the weights using trainable activation functions.
+measure to overcome the margin of error, but this came up Inheriting from the “Universal Approximation Theorem”, for
+with a trade-off. Adding more layers introduced the Vanishing MLPs any function y = f (x) can be approximated as in eqn. (2)
+Gradient (gradient tends to zero) [32], and Exploding Gradient 
+(gradient tends to infinity) [33] problems in the deep neural y= a[Ω · x + β] (2)
+networks. Residual Blocks came to the rescue, by enabling where a[ · ] is the fixed activation function (e.g., ReLU,
+the deeper neural networks to train on a given dataset with tanH, etc.), and (ωi,j ∈ Ω, βj ∈ β) are the model
+lower experimental error. Residual Blocks introduced Skip weights, and bias respectively. Contrary to that, inheriting
+Connection that connects activations from non-adjacent layers from the “Kolmogorov-Arnold Representation Theorem”, the
+by skipping layers in between. This enables the network approximation (for KAN) can be made as in eqn. (3)
+to skip any layer by regularization if that layer contributes   
+to degrading performance of the model. Mathematically, y= Φ φ[x] (3)
+the Residual Block operation is represented as in
+eqn. (1): where φi,j ∈ φ are the real-valued functions (trainable,
+ specifically B-Splines), and Φ ∈ Φ is the mapping (composition) function of th layer. Further, the real-valued functions
+ x → a[x] + x (1) are defined as:
+   K
+ 
+ (b) xi (s)
+where a[x] refers to the activation from any neural layer with φi,j [xi ] = μi,j · + μ i,j · λi,j ,k · Bk [xi ] (4)
+ 1 + e −xi
+input feature x. k =1
+ Since our proposed RISK-4-AUTO models solely depend and the composition functions as:
+on learning patterns from FlowPic images generated for auto- ⎡ ⎤
+ φ,1,1 φ,1,2 · · · φ,1,L
+motive network traffic flow, the vanishing gradient problem ⎢ φ,2,1 φ,2,2 · · · φ,2,L ⎥
+may adversely affect the precision of the IDS. Hence, we have ⎢ ⎥
+ Φ = ⎢ . .. .. .. ⎥; φ,i,j ≡ φi,j (5)
+made Residual Blocks an integral part of the proposed RISK- ⎣ .. . . . ⎦
+4-AUTO models. φ,L,1 φ,L,2 · · · φ,L,L
+1080 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Algorithm 1 Histogram Generation Algorithm 1) Linear KAN (L IN -KAN) is the most simple, and
+Require: n, T , and Π  T , Π are n-dim vectors lightweight classifier of all the RISK-4-AUTO IDS
+Ensure: Hi,i ∈ H  H is the 2-D Histogram models. It takes a visual histogram of dimension (64
+ 1: function S ESSION P LOTTER(n, T , Π) × 64) as input, then rearranges (through a Flatten
+ 2: Initialize vectors T~ , Π̃ with NULL entries. Layer) the entire feature set from the two-dimensional
+ 3: for i = 0 to n − −1do histogram into a single one-dimensional array consisting
+ 4: T˜i ← Tn−1Ti −T0
+ −T0 · # MTU  Normalization of of 4096 features, and inputs it to the KAN layer in
+ packet arrival times  batches of 32 features each. The KAN layer further
+ 5: Π̃i ← ΠΠ i −Π0
+ n−1 −Π0
+ · # MTU  Normalization of learns from the underlying features, such that for any
+ packet sizes input feature set, it maps the set (through Softmax
+ 6: end for Activation Layer) to any one of the network traffic
+ 7: Initialize H(# MTU×# MTU) ← 0(# MTU×# MTU) classes (five in our case).
+ 8: for j = 0 to n − −1 do 2) Residual KAN (R ES -KAN) is the next model in the
+ 9: H   ˜ ← H   ˜ + 1  Increment cluster. It has an incremental architecture on the L IN -
+ Πj ,Tj Πj ,Tj KAN model, wherein before channelizing the feature
+10: end for vectors to the KAN layers, they are passed through
+11: return H two consecutive sequences of Residual Layers, and
+12: end function MaxPool2D (with kernel size 2 × 2) for better extraction of the spatio-temporal feature. The first network
+ (b) (s) maps between ninput = 1 and noutput = 5, while
+where, (μi,j , μi,j ) are the weights for the “biological” the second network maps between ninput = 5 and
+term (Swish), and “spline” term (λi,j ,k being the spline noutput = 25. Afterwards, the model retraces the
+coefficients). computational path as followed by L IN -KAN.
+ 3) Batch-Normalized Residual KAN (R ES -KAN BN ) is sim-
+ IV. P ROPOSED S OLUTION
+ ilar to the R ES -KAN model, the only difference being
+ This section, describes the supervised framework, the an additional learnable BatchNorm2D layer after each
+adopted mini-FlowPic algorithm for histogram generation and of the Residual Layers. The BatchNorm2D layers
+the four classifier model architectures constituting RISK-4- scale and shift the normalized activations from the
+AUTO. respective predecessors, improve the flow of features and
+ gradients between the corresponding layers, and counter
+A. The Supervised Framework the internal Covariate Shift.
+ This framework (refer to Fig. 2) considers sequential data 4) Dual-Residual-KAN (R ES -KAN II ), which is the beststream (from the CAN bus) consisting of standard network performing model in the cluster. It again has an
+parameters in the form, {Timestamp (in UTC), CAN message incremental architecture on the R ES -KAN model, with
+Identifier (in Hexadecimal), Number of packets (n), n packet two KAN layers for feature extraction and mapping.
+arrival time stamps (normalized form: T ), n tuples of packet This way, the extraction is smoother than its predecessizes (normalized form: Π, in bytes)} and a “Flag”}. sors, thus retaining and transmitting deep features, which
+ The “Flag” field represents the status of the message in turn makes the classification more accurate.
+under consideration, i.e., either the message is injected on The rationale behind the choice of specific model paramthe CAN bus, or it is evolving originally. The time-series eters is as follows; Firstly, the output histograms generated
+corresponding to aforementioned set of five (excluding “Flag”) by Algorithm 1 are of dimension 64 × 64. Consequently,
+features are mapped to form a two-dimensional histogram the input histograms to the RISK-4-AUTO model retain the
+(as per Algorithm 1), which is then further used for the same dimensions. These histograms are grayscale, with gray
+classification (both multi-class and binary) using supervised values normalized to the range [0, 255], and, being spread
+learning algorithms. Algorithm 1 constructs a 2D histogram across a single channel, correspond to a total of 4096 features.
+that captures the joint distribution of (normalized) packet Secondly, the first residual network layer in each of the RISKarrival times and their sizes within a network session. First, 4-AUTO models is configured with ninput = 1 and noutput =
+both packet arrival times (T ) and sizes (Π) are normalized to 5, while the subsequent layer uses ninput = 5 and noutput =
+a fixed resolution (as constrained by the definition of # MTU). 25. As the input histogram is represented as a two-dimensional
+These normalized values are then used to index into the 2D grayscale image, where the intensity at each pixel corresponds
+histogram grid H, incrementing the count at the corresponding to the frequency of specific features, this setup effectively
+location for each packet, which enables visualization of spatial captures unimodal information (ninput = 1). The choice of
+and temporal characteristics of the network traffic. noutput = 5 ensures that the input is expanded into multiple
+ feature maps, facilitating the extraction of spatial relationships
+B. RISK-4-AUTO: Residually Interconnected and in the histogram. This design aligns conceptually with (a
+Superimposed Kolmogorov Arnold Networks maximum of) five network traffic classes, as is the upper bound
+ This subsection describes the four classifier model archi- for most of the automotive network traffic datasets. But if
+tectures constituting RISK-4-AUTO, as depicted pictorially in needed, the dimension can be expanded based on require-
+Fig. 3. ments. The subsequent layer, configured with ninput = 5 and
+DUTTA et al.: RISK-4-A UTO 1081
+
+ TABLE I
+noutput = 25, maintains a scaling ratio of five, consistent with A N OVERVIEW OF THE HCRL-C AR H ACKING DATASET
+the preceding layer. Finally, the use of MaxPool2D with a
+kernel size of 2 × 2 allows for downscaling the features while
+retaining most of the relevant information. A kernel size of
+two is a commonly adopted choice for smaller image samples.
+ Additionally, the KAN layer had the following hyperparameters: grid-size = 10 (complexity of the network),
+spline-order = 3, that determines the order of the
+trainable activation functions – B-Splines (here degree-three
+polynomials), noise-factor = 10−2 (for regularization, TABLE II
+ A N OVERVIEW OF THE HCRL CAN W ITH F LEXIBLE
+and to prevent overfitting). These values were initialized DATA R ATE DATASET
+randomly, and 10% data was left out for validation during
+model training to determine the effective parameter values.
+Subsequently, these parameter values were updated through
+cross-validation.
+
+ V. E VALUATION M ETHODOLOGY
+ TABLE III
+ This section presents the datasets and the methodology A N OVERVIEW OF THE HCRL B-CAN DATASET
+(experimental setup) used for validating the proposed RISK-
+4-AUTO models.
+
+A. Dataset
+ In this research, for experimentation, three open-source
+CAN traffic based datasets made available by the “Hacking
+and Countermeasure Research Lab (HCRL)” were chosen.
+The datasets include Car-Hacking Dataset (HCRL-CHD) [20],
+CAN with flexible data rate Dataset (HCRL-CAN-FD) [21]
+and Bus-type topology CAN (HCRL-B-CAN) [22] Dataset
+were chosen. These datasets (as reported in the data collection methodology by HCRL) were collected through
+direct-injection in the on-board diagnostic port. The reason
+behind the choice of these datasets is the large number of
+data points available with these datasets. Besides, existing
+literature mostly considers these datasets (as a whole, or in
+sets), which enabled us to compare state-of-the-art with the
+proposed framework. Refer to Table I, II and III for the dataset
+details. Each of these three datasets is a hexadecimally identifiable sequence-based dataset consisting six main attributes, Fig. 4. Confusion Matrices for all-class-classification of network traffic on
+ the HCRL-CHD.
+as discussed in Section IV-A. The three datasets have the
+following characteristics:
+ 1) The Car-Hacking Dataset [20] covers five types of CAN out on a system with 16 GB main memory, Intel Core
+ traffic of which one is for benign flow, and the remaining i7-1065G7 @1.30 GHz processor and an NVIDIA
+ four are: (I) DoS attack, (II) Fuzzy attack, (III) Gear GeForce MX330 Graphics Processing Unit (GPU) with 2
+ spoofing attack, and (IV) RPM spoofing attack. GiB in-built memory. Existing literature mostly performs an
+ 2) CAN with flexible data rate Dataset [21] covers three all-class classification, but to the best of our knowledge,
+ types of CAN traffic: (I) Flooding attack, (II) Fuzzy no other published work has reported intra-class detection
+ attack, and (III) Malfunction. for each class of these attacks. We have made the codes
+ 3) Finally, the Bus-type topology CAN Dataset [22] covers and processed data (2D histograms, some selected instances)
+ three types of CAN traffic of which one is for benign open-sourced at [34] for reproduction.
+ flow, and the remaining two are: (I) DDoS attack, and
+ (II) Fuzzy attack. VI. E XPERIMENTAL R ESULTS
+ This section describes in detail, the obtained results
+B. Experimental Setup (Section VI-A) from the experiments mentioned in
+ The RISK-4-AUTO deep learning models were imple- Section V-B, and also performs an ablation study
+mented in Python using the PyTorch (v. 2.4) (Section VI-B) on different components of the RISK-4-AUTO
+framework, and were evaluated on three open-source datasets model, and their influence (overall) on the intrusion detection
+as discussed in Section V-A. All experiments were carried efficiency.
+1082 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE IV
+ C OMPARISON OF P ERFORMANCE B ETWEEN D IFFERENT IDS M ODELS FOR All-Class-Classification (M ULTI -C LASS ) OF N ETWORK
+ T RAFFIC ON THE HCRL-C AR H ACKING DATASET
+
+ TABLE V
+ C OMPARISON OF P ERFORMANCE B ETWEEN D IFFERENT IDS M ODELS FOR All-Class-Classification (M ULTI -C LASS ) OF N ETWORK
+ T RAFFIC ON THE HCRL-CAN W ITH F LEXIBLE DATA R ATE DATASET
+
+ TABLE VI
+ C OMPARISON OF P ERFORMANCE B ETWEEN D IFFERENT IDS M ODELS FOR All-Class-Classification (M ULTI -C LASS ) OF N ETWORK
+ T RAFFIC ON THE HCRL-B US -T YPE CAN DATASET
+
+ TABLE VII
+C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ DoS-Attack F ROM HCRL-CHD
+
+A. Results
+ Since this work is related to classification, common
+performance metrics – Accuracy, Precision, Recall, and
+ Fig. 5. Confusion Matrices for all-class-classification of network traffic on
+F1-Score are considered for evaluating the models. The the HCRL CAN-FD.
+three datasets (as mentioned in Section V-B) are subjected
+to a 80:10:10 train-test-validation ratio for the experiments.
+Additionally, the Time-to-Train (TTTr), and Time-to-Test The following S-O-T-A IDS were considered as baseline
+(TTTe) were measured to present the computational overhead (mentioned along with their respective publication venues in
+of the proposed models, alongside comparing them to the chronological order by their publication years), (I) LSTM
+temporal dependencies of the pre-existing models. From a Autoencoder based IDS (LSTMIDS) [13], (II) GAN based IDS
+practitioner’s point of view, the high training time might seem (GIDS) [12], (III) CNN and Attention-based Gated Recurrent
+like a trade-off for achieving more accuracy, but note that Unit (GRU) CAN IDS (CANintelliIDS) [11], (IV) Deep
+training the model is a one-time process. Once the model Convolutional Neural Network IDS (DCNN) [3], (V) Transfer
+has been trained and saved, the same model can be Learning based IDS (CANTransfer) [10], and (VI) Heuristic
+queried any number of times with very little computational RNN IDS (RNN+Heuristics) [9]. Tables IV, V, and VI present
+overhead (Time-to-Test). the all-class classification (five classes in HCRL-CHD, and
+DUTTA et al.: RISK-4-A UTO 1083
+
+ TABLE XII
+ C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ Fuzzy-Attack F ROM HCRL CAN-FD
+
+ TABLE XIII
+ C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ Malfunction-Attack F ROM HCRL CAN-FD
+
+Fig. 6. Confusion Matrices for all-class-classification of network traffic on
+the HCRL-B-CAN.
+
+ TABLE VIII
+C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ Fuzzy-Attack F ROM HCRL-CHD TABLE XIV
+ C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ DDoS-Attack F ROM HCRL-B-CAN
+
+ TABLE IX
+C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ TABLE XV
+ Gear-Spoofing-Attack F ROM HCRL-CHD
+ C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ Fuzzy-Attack F ROM HCRL-B-CAN
+
+ TABLE X
+C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE )
+ RPM-Spoofing-Attack F ROM HCRL-CHD
+ The best set of results corresponding to each stratum of
+ multi-class classification have been highlighted in bold font.
+ Drawing from the experimental observations from the aforementioned tables, for HCRL-CHD, the best of the proposed
+ RISK-4-AUTO models outperformed the best from the stateof-the-art by 0.7576%; even the base variant of the proposed
+ models –R ES -KAN outperforms by 0.6568%. Alongside to
+ TABLE XI reprove the overfitting issues, their confusion matrices have
+C OMPARISON ON C LASSIFYING (B INARY- Injected, OR Normal M ESSAGE ) also been reported (refer to Fig. 4). Similarly, for HCRL-
+ Flooding-Attack F ROM HCRL CAN-FD CAN-FD and HCRL-B-CAN, the best of the proposed models
+ outperformed the best from the state-of-the-art by 0.4523%,
+ and 1.8398% respectively; and the base variant of by 0.3920%,
+ and 0.3393% respectively. The respective confusion matrices
+ for the HCRL-CAN-FD and HCRL-B-CAN have also been
+ reported in Fig. 5, and 6. Apart from all-class classification,
+ this research also presents the focused single-class attack
+ detection (i.e., whether the attack is performed by injected,
+ or normal message flow). Corresponding to each of the
+three classes each in HCRL-CAN-FD, and HCRL-B-CAN) of four malicious flows in HCRL-CHD the single-class attack
+the network flows, compared to six state-of-the-art intrusion detection results have been presented in Table VII, VIII, IX,
+detection systems. and X. Similarly, Tables XI, XII, and XIII presents the
+1084 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE XVI
+ I MPLICATIONS OF D IFFERENT C OMPUTATIONAL L AYERS FOR THE C LASSIFICATION P ROCESS
+
+focused single-class attack detection metrics for HCRL-CAN- VII. C ONCLUSION
+FD (three malicious flows); and Tables XIV, and XV presents We have proposed RISK-4-AUTO, a collection of four
+the focused attack detection metrics for HCRL-B-CAN (two deep-learning-based models for the classification of in-vehicle
+malicious flows). For each of the tables, one can observe, that network traffic. The models under RISK-4-AUTO combine the
+they outperform the state-of-the-art models when evaluated novel Kolmogorov-Arnold Network (enabling trainable actisingle-class by ≈2.5535% on an average, with a deviation of vation functions) with the Residual Network architecture. The
+0.4596. models were applied on the open source HCRL Datasets, and
+ when evaluated based on their performance compared to other
+ state-of-the-art intrusion detection systems, an ≈1.0163%
+ improvement on an all-class classification, and ≈2.5535%
+B. Ablation Study improvement on focused malicious flow detection was
+ We performed an ablation study to judge the impact of observed. Additionally, these models can be extended to
+the different computational layers in the neural networks other in-vehicle networks, e.g., Automotive Ethernet, Serial
+considered by us. Table XVI presents the layer-wise ablation Peripheral Interface, Safety Systems, etc.
+study with respect to the accuracy (validation), TTTr (sec.), Although the proposed set of RISK-4-AUTO models can
+TTTe (sec.) and the model size (kB). Although it is common work well for the ten different attacks across three datasets, it
+practice to present the model sizes in terms of the number cannot be generalized for completely out-of-the-box attacks.
+of parameters, we feel that from an implementation point of To the best of our knowledge, except GIDS [12], no other
+view, model size (in kB) would enable the practitioner to models are generalizable beyond the attacks they have been
+make a better choice of the model based on their requirements. trained for, and even in GIDS the GAN-based augmentation
+Prioritizing on the model accuracy (as a primary decider), has been reported to work well on attacks, similar to those
+a color-code of green , yellow , and red is adopted on which the models have been trained. Our future research
+denoting significant improvement, negligible changes, and will be directed towards detecting fabricated message based
+degradation respectively. attacks.
+ Further, the collection of four different models allows the
+practitioner to make an informed choice of the model they
+might need, based on requirements. If the need of the hour R EFERENCES
+is achieving more accuracy, without much constraints on the [1] M. Kaiser, U. Schaefer, and G. Haaf, “Electronic control
+spatiotemporal requirements of the model, complex variants unit,” in Automotive Mechatronics: Automotive Networking, Driving
+(Batch-Normalized Residual KAN (R ES -KAN BN ) and Dual- Stability Systems, Electronics. Wiesbaden, Germany: Springer, 2014,
+ pp. 18–43.
+Residual-KAN (R ES -KAN II ) should be considered. But, if it
+ [2] G. M. Smith. “What is can bus (controller area network) and how it
+is needed to implement a robust, lightweight system, Residual compares to other vehicle bus networks.” Accessed: Dec. 2024. [Online].
+KAN (R ES -KAN) can be thought of. Available: https://dewesoft.com/blog/what-is-can-bus
+DUTTA et al.: RISK-4-A UTO 1085
+
+ [3] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network intrusion [26] T. Shapira, “FlowPic: Encrypted internet traffic classification is as
+ detection using deep convolutional neural network,” Veh. Commun., easy as image recognition,” in Proc. IEEE Conf. Comput. Commun.
+ vol. 21, Jan. 2020, Art. no. 100198. Workshops (INFOCOM WKSHPS), 2019, pp. 680–687.
+ [4] L. B. Othmane, L. Dhulipala, M. Abdelkhalek, N. Multari, and [27] E. Horowicz, T. Shapira, and Y. Shavitt, “A few shots traffic classification
+ M. Govindarasu, “On the performance of detecting injection of fab- with mini-flowpic augmentations,” in Proc. 22nd ACM Internet Meas.
+ ricated messages into the can bus,” IEEE Trans. Dependable Secure Conf., 2022, pp. 647–654.
+ Comput., vol. 19, no. 1, pp. 468–481, Jan./Feb. 2020. [28] M. Z. Alom et al., “The history began from AlexNet: A comprehensive
+ [5] A. Anwar, A. Anwar, L. Moukahal, and M. Zulkernine, “Security survey on deep learning approaches,” 2018, arXiv:1803.01164.
+ assessment of in-vehicle communication protocols,” Veh. Commun., [29] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classification
+ vol. 44, Dec. 2023, Art. no. 100639. with deep convolutional neural networks,” Commun. ACM, vol. 60, no. 6,
+ [6] F. Arena, G. Pau, and A. Severino, “A review on IEEE 802.11p for pp. 84–90, 2017.
+ intelligent transportation systems,” J. Sens. Actuat. Netw., vol. 9, no. 2, [30] K. He, R. Girshick, and P. Dollár, “Rethinking ImageNet prep. 22, 2020. training,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2019,
+ [7] Y. Wang, A. Ahmed, B. Krishnamachari, and K. Psounis, “IEEE 802.11p pp. 4918–4927.
+ performance evaluation and protocol enhancement,” in Proc. IEEE Int. [31] O. Russakovsky et al., “ImageNet large scale visual recognition chal-
+ Conf. Veh. Electron. Safety, 2008, pp. 317–322. lenge,” Int. J. Comput. Vis., vol. 115, pp. 211–252, Dec. 2015.
+ [8] A. R. Bharadwaj, M. K. Akhilesh, H. A. Abhiram, and R. Ravish, [32] S. Hochreiter, “The vanishing gradient problem during learning recurrent
+ “Popcorn attack: Intrusion into can remotely through android application neural nets and problem solutions,” Int. J. Uncertainty, Fuzziness Knowl.
+ of infotainment system,” in Proc. Int. Conf. Knowl. Eng. Commun. Syst. Based Syst., vol. 6, no. 2, pp. 107–116, 1998.
+ (ICKECS), vol. 1, 2024, pp. 1–6. [33] G. Philipp, D. Song, and J. G. Carbonell, “The exploding gradient
+ [9] S. Tariq, S. Lee, H. K. Kim, and S. S. Woo, “Detecting in-vehicle CAN problem demystified-definition, prevalence, impact, origin, tradeoffs, and
+ message attacks using heuristics and RNNs,” in Proc. Int. Workshop Inf. solutions,” 2017, arXiv:1712.05577.
+ Oper. Technol. Secur. Syst., 2019, pp. 39–45. [34] A. Dutta et al. “RISK-4- AUTO codebase.” Accessed: Dec. 2024. https://
+[10] S. Tariq, S. Lee, and S. S. Woo, “CANTransfer: Transfer learning based github.com/Anurag-Dutta/RISK-4-Auto,
+ intrusion detection on a controller area network using convolutional
+ LSTM network,” in Proc. 35th Annu. ACM Symp. Appl. Comput., 2020,
+ pp. 1048–1055.
+[11] A. R. Javed, S. Ur Rehman, M. U. Khan, M. Alazab, and T. Reddy,
+ “CANintelliiDS: Detecting in-vehicle intrusion attacks on a controller
+ area network using CNN and attention-based GRU,” IEEE Trans. Netw.
+ Sci. Eng., vol. 8, no. 2, pp. 1456–1466, Apr.–Jun. 2021.
+[12] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion Anurag Dutta (Graduate Student Member, IEEE)
+ detection system for in-vehicle network,” in Proc. 16th Annu. Conf. received the bachelor’s degree in computer science
+ Privacy, Security Trust (PST), 2018, pp. 1–6. and engineering from the Government College of
+[13] J. Ashraf, A. D. Bakhshi, N. Moustafa, H. Khurshid, A. Javed, Engineering and Textile Technology, Serampore,
+ and A. Beheshti, “Novel deep learning-enabled LSTM autoencoder India. He is currently pursuing the M.S. degree
+ architecture for discovering anomalous events from intelligent trans- with the Department of Computer Science and
+ portation systems,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7, Engineering, IIT Kharagpur. His research interests
+ pp. 4507–4518, Jul. 2021. include time-series forecasting, computer vision,
+ image processing, and the applications of artificial
+[14] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+ intelligence in digital forensics.
+ recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016,
+ pp. 770–778.
+[15] H.-K. Lim, J.-B. Kim, J.-S. Heo, K. Kim, Y.-G. Hong, and
+ Y.-H. Han, “Packet-based network traffic classification using deep learning,” in Proc. Int. Conf. Artif. Intell. Inf. Commun. (ICAIIC), 2019,
+ pp. 46–51.
+[16] C. Su, Y. Liu, and X. Xie, “Fine-grained traffic classification based
+ on improved residual convolutional network in software defined
+ networks,” IEEE Latin America Trans., vol. 21, no. 4, pp. 565–572, Sangita Roy (Member, IEEE) received the
+ Apr. 2023. B.Tech. degree from the West Bengal University
+[17] Z. Liu et al., “KAN: Kolmogorov-Arnold networks,” 2024, of Technology and the M.Tech. degree from
+ arXiv:2404.19756. the Kalinga Institute of Industrial Technology,
+[18] A. D. M. Ibrahum, Z. Shang, and J.-E. Hong, “How resilient are Bhubaneswar, and the Ph.D. degree from IIT Patna.
+ Kolmogorov–Arnold networks in classification tasks? A robustness She is currently an Assistant Professor with the
+ investigation,” Appl. Sci., vol. 14, no. 22, 2024, Art. no. 10173. Department of Computer Science and Engineering,
+[19] M. Abd Elaziz, I. A. Fares, and A. O. Aseeri, “CKAN: Convolutional Thapar Institute of Engineering and Technology,
+ Kolmogorov–Arnold networks model for intrusion detection in IoT Patiala, India. Her research interests include comenvironment,” IEEE Access, vol. 12, pp. 134837–134851, 2024. puter network, network security, image processing,
+[20] H. K. Kim et al. “HCRL-car hacking dataset.” 2020. Accessed: and deep learning.
+ Dec. 2024. [Online]. Available: https://ocslab.hksecurity.net/Datasets/
+ car-hacking-dataset
+[21] H. K. Kim. “HCRL-can with flexible data rate dataset.” 2022. Accessed:
+ Dec. 2024. [Online]. Available: https://ocslab.hksecurity.net/Datasets/
+ can-fd-intrusion-dataset
+[22] H. Kim. “HCRL-B-can dataset.” 2022. Accessed: Dec. 2024. [Online].
+ Available: https://ocslab.hksecurity.net/Datasets/b-can-intrusion-dataset,
+[23] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered Rajat Subhra Chakraborty (Senior Member,
+ hybrid intrusion detection system for Internet of Vehicles,” IEEE Internet IEEE) is a Professor with the Department of
+ Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022. Computer Science and Engineering, IIT Kharagpur.
+[24] P. F. De Araujo-Filho, A. J. Pinheiro, G. Kaddoum, D. R. Campelo, His area of research is hardware security, VLSI
+ and F. L. Soares, “An efficient intrusion prevention system for can: design, and digital content protection through water-
+ Hindering cyber-attacks with a low-cost platform,” IEEE Access, vol. 9, marking. He is a Senior Member of ACM.
+ pp. 166855–166869, 2021.
+[25] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+ encrypted traffic classification and applications identification,” IEEE
+ Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.

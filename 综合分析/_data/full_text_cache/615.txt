@@ -1,0 +1,879 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026 4647
+
+ Balancing Timeliness and Accuracy: A Hybrid
+ Data-Control Plane Framework for Volumetric
+ DDoS Defense in IoT
+ Jiahang Pu , Hongyu Ye, Jing Cheng, Feng Shan , Member, IEEE, and Runqun Xiong , Member, IEEE
+
+ Abstract—Resource-constrained IoT devices in Industrial traditionally closed Operational Technology (OT) networks
+Internet environments are highly vulnerable to DDoS attacks due and open Information Technology (IT) networks, enabling
+to infrequent security updates and insufficient built-in protection applications like smart manufacturing, remote monitoring,
+mechanisms. Existing defense solutions primarily rely on external
+filtering servers or programmable switches, but these approaches and fine-grained management. The number of connected
+fail to simultaneously meet the stringent real-time performance IoT devices reached 16.6 billion by the end of 2023,
+and high accuracy requirements of industrial applications. To a 15% increase from 2022 [1]. However, their inherent
+address these limitations, we propose a novel cross-plane defense characteristics—low performance, infrequent updates, and lack
+framework that exploits the temporal invariance characteristics of self-protection measures—make them the weakest link in
+of attack traffic patterns. In the data plane, an adaptive variance
+threshold mechanism immediately mitigates high-volume, low- Industrial Internet security and a primary target for attackers.
+variance traffic flows, while a bidirectional dual-hash table Distributed Denial of Service (DDoS) attacks represent the
+captures low-collision flow features for efficient export to the most significant network threat in this domain [2]. The low
+control plane. The control plane constructs temporally-enhanced attack tolerance of these devices, combined with the high
+flow sequences that enable deep learning models to perform stability requirements of production control, imposes strict
+accurate attack detection, subsequently directing the data plane
+to block identified malicious sources. We implemented and demands on the real-time performance and accuracy of any
+evaluated a prototype of this framework on a software switch defense system.
+platform using both real-world attack datasets and custom- To achieve high detection accuracy, many works employ
+generated traffic patterns. Experimental results demonstrate server-based machine learning approaches, training models
+that our framework successfully mitigates 86% of attack traffic on large-scale datasets [3], [4], [5], [6], [7], [8], [9], [10].
+within milliseconds and achieves complete source blocking within
+52 seconds. Compared to baseline methods, our framework While these methods can leverage prior knowledge, they are
+can effectively counter both DoS and DDoS attacks without detached from the packet processing pipeline. The process of
+generating false positives on benign traffic. packet uploading for feature extraction and model inference
+ Index Terms—Distributed denial-of-service attack, attack introduces significant latency, rendering them incapable of
+detection, attack defense, P4, deep learning. meeting the real-time demands of the Industrial Internet,
+ where the resulting delay is sufficient to paralyze resource-
+ I. I NTRODUCTION constrained IoT devices.
+ To meet the high-speed, low-latency processing require-
+T HE rapid development of the Industrial Internet has led
+ to the widespread adoption of IoT devices in industrial settings. These devices act as a critical bridge between
+ ments, many recent studies have utilized programmable
+ switches to build defense systems [11], [12], [13], [14], [15],
+ [16], [17], [18], [19], [20], [21]. These devices support the
+ Received 7 December 2025; revised 26 March 2026; accepted 10 May P4 language, enabling efficient, line-rate packet processing
+2026. Date of publication 14 May 2026; date of current version 20 May
+2026. This work is supported by the National Key R&D Program of
+ and making them well-suited for high-speed, low-power traf-
+China with Grant number 2021YFB2900100; National Natural Science fic analysis and defense. However, a key limitation is their
+Foundation of China under grants 62572115 and 62232004; Shenzhen’s reliance on small on-chip memories (tens of MBs), which
+Industrial Application Research on “Key Technologies and Systems for restricts the complexity of real-time data processing. Exist-
+Intelligent Cloud-Edge Collaboration in the Industrial Internet” (Grant No.
+CJGJZD20230724092759006) funded by Shenzhen Municipal Science and ing P4-based works have focused on optimizing detection
+Technology Innovation Commission; Jiangsu Provincial Key Laboratory of mechanisms [15], [16] or embedding simplified ML models
+Network and Information Security under grant BM2003201; Key Laboratory
+of Computer Network and Information Integration of the Ministry of Educa-
+ [17], [18], [19], [20], [21]. The former often require tens
+tion of China under grant 93K-9; and the Collaborative Innovation Center of seconds to analyze traffic distribution patterns, failing to
+of Novel Software Technology and Industrialization. The associate editor provide a timely response to bursty attacks, while the latter
+coordinating the review of this article and approving it for publication was must compress models to fit into Match-Action tables, thereby
+E. E. Tsiropoulou. (Corresponding author: Runqun Xiong.)
+ The authors are with the School of Computer Science and Engineer- sacrificing accuracy.
+ing, Southeast University, Nanjing 211189, China (e-mail: j.pu@seu.edu.cn; Furthermore, the Industrial Internet is highly heterogeneous,
+hy.ye@seu.edu.cn; chengjing@seu.edu.cn; shanfeng@seu.edu.cn; rxiong@
+seu.edu.cn).
+ utilizing diverse traffic forms and specialized protocols. While
+ Digital Object Identifier 10.1109/TNSM.2026.3693266 current AI-driven defenses achieve high accuracy in detecting
+ 1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+4648 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+threats within specific protocols [22], deploying these models TABLE I
+across the entire industrial protocol stack is computationally A NALYZED T RAFFIC DATASET
+prohibitive. Such protocol-specific approaches fail to provide
+comprehensive coverage and cannot meet the strict low-latency
+constraints of resource-constrained IoT devices.
+ To address these challenges, our work is based on a key
+insight derived from analyzing public DDoS and benign traffic
+datasets: attack and benign traffic exhibit a high degree of
+ functions, resulting in limited software, hardware, and resource
+discrimination in both the magnitude and temporal patterns
+ capabilities, which gives them a low tolerance for highof their packet-level and flow-level features. While previous
+ volume attacks. The goal for these victim devices is to prevent
+work often used simple data plane thresholds or sampled
+ service disruption and subsequent losses from such attacks.
+statistics, we posit that leveraging the high-frequency, low-
+ The defense posture assumes that all traffic within the topology
+variance temporal patterns of attack traffic can reduce initial
+ passes through a device where the defense framework is
+detection latency without compromising accuracy. Furtherdeployed, and that both the victim and the framework have
+more, using sequences of time-windowed statistics provides
+ no prior knowledge of the attack’s source, type, or scale.
+a more comprehensive foundation for detection models.
+ Attackers are assumed to have access to the network
+ Based on this insight, we propose a cross-plane collabtopology containing these IoT devices. They can leverage
+orative framework that combines real-time primary defense
+ a controlled botnet to send high-speed, high-volume DDoS
+and feature extraction in the data plane with flow sequence
+ traffic aimed at exhausting the victim’s bandwidth or comdetection in the control plane. Specifically, our framework
+ putational resources. The attacker may employ various DDoS
+utilizes three modules to address the following challenges:
+ attacks, including UDP, DNS, and NTP floods, and can use
+ • Lightweight Primary Defense: To provide a timely multiple hosts to send a massive number of packets to a single
+ response to high-volume attacks and mitigate their target.
+ impact, we propose a lightweight primary defense mechanism. By tracking traffic frequency and feature variance,
+ B. Key Observation
+ it immediately rate-limits high-speed, low-variance flows,
+ achieving real-time mitigation with minimal overhead. 1) Feature Selection: To identify the most effective features
+ • Low-Collision Feature Extraction: To ensure complete for distinguishing between normal and attack traffic, and to
+ statistical records for suspicious traffic, we design a low- better align with the multi-source nature of DDoS attacks,
+ collision feature extraction mechanism. It uses a dual- datasets with a large number of source IPs—a real-world DNS
+ hash table to maintain statistics for bidirectional flows and attack dataset [23] and a simulated benign background traffic
+ employs a time-windowed storage and collection policy dataset [24]—were used to analyze feature distribution and
+ to guarantee low-collision recording. temporal variation. The selected datasets are shown in Table I.
+ • Temporal Sequence-Based Detection: To guarantee Since the framework focuses on a binary classification probdetection accuracy on attack sources, we employ a CNN- lem with multiple continuous features, Analysis of Variance
+ GRU-Attention model to analyze the temporal evolution (ANOVA) is used to select highly discriminating features by
+ of traffic data using constructed temporal flow sequences. checking for significant differences between the means of
+ It accurately identifies attack sources by detecting the normal and attack traffic. To visually represent the feature
+ high-volume, low-variance characteristics of attack flows. differences, the test set was formatted for binary classification,
+ and ANOVA was used to select top 10 key features for
+ We implemented a software switch-based prototype of the
+ simplified analysis. These features were then standardized
+framework and evaluated its performance using real-world
+ using Eq. 1, where x̄ is the sample mean, S is the sample
+attack traffic and custom attack scripts. The results show that
+ standard deviation, and z is the standardized value.
+the primary defense stage detects over 99% of attack packets,
+reducing attack traffic by approximately 86% within 25ms. x − x̄
+ z= (1)
+Subsequently, the temporal model, with a PR-AUC exceeding S
+99%, detects and completely blocks the attack sources within As depicted in Figure 1, there are clear differences in the
+approximately 50 seconds. Compared to baseline methods, network characteristics of normal and DDoS traffic. Features
+our framework effectively covers both DoS and DDoS attacks such as packet transmission rate, byte rate, packet length,
+while ensuring that benign traffic is not falsely classified. and packet interval are particularly suitable for distinguishing
+ malicious traffic. This analysis provides a guiding reference
+ II. BACKGROUND AND M OTIVATION for designing the data plane thresholds, selecting the types of
+ features to extract, and designing the temporal model.
+A. Problem Scope 2) Magnitude Difference: An analysis of the two datasets
+ This paper focuses on DDoS network attacks targeting was conducted by selecting three features: flow bytes per
+IoT devices. The network topology may include multiple second, flow packets per second, and average packet size,
+IoT devices, such as cameras and sensors, that send packets shown in Figure 2.
+to a controller or gateway either periodically or based on At a macroscopic level, attack traffic is characterized by
+specific trigger conditions. These devices often have simple large and high-speed packet transmissions, as the attacker’s
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4649
+
+ Fig. 3. Time series changes of DNS DDoS traffic features.
+
+Fig. 1. Standardized values of selected features.
+
+ Fig. 4. Time series changes of benign traffic features.
+
+ b) Normal traffic: In contrast, normal traffic from diverse
+Fig. 2. Statistical feature distribution of DNS DDoS and benign traffic.
+ sources like sensors and user interactions results in packets
+ with varying sizes and irregular transmission patterns, as
+ TABLE II shown in Figure 4. This leads to statistics with significantly
+ M EDIAN VALUE OF S ELECTED F EATURES higher variance and more dynamic characteristics compared
+ to the continuous, uniform nature of attack traffic.
+ Traditional lightweight machine learning models, such as
+ Multi-Layer Perceptrons (MLPs) or Random Forests (RFs),
+ evaluate traffic features within isolated time windows. This
+ static approach struggles in IoT environments, where transient benign bursts (e.g., event-triggered sensor data) closely
+ resemble attack traffic within a single time slice. Our temporal
+ analysis reveals that DDoS attacks are characterized not just
+goal is to rapidly saturate network bandwidth and server by high volume, but by temporal invariance, with continuresources. At a microscopic level, the median values for flow ous, low-volatility transmission rates over extended periods.
+bytes per second, flow packets per second, and average packet Because simple models lack temporal memory to capture
+size differ significantly. As Table II shows, there is a gap of these sequential dependencies, extracting feature sequences
+more than two orders of magnitude between attack and normal across multiple time windows and employing a temporaltraffic for these features, allowing for clear differentiation. aware model is essential to accurately distinguish sustained
+This suggests that a lightweight thresholding algorithm can be attacks from benign bursts and minimize false positives.
+implemented in the data plane to identify malicious sources
+based on flow rate and packet size distribution, enabling an III. OVERVIEW
+initial rate-limiting defense.
+ 3) Temporal Difference: To observe how traffic character- A. Design
+istics change over time, the five most active flows from each The main contributions of the framework are divided into
+dataset were analyzed. The results show significant differences three parts, which perform primary rate limiting, flow feature
+in the magnitude, distribution, and duration of statistical data extraction, and temporal model detection.
+between attack and normal traffic, which primarily stem from 1) Adaptive Lightweight Primary Defense: This module
+their respective packet generation processes. uses the EWMA-based method to adaptively adjust detection
+ a) Attack traffic: The packet rate and size of attack traffic thresholds based on normal traffic conditions, enabling lowshow little variation and are sent continuously, as shown in overhead differentiation of malicious traffic. It employs a
+Figure 3. This uniformity arises because DDoS attacks are sketch-based data structure to record suspicious sources with
+typically launched via scripts that control multiple hosts with minimal storage, which triggers flow-level feature extraction.
+predefined parameters (e.g., protocol, packet size), resulting in A meter mechanism actively limits packet forwarding rates for
+traffic with stable and homogenous statistical features. a rapid response that reduces the impact on benign traffic.
+4650 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 5. Overview of proposed framework.
+
+ 2) Low-Collision Bidirectional Feature Extraction: To For non-suspicious packets, their corresponding lightweight
+reduce the number of required register entries, this module statistics are updated in real-time. If the flow’s variance
+maps bidirectional traffic from a given host-protocol pair exceeds the primary defense threshold, its source IP is used
+to a single hash value. Its dual hash table design automat- to update the sketch. For suspicious packets, they are immeically engages a secondary table when a collision occurs diately rate-limited. The full bidirectional feature extraction
+in the primary table, increasing the capacity for concurrent process is enabled for these flows. At the end of each time
+flow tracking. A time-window-based mechanism automatically window, the collected statistics are sent to the control plane,
+exports statistical data and clears entries, maximizing the and the corresponding data plane entries are reset.
+efficient use of register space by minimizing memory footprint. 2) Control Plane: The control plane uses a streaming
+ 3) High-Accuracy Temporal Model Detection: In the data channel to receive statistical data for individual flows in realpreprocessing stage, enhanced temporal features are com- time, maintaining a data sequence of a fixed window size for
+puted to capture the dynamic changes in data sequences. A each flow. Once a sequence window is full, the control plane
+CNN-GRU-Attention model effectively identifies attacks by computes enhanced temporal features and feeds the sequence
+recognizing the temporal invariance characteristic of malicious into the CNN-GRU-Attention model for detection. The source
+traffic. Using the P4Runtime API, the control plane receives IPs of flows identified as malicious are then added to the data
+flow feature data via digests, updates blocklist entries, and sup- plane’s blocklist, completing the closed-loop process for attack
+ports integration with existing feature extraction frameworks. detection and mitigation.
+
+ IV. D ESIGN D ETAIL
+B. Workflow
+ The framework’s workflow is depicted in Figure 5. A. Lightweight Primary Defense
+ 1) Data Plane: The data plane supports two modes, which The primary defense process is executed entirely within
+can be modified in real-time by the control plane: the data plane, leveraging its high processing rate while
+ Pre-detection Mode. All packets passing through the circumventing the limitations of the P4 programming language
+switch are forwarded without additional feature extraction and hardware resources. Specifically, the module implements
+or data recording. In this mode, the data plane adaptively lightweight attack traffic identification, suspicious IP recordupdates the detection threshold used by the primary defense ing, and traffic rate limiting to achieve a timely and effective
+mechanism based on the observed benign traffic. response during the initial stages of an attack with minimal
+ Detection Mode. Incoming packets are first checked against computational and storage overhead.
+a blocklist, which is updated in real-time by the control plane’s 1) Variance-Based Detection: The analysis in the previous
+detection model. Packets from sources not on the blocklist are sections, which showed an order-of-magnitude difference in
+processed by a sketch to determine if the source has been packet size between normal and DDoS traffic, provides a
+previously marked as suspicious. basis for classification. However, there are challenges in both
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4651
+
+the statistical principles for correctly distinguishing traffic and maximum accumulated absolute error is bounded by the
+their implementation in the data plane. geometric series:
+ At the principle level, some existing work continuously ∞  k !
+collects packet sizes and rates within a time window in the
+ X 7 max
+ |Etotal | ≤ max = = 7. (8)
+data plane, marking traffic as an attack when a predefined 8 1 − 7/8
+ k=0
+threshold is reached. However, this approach has two prob- Thus, the steady-state maximum absolute error for both µ̂n
+lems. First, manually set thresholds require domain knowledge and σ̂n is 7 (i.e., |Eµ | ≤ 7 and |Eσ | ≤ 7). Substituting these
+and make it difficult to distinguish between different traffic into the variance error formula yields:
+types. Second, even among normal traffic, characteristics can
+vary numerically depending on the operating scenario and Evar = V arn − V ˆarn
+device type. For instance, some IoT sensors transmit data = (σ̂n + Eσ ) − (µ̂n + Eµ )2 − (σ̂n − µ̂2n )
+periodically, resulting in traffic with similarly sized packets, = σ̂n + Eσ − µ̂2n − 2µ̂n Eµ − Eµ2 − σ̂n + µ̂2n
+while other event-triggered IoT devices or user interactions
+produce intermittent traffic with varied packet sizes. = Eσ − 2µ̂n Eµ − Eµ2 . (9)
+ At the implementation level, common methods for dis- Consequently, the maximum absolute error of the variance
+tinguishing malicious traffic are based on transmission size is bounded by:
+and rate, calculated per second. While these operations are
+simple to implement in a control plane language like Python, |Evar | ≤ 7 + 14|µ̂n | + 49 = 14|µ̂n | + 56. (10)
+the P4 data plane has significant operational constraints. For This derivation indicates the variance error is linearly corexample, calculating an average transmission rate by summing related with the packet length EWMA (µ̂n ). Our evaluations
+bytes and dividing by a timestamp is not feasible, as P4 confirm that for α = 2−3 , the relative variance error is
+specifications prohibit division and floating-point operations. merely 1.37%, which is entirely sufficient to support accurate
+Even converting calculations to multiplication and comparison threshold-based anomaly detection without causing misclassiis problematic due to limitations on the bit-width of operands, fications.
+which can lead to data overflow.
+ To address these issues, this framework uses variance Algorithm 1 EWMA-Based Suspicious IP Detection
+instead of a simple size threshold to improve generality, and Require: Packet length L, flow hash h, variance threshold
+it uses the Exponentially Weighted Moving Average (EWMA) θ
+to avoid direct average calculations, lowering implementation Ensure: Suspicious IP marking decision
+requirements for the data plane. EWMA assigns greater weight 1: Phase 1: EWMA update
+ 2
+to recent observations, better reflecting current trends without 2: µprev , σprev ← ReadEW M A(h)
+needing to store past values, thus reducing the computational 3: ∆ ← (L − µprev )  3 {α = 0.125}
+load to meet data plane constraints. 4: µnext ← µprev + ∆
+ The framework maintains the variance of the packet size 5: ∆2 ← (L2 − σprev 2
+ )3
+EWMA and a count of threshold triggers to judge traffic type. 2 2
+ 6: σnext ← σprev + ∆2
+ 2
+Because the P4 data plane prohibits floating-point operations, 7: W riteEW M A(h, µnext , σnext )
+EWMA and variance calculations must be approximated using 8: Phase 2: Variance calculation
+ 2
+integer bit-shift operations. Quantifying the inevitable quan- 9: V arf low ← σnext − µ2next
+ 2
+tization error from this precision loss is crucial. The ideal 10: µbenign , σbenign ← ReadBenignEW M A()
+ 2
+floating-point pipeline is formulated as: 11: V arbenign ← σbenign − µ2benign
+ 12: Phase 3: Anomaly counting
+ µn = (1 − α)µn−1 + αxn , (2)
+ 13: count ← ReadExceedCount(h) {Low variance indi-
+ σn = (1 − α)σn−1 + αx2n , (3) cates attack}
+ V arn = σn − µ2n (4) 14: if V arf low < V arbenign then
+ 15: count ← count + 1
+where µn and σn are the EWMAs of the packet size and its 16: W riteExceedCount(h, count)
+square, respectively, xn is the current packet size, V arn is 17: end if
+the true variance, and α = 2−s (with s = 3) is the weight 18: Phase 4: Suspicious marking
+parameter. The corresponding fixed-point bit-shift pipeline, 19: if count > θ then
+employing the floor function, is: 20: M arkSuspicious(IP )
+  
+ xn − µ̂n−1 21: ResetEW M AStatistics(h)
+ µ̂n = µ̂n−1 + , (5)
+ 2s 22: end if
+  2 
+ x − σ̂n−1
+ σ̂n = σ̂n−1 + n s , (6) In pre-detection mode, the framework forwards normal
+ 2
+ traffic and updates the normal traffic variance in real-time,
+ V ˆarn = σ̂n − µ̂2n . (7)
+ requiring no manual configuration. In detection mode, the
+ Integer truncation during right-shifts discards the remainder, detection process is shown in Algorithm 1. Since P4 does not
+introducing a truncation error  ∈ [0, 7/8) per update. The support floating-point arithmetic, the multiplication by α is
+4652 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+implemented as a bit-shift operation. The calculated variance collision probability. This design is based on the key insight
+is compared to the normal variance. If it is lower, a trigger that DDoS traffic exhibits a significant order-of-magnitude difcounter is incremented. If this counter exceeds a threshold ference between the statistics of its two directions—attackers
+within a time window, the source IP is deemed suspicious, send a high volume of traffic to victims who typically have not
+activating rate limiting and full feature extraction. Experiments previously communicated with them. In contrast, this statistical
+confirmed that using an EWMA-based variance and a hit-count gap is less pronounced in normal traffic. This asymmetry
+threshold effectively filters malicious packets while avoiding provides a strong data foundation for the subsequent model
+false positives on benign traffic. to leverage for detection.
+ 2) Sketch-Based IP Recording: IPs whose traffic exceeds
+the variance threshold are considered suspicious and must be Algorithm 2 Bidirectional Flow Hash Calculation With Colrecorded for mitigation. A naive approach of using a large hash lision Detection
+table in the data plane is infeasible due to memory constraints, Require: Packet with src ip, dst ip, protocol
+while recording in the control plane would incur significant Ensure: Flow hash h and direction flag dir {Assume
+communication overhead, a problem exacerbated by the multi- forward direction}
+source nature of DDoS attacks. 1: dir ← F ORW ARD
+ To resolve this, the framework implements a Bloom filter as 2: h, chk ← Hash(src ip, dst ip, protocol)
+low-overhead method to track suspicious IPs. A Bloom filter 3: cnt ← ReadCount(h)
+is a probabilistic data structure that efficiently tests for set {No flow found, try reverse}
+membership. Our implementation uses a 1-bit register array of 4: if cnt = 0 then
+length 218 and three different hash functions. When a flow’s 5: dir ← BACKW ARD
+variance triggers the threshold, its source IP is hashed three 6: h, chk ← Hash(dst ip, src ip, protocol)
+times, and the bits at the three corresponding positions in the 7: cnt ← ReadCount(h)
+array are set to 1. When a new packet arrives, it is checked 8: end if
+against the filter by hashing its source IP and performing an {Flow exists, check collision}
+AND operation on the bits at the three positions. A result 9: if cnt > 0 then
+of 1 indicates the IP was previously marked as suspicious, 10: stored chk ← ReadStoredCheck(h)
+triggering rate limiting and feature extraction. 11: if stored chk 6= chk then
+ 3) Proactive Rate Limiting: Packets from suspicious 12: use second table ← T RU E
+sources are immediately rate-limited to reduce their impact 13: Resubmit packet for second hash table
+on the target’s bandwidth and services, using the P4 meter 14: return
+mechanism. This mechanism is based on a Single Rate Three 15: end if
+Color Marker (srTCM), which defines a Committed Informa- 16: end if{Initialize new flow}
+tion Rate (CIR) and a Burst Size to mark packets according 17: if cnt = 0 then
+to their conformance to traffic profiles. 18: dir ← F ORW ARD
+ The framework uses a filtering table in conjunction with the 19: h, chk ← Hash(src ip, dst ip, protocol)
+meter’s color markings to enforce rate limits. When a packet 20: InitializeF low(h)
+from a suspicious IP arrives (i.e., it hits the Bloom filter), a 21: StoreCheck(h, chk)
+hash function maps it to one of 215 meter instances. This meter 22: end if
+updates a rate marker based on preset CIR and Burst Size 23: return h, dir
+values configured from the control plane. The filtering table
+then inspects this marker to determine if the packet exceeds The first step is to designate one direction as “forward”.
+the rate limit. If so, the packet is dropped, thus maintaining A simple method like comparing IP addresses is insufficient.
+the high-volume traffic in a low-speed forwarding state. Instead, we leverage the observation that a benign server will
+ not initiate a connection to a previously unknown malicious
+B. Low-Collision Feature Extraction host, but not vice versa. Therefore, the first packet in a DDoS
+ The entire feature extraction process is handled within the attack will reliably be sent from the malicious host to the
+data plane to capture the characteristics of attack traffic while benign server. Based on this, the framework assumes any new
+avoiding storage-location conflicts. Specifically, this module flow is initiated in the “forward” direction. As detailed in
+implements bidirectional flow recording, statistical feature Algorithm 2, it checks for a record in both the forward and
+extraction, and a dual hash table mapping scheme. This low- reverse directions. If no record exists, one is initialized. After
+collision design allows for the storage of diverse statistical data a record is found, it must be checked for a hash collision, a
+in a manner that is compatible with both data plane constraints process handled by the dual hash table mechanism.
+and the requirements of the temporal detection model. 2) Dual Hash Table: DDoS attacks are characterized by a
+ 1) Bidirectional Flow Recording: Traffic between a pair of large number of source IPs, which can lead to hash collisions
+hosts is inherently bidirectional. This framework records the when storing flow features. To balance the trade-off between
+features for both directions of a host pair in a single, unified collision rates and memory overhead, the module employs a
+entry. This approach reduces the number of required hash dual hash table solution instead of a single, larger table. This
+values, which in turn lowers the hash table load and minimizes design splits a hash table of a given width into two tables of
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4653
+
+ TABLE III Algorithm 3 Flow Time Window Management and Collection
+ E XTRACTED F EATURES FOR F LOWS Policy
+ Require: Flow metadata meta, timestamps tcurrent , tlast ,
+ tstart
+ Ensure: Flow cleanup or data collection decisions
+ 1: ∆tidle ← tcurrent − tlast
+ 2: ∆tduration ← tcurrent − tstart {First stage cleanup
+ policy}
+ 3: if suspicious = F ALSE then
+ 4: if ∆tidle > Texpired or ∆tduration > Tewma then
+ 5: ResetF lowStatistics()
+ 6: ClearHashCheck()
+ 7: return
+ 8: end if
+ 9: end if{Suspicious flow collection policy}
+half that width; if a collision occurs in the primary table, the 10: if suspicious = T RU E then
+backup table is used. 11: if ∆tidle > Texpired or ∆tduration > Tmax then
+ To detect collisions, a secondary hash function computes a 12: if direction = BACKW ARD then
+checking value for each new flow, which is stored alongside 13: SwitchF lowDirection()
+the flow’s primary record. When a subsequent packet maps to 14: end if
+that same location, its checking value is compared with the 15: SendF lowDigest()
+stored one. A mismatch indicates a collision. The packet is 16: ResetF lowStatistics()
+then marked and re-injected into the processing pipeline via 17: ClearHashCheck()
+the resubmit mechanism, which transfers the new flow’s record 18: return
+to the backup hash table. Experiments show that when storing 19: end if
+10,000 flows, two 215 sized hash tables yield a collision rate 20: end if
+that is only 18.86% of that from a single 216 sized table.
+ 3) Time Window Feature Extraction: The calculated hash
+value maps to the same index across multiple register arrays, and parse digest messages into 5-tuple information and bidiwhich store the various features extracted for a single flow. rectional statistics. These messages are processed via a FIFO
+Based on the earlier analysis, the features with the highest queue and grouped by source IP, destination IP, and protocol
+discriminative power are selected as input for the temporal into a double-ended queue of length L. Once a flow reaches
+model, as shown in Table III. this sequence length, its temporal features are preprocessed
+ To manage memory, flow statistics are maintained within and fed into the detection model. To ensure temporal relea time window. If the inter-arrival packet time or total flow vance, flow records are removed after a timeout. Due to the
+duration exceeds their corresponding threshold, the data plane operational constraints of the data plane, certain statistics (e.g.,
+entry is cleared, and its statistics are uploaded to the control flow bytes per second) are calculated in the control plane using
+plane via a digest message. The policy for this process differs the raw sums and timestamps provided by the data plane.
+based on the flow’s status, as shown in Algorithm 3. To better capture the dynamics of traffic sequences, the
+ Non-suspicious flows use a shorter time window to peri- framework computes several enhanced time-series features:
+odically update their variance data. Suspicious flows (those Difference Features. Eq. 11 calculates the first-order differflagged by the primary defense) use a longer time window to ence of the byte rate and packet rate time series. This feature
+collect more detailed, flow-level statistics for the control plane. captures the instantaneous rate of change between consecutive
+Notably, if the packet triggering an update belongs to the time steps, highlighting sudden accelerations or decelerations
+reverse flow, the 5-tuple in the digest is swapped to ensure that in traffic volume. In the equation, ∆Bt and ∆Pt are the
+attack traffic is always represented in the “forward” direction resulting difference features for the byte and packet rates at the
+for correct processing by the detection model. current time step t, respectively, calculated from the rates at
+ the current step (Bt , Pt ) and the previous step (Bt−1 , Pt−1 ).
+C. Temporal Flow Sequence Detection
+ The flow detection process is executed entirely in the control ∆Bt = Bt − Bt−1 and ∆Pt = Pt − Pt−1 (11)
+plane. It uses the statistical data uploaded from the data plane
+to form traffic sequences, which are then fed to a detection Moving Average Features. To reveal the underlying trend
+model to identify and block packets from malicious IP sources. of a traffic flow, Eq. 12 computes a 3-point moving average
+This module implements temporal data preprocessing and a to smooth the time series and reduce the impact of random
+temporal detection model to accurately locate attack IPs by noise. By averaging over a short window, this feature dampens
+leveraging the temporal invariance of their traffic features. insignificant, short-term fluctuations. Here, M A3 (Xt ) is the
+ 1) Temporal Data Preprocessing: The control plane estab- moving average of a given time-series feature X at time step
+lishes a P4Runtime streaming channel to continuously receive t, calculated by averaging the feature’s value over the last three
+4654 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+time steps (i = 0, 1, 2). Temporal Dependency Modeling. To capture long-term
+ 2
+ dependencies, the output from the CNN module, Hf inal , is fed
+ 1X into a 2-layer stacked bidirectional GRU. The BiGRU’s gates
+ M A3 (Xt ) = Xt−i (12)
+ 3 i=0 effectively control information flow, allowing it to model longrange temporal relationships. The state update for the BiGRU
+ Ratio Features. The ratio feature in Eq. 13 is calculated at each time step t is represented as:
+to reflect traffic density by determining the average bytes per
+packet for a given time step. In the equation, Rt represents ht = BiGRU(ht−1 , Hf inal [:, t]). (17)
+the ratio feature at time step t, calculated from the byte rate The term ht−1 is the hidden state from the previous time
+Bt and packet rate Pt for that step. A small smoothing factor step, and Hf inal [:, t] is the feature vector from the CNN
+ = 10−10 is added to the denominator to prevent division by module for the current time step. The GRU module produces
+zero in cases where the packet rate is momentarily zero. the final sequence of hidden states Hgru ∈ RL×B×256 .
+ Bt Attention Focusing. A multi-head self-attention mechanism
+ Rt = (13) is applied to the GRU outputs to enhance the model’s focus on
+ Pt + 
+ key discriminative features. As shown in Eq. 18, the attention
+ These methods effectively capture the dynamic charac- scores are calculated using scaled dot-product attention.
+teristics of network traffic, including instantaneous changes,
+smoothed trends, and density. A = MultiHeadAttention(Q, K, V )
+ QK T
+  
+ 2) Model Design: While intuitively fast, using simple static
+ = softmax √ V (18)
+models (e.g., MLP or RF) on single traffic time slices risks dk
+generating false positives on transient bursty benign traffic. The query (Q), key (K), and value (V ) matrices are derived
+Conversely, applying simple models across multiple time slices from Hgru . he model uses 4 attention heads, and the scaling
+with trigger thresholds fails to leverage the spatio-temporal factor dk is the dimension of the key vector.
+invariance of attacks and offers negligible latency advan- Classification Decision. The output of the self-attention
+tages. To address this, we employ a CNN-GRU-Attention layer, A, is aggregated into a single context vector c using an
+architecture to detect sequences of traffic time slices. Unlike attention-based weighted pooling mechanism. First, attention
+lightweight models, it simultaneously captures spatial patterns weights α are computed for each time step’s output using a
+and long-term temporal dependencies, effectively eliminating small feed-forward network, as shown in Eq. 19.
+false positives on benign IoT traffic. The marginal increase
+in inference complexity is heavily outweighed by the critical α = softmax(W2 · tanh(W1 · A)) (19)
+gains in detection accuracy and overall system reliability. These weights, which reflect the importance of each time
+ The core architecture fuses a 1D Convolutional Neural step, are then used to compute the final context vector c as a
+Network (CNN), a Gated Recurrent Unit (GRU), and an weighted sum of the attention outputs, as described in Eq. 20.
+attention mechanism. This three-stage design achieves efficient
+ L
+detection by capturing complex spatio-temporal patterns and X
+key discriminative information from the traffic data. The model c= αi Ai (20)
+ i=1
+input is a sequence of traffic statistics from multiple time
+windows, represented as X ∈ RB×L×F , where B = 64 is This context vector c is then passed to a 3-layer MLP
+the batch size, L = 5 is the sequence length (time steps), and classification head, fc : R256 → R1 , which outputs the final
+F = 21 is the feature dimension. prediction.
+ Local Pattern Extraction. A two-layer 1D CNN extracts 3) Optimization Strategies: Given the imbalanced nature
+local patterns and temporal features. The input X is pro- of the dataset, a weighted Binary Cross-Entropy loss function
+cessed through two blocks of Conv1D, BatchNorm, and GELU (BCEWithLogitsLoss) is used. The loss function is formally
+activation. This process is formally described in Eq. 14 and defined in Eq. 21.
+15, where Conv1Dk denotes a 1D convolution with k output 1 X
+ B
+channels, a kernel size of 3, and a stride of 1. LBCE = − [w · yj · log(σ(zj ))
+ B j=1
+ H (1) = GELU(BatchNorm(Conv1D128 (X))) (14) + (1 − yj ) · log(1 − σ(zj ))] (21)
+ (2) (1)
+ H = GELU(BatchNorm(Conv1D256 (H ))) (15)
+ In this equation, yj ∈ {0, 1} is the true label, zj is
+ A residual connection is included to preserve original fea- the model’s raw output (logit) for sample j, σ(·) is the
+ture information and mitigate potential vanishing gradients. A sigmoid function, and w is a weight applied to the positive
+1 × 1 convolution Wres maps the input features to the output class, calculated as the ratio of negative to positive samples
+dimension of the second convolutional layer for summation. Nneg /Npos to counteract the imbalance.
+The final output of the CNN module, Hf inal , is computed The OneCycleLR policy is employed to dynamically adjust
+by adding the output of the second convolutional layer to the the learning rate lrt during training, which is calculated
+transformed input, as shown in Eq. 16. according to the schedule in Eq. 22 at any given epoch t.
+ 1 + cos(π · (t/T − 0.1)/0.9))
+ Hf inal = H (2) + Wres · X (16) lrt = lrmax · (22)
+ 2
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4655
+
+ This policy linearly increases the learning rate from an TABLE IV
+initial value of 5 × 10−4 to a peak of lrmax = 1.25 × 10−3 E XPERIMENT PARAMETERS
+over the first 10% of epochs, and then anneals it down using a
+cosine schedule for the remaining epochs. Here, T is the total
+number of epochs.
+ V. E VALUATION
+A. Setup
+ 1) Implementation: We prototyped the system using P4
+(1,300 LoC) and Python (2,500 LoC), executing data plane on
+the bmv2 software switch [25] using default configuration for
+reproducibility. The data plane comprises a primary defense
+module (utilizing Bloom filter for IP screening and meter 1) Throughput and Pps: To establish a baseline processing
+for rate-limiting) and a feature extraction module (employing capacity for the bmv2 switch in our virtualized environment,
+dual-hash tables with resubmit mechanism for collision we measured direct packet forwarding between two hosts using
+handling). To accommodate massive concurrent flows, we iperf (5 runs, 30s each). The software switch sustained a
+configured the dual-hash table with 215 registers. The variance maximum throughput of 86.40 ± 0.48 Mbps and a packet rate
+detector requires three arrays per table (32-bit packet EWMA, of 7455.23 ± 42.03 pps.
+32-bit squared EWMA, and 8-bit trigger counter), result- 2) Numeric Quantization Error: Because P4 lacks floatinging in a highly lightweight memory footprint of 471.8 KB point support, the primary defense module approximates
+(2 × 215 × 72 bits), which is easily deployable on resource- EWMA and variance using integer bit-shifts, introducing
+constrained programmable switches. truncation errors. We empirically compared this fixed-point
+ The Python-based control plane uses P4Runtime for table logic against an ideal floating-point implementation in Python
+management and PyTorch for the temporal detection model. using CIC-IoT-2023 benign traffic traces. The experiment
+A streaming channel was implemented to continuously receive evaluated different weight parameters, specifically α ∈
+digest messages containing feature data from the data plane. {0.5, 0.25, 0.125, 0.0625}.
+ 2) Testbed: The system was deployed on a server VM with We measured the absolute error of the packet size EWMA
+a 10-core CPU, 24GB of memory, and Ubuntu 24.04. The and the corresponding relative error of the variance, as shown
+model was trained on an Nvidia GTX 1650Ti GPU and run in Fig. 6 and 7. The results demonstrated that α = 0.125 yields
+on the CPU during system evaluation. a maximum absolute error of 5.47 for the packet size EWMA,
+ 3) Datasets: The datasets were partitioned into specific which complies with our theoretical analysis bounding the
+roles: absolute error below 7. Furthermore, under this α, the EWMA
+ • Benign Traffic: To accurately model the baseline behavior algorithm introduces a minimal mean relative variance error
+ of modern IoT environments, benign traffic data was of 1.37% among tested α values. Because our detection logic
+ sourced from the CIC-IoT-2023 [26], CIC-DDoS-2019 differentiates between the near-zero variance of automated
+ [27], IEEE-TMC-2018 [28], CIC-IDS-2017 [24], and DDoS flows and the massive variance of benign traffic, this
+ CIC-UNSW-NB15 [29] dataset. This data is used for minute quantization error is entirely absorbed by the threshold,
+ model training, false positive rate evaluation, and baseline introducing zero misclassifications.
+ setting for data plane thresholds. 3) EWMA Parameter Sensitivity Analysis: The primary
+ • Attack Traffic: Various volumetric attacks (e.g., SYN, defense identifies suspicious IPs when their moving variance
+ UDP, SSDP, NTP) from the CIC-DDoS-2019 dataset stays below a baseline threshold for a predefined hit count
+ were utilized. To align with practical application scenar- (τ ). Before the experiment, the EWMA data update time
+ ios, we also introduced the Booters [23] dataset, which window was set to 1s, and the normal variance threshold was
+ contains in-the-wild DDoS traffic (Chargen and DNS- automatically established using truncated benign traffic Pcaps
+ based attacks) captured from real-world attack services. from CIC-IoT-2023 (replayed at 5 Mbps).
+ For model training, SYN/UDP attack types from the CIC- To minimize false positives on benign traffic, we analyzed
+ DDoS-2019 dataset were strictly employed. the sensitivity of the EWMA weight (α) and trigger threshold
+ 4) Metrics: Evaluation metrics included the primary (τ ) using heterogeneous benign traffic from the CIC-IoT-2023
+defense’s True Positive Rate (TPR) for marking suspicious and TMC-IoT-2018 datasets. Fig. 8 shows the False Positive
+packets, the hash collision rate, the detection model’s accu- Rate (FPR) across τ ∈ [25, 200]. Settings of α ≥ 0.125 and
+racy/ AUC/ F1-score, attack throughput reduction, and system τ ≥ 100 yielded notably lower FPRs.
+response time. Integrating our quantization error findings, we fixed α =
+ 5) Parameters: Default parameters are shown in Table IV. 0.125 and evaluated the True Positive Rate (TPR) using
+ 1000 pps UDP/TCP attacks (Fig. 9). The operable region
+B. Data Plane Performance (TPR ≥ 99.5%, FPR ≤ 0.5%) highlights where the defense
+ The data plane’s accuracy and efficiency is evaluated by maximizes attack interception while sparing benign traffic. We
+analyzing its baseline throughput, numeric quantization error, selected α = 0.125 and τ = 200 as the optimal operating
+parameter sensitivity, and processing latency. point. Here, the system reliably filters highly dynamic benign
+4656 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 6. Absolute error of packet size EWMA under different weight.
+
+Fig. 7. Relative error of packet size variance under different weight.
+
+Fig. 8. FPR of benign traffic packets under different EWMA weight α.
+
+Fig. 9. Positive rate of traffic packets under different variance threshold τ .
+
+ Fig. 10. Comparison of collision situations between single and dual hash
+bursts (0% FPR) while successfully mitigating continuous table.
+attack flows with minimal latency.
+ 4) Hash Collision Rate: The framework employs a dual
+hash table to increase its capacity to track concurrent flows showed the primary table remains highly utilized, storing
+from multi-source DDoS attacks. Experiments compared a 78.81% of flows in the 10,000-flow scenario.
+single 65536-entry hash table with a dual-table configuration 5) Packet Processing Latency: To handle hash collisions,
+(two 32768-entry tables), as shown in Figure 10(a). With the proposed dual-hash design uses the P4 resubmit mech-
+10,000 concurrent flows, the dual-table design’s collision rate anism, which restarts processing exclusively at the ingress
+was only 18.86% of the single table’s rate. pipeline, avoiding the higher overhead of full recirculate.
+ Since the use of a backup hash table involves the recircu- The processing latency for a single packet was calculated
+lation of related data packets at the switch end, it introduces as the difference between the timestamp of exiting and entering
+additional forwarding delay. Therefore, forwarding should pri- the processing queue. To quantify this, we compared the
+oritize maximizing the use of the primary hash table. Figure 10 latency distribution of individual packets between a single hash
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4657
+
+ SYN/UDP floods. Results shown in Table V demonstrated that
+ L = 5 maximizes the True Negative Rate (TNR) for benign
+ IoT traffic (up to 99.09%), while L = 8 optimizes the True
+ Positive Rate (TPR) for attack traffic (> 99.6%). Attack TPR
+ initially increases with sequence length as temporal context
+ enriches, but subsequently decreases, likely because excessive
+ lengths exceed the GRU’s optimal capacity and induce longterm memory decay.
+ Based on the dataset detection results, we plotted the
+ PR/ROC curves shown in Figure 12 and Figure 13, respec-
+Fig. 11. Packet processing latency distributions for single-hash and dual-hash tively. Due to class imbalance, we prioritize the PR-AUC
+table configurations.
+ metric, which reaches 0.9977 at L = 5. Balancing detection
+ accuracy and preprocessing latency, we ultimately selected
+ TABLE V L = 5 for the system’s sequence detection mechanism. It
+ M ODEL D ETECTION R ESULTS provides optimal benign traffic identification while maintaining a > 96.3% TPR across most attack types. Furthermore,
+ under the 10-second window setting, L = 5 guarantees the
+ control plane can identify and block threats in under one
+ minute, confirming it achieves the optimal balance between
+ high accuracy and agile system response.
+ 3) Resource Overhead: Flow state tracking relies on
+ a lightweight double-ended queue (length 5) storing a
+ 21-dimensional statistical vector. To evaluate the scalability
+ of maintaining temporal sequences, we measured the overall
+ system memory usage of the control plane processes under
+ scenarios with no traffic digests and with attack traffic digests.
+ By comparing the incremental memory consumption across
+ different scenarios, the experiment confirmed that the runtime
+ control plane RAM usage is 386 MB, with the amortized memtable (sized 216 ) and a dual-hash table (each sized 215 ) using ory per active suspicious flow being approximately 7.73 KB.
+traffic from 60,000 distinct flows. This demonstrates that the control plane can continuously
+ As shown in Fig. 11, the mean latencies for the single-hash process a massive number of concurrent suspicious flows
+and dual-hash configurations are 644.6 µ s and 689.29 µ s, without exceeding standard server memory limits.
+respectively, with a minimal overhead of just 44.68 µ s.
+Within the dual-hash setup, primary and backup table mean D. System Performance
+latencies are 589.80 µ s and 754.00 µ s (a difference of 1) Detection Performance: To evaluate the performance of
+164.2 µ s). Because the dual-hash design heavily utilizes the proposed primary defense mechanism at detecting attack
+the faster primary table while drastically reducing collision traffic while correctly handling benign traffic, we conducted
+rates, the median processing time is actually lower for the experiments using benign traffic from the IEEE-TMC-2018
+dual-hash approach (635.00 µ s vs. 650.00 µ s). Thus, the and CIC-IoT-2023 datasets, and custom-built UDP/TCP attack
+dual-hash structure effectively maps high-throughput traffic traffic replayed for 120 seconds. The attack traffic was configwith negligible latency penalties. ured with 1, 5, and 10 source IPs, with each source maintaining
+ a sending rate of 1kpps.
+ We compared the detection performance of our method
+C. Control Plane Performance against two state-of-the-art P4-based approaches: Euclid [30],
+ 1) Model Training and Testing: The detection model was which uses the Shannon entropy of IP address distributions
+trained on 5,361,343 attack and 5,680,779 benign traffic to detect anomalies, and P4RTHENON [31], which identifies
+records. To align with data-plane collection windows, datasets attacks based on the packet count difference between forward
+were processed into feature vector sequences of length L (max and reverse traffic directions. To specifically isolate and evalflow duration 10s, idle timeout 5s) and split into training uate the effectiveness of our primary defense module, we also
+(64%), validation (16%), and test (20%) sets. Models utilizing conducted an ablation study by testing our framework with the
+sequence lengths L ∈ {3, 5, 8, 12} all achieved > 99.93% subsequent flow-level feature extraction disabled.
+accuracy and > 0.9992 F1 scores on the test set. Each method was configured according to its specification.
+ 2) Sequence Length Ablation: To evaluate model gen- Our method used a trigger threshold of 200 after being
+eralization, we conducted an ablation study varying L ∈ baselined with 10k packets of benign traffic. Euclid used an
+{3, 5, 8, 12}. The tests incorporated unseen reflective attacks observation window of 214 packets and was baselined with
+(e.g., SSDP, NTP) alongside real-world attacks (Booter), 40k benign packets. P4RTHENON used a trigger threshold of
+despite the model being trained exclusively on direct 200 and a 1s window size.
+4658 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 12. PR curve of models on the collected dataset.
+
+Fig. 13. ROC curve of models on the collected dataset.
+
+Fig. 14. Detection performance of frameworks under different traffic types.
+ Fig. 15. Mitigation performance under chargen DDoS attack.
+
+ The results, shown in figure Figure 14, evaluate the propor- P4RTHENON performed similarly to our primary defense,
+tion of packets marked as suspicious. Our proposed method achieving a detection rate above 99% with no false posiachieved a detection rate of over 99% for attacks of all tives. However, a key distinction is that P4RTHENON lacks
+intensities while generating zero false positives on benign an in-network mechanism for extracting flow-level features.
+traffic. When the full framework including feature extraction After flagging suspicious traffic, it only samples packet-level
+was enabled, the detection rate for the 10-IP attack dropped features to send to an external collector. This design choice
+to approximately 90%. This is attributable to packet loss in prevents the use of more sophisticated detection models that
+the resource-constrained software switch environment and is rely on the rich, contextual information provided by flow-level
+considered a limitation of the testbed, not the method itself. statistics, which our framework is designed to support.
+ In comparison, while Euclid also achieved a detection rate 2) Mitigation Performance: The mitigation rate is strictly
+above 99% for multi-source attacks, it failed to detect single- defined as the percentage difference between attack traffic
+source DoS attacks and exhibited a very high false positive volume (bytes and packets) sent by the attacker versus sucrate, flagging 50.61% of the benign CIC-IoT-2023 traffic as cessfully received by the victim, measured via synchronized
+malicious. This is due to a fundamental mismatch between Pcap captures. To evaluate real-world resilience, we replayed
+its entropy-based mechanism and the traffic patterns of DoS a Chargen-based DDoS attack (8000 pps, 70s) against backand IoT networks. First, a single-source DoS attack does ground CIC-IoT-2023 benign traffic.
+not generate enough flow diversity to trigger Euclid’s IP fre- As shown in Figure 15, the primary defense immediately
+quency thresholds. Second, normal IoT network behavior often identified the low-variance attack and applied a 10 pps rate
+involves many devices communicating periodically with a limit, dropping the attack volume and packet rate by 86.70 ±
+single gateway (a many-to-one pattern), which creates entropy 0.13% and 86.25 ± 0.12%, respectively, effectively mitigating
+fluctuations that Euclid misinterprets as an attack. the attack traffic bursts on downstream devices.
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4659
+
+Fig. 16. Mitigation performance under UDP DoS attack.
+
+ primarily dictated by the control plane’s need to collect a full
+ sequence of 5 feature vectors, with each vector generated from
+ a 10-second time window (5 * 10s = 50s, plus processing
+ time).
+
+ VI. D ISCUSSION
+ The experimental evaluation demonstrates that our framework effectively balances real-time performance and accuracy
+ requirements for DDoS defense in IoT environments. The
+ system significantly mitigates attack traffic in its initial stages
+Fig. 17. Mitigation performance under random size UDP DoS attack.
+ while providing accurate source localization and blocking.
+ The adaptive variance-based threshold automatically adjusts
+ TABLE VI its statistical basis, enabling effective defense against var-
+ L ATENCY A NALYSIS OF P ROCESSING ATTACK T RAFFIC ious high-volume DDoS attacks without manual parameter
+ tuning across different deployment scenarios. Additionally,
+ by utilizing traffic sequences as input, the detection model
+ successfully distinguishes the high-rate, high-volume, lowvariance characteristics of attack traffic from legitimate traffic,
+ thereby improving detection accuracy and minimizing false
+ positives. Nevertheless, several limitations in the proposed
+ approach warrant future investigation.
+
+ 3) Latency Performance: To evaluate the system’s response A. Defense Against Dynamic, Low-Rate Attacks
+time to sustained attacks, the experiment continuously looped
+a Pcap file containing 5000 UDP attack packets, evaluating The current data-plane mechanism fundamentally relies
+various attack rates from 5 to 1000 kpps, while simultane- on the low-variance characteristics of sustained volumetric
+ously simulating a benign IoT device transmitting background attacks, making it vulnerable to evasive tactics. In a pulsing
+telemetry data at a rate of 1 UDP packet per 0.5 seconds. As DoS attack, adversaries alternate traffic bursts with silent
+shown in Figure 16, the system identifies and rate-limits the periods to artificially inflate statistical variance, while in a
+packet rate of the corresponding IP source at the millisecond low-rate DoS attack, they transmit slowly to avoid triggering
+level during the early stages of the attack, while ensuring that count thresholds. Countering these evasions requires intethe packet drop rate for normal traffic remains at 0%. grating frequency-domain features, periodicity tracking, and
+ To evaluate resilience against adversarial evasion, we ran- advanced bio-inspired computing paradigms [32] to establish
+domized attack payload sizes (500-700 bytes, 10,000 packets) a higher-precision source identification mechanism.
+to inflate variance and mimic benign dynamics. As illustrated
+in Figure 17, while this artificial variance temporarily delays B. Model Generalization and Adaptation
+the EWMA trigger, incurring approximately 100 ms of addi- While the offline-trained CNN-GRU-Attention model gentional latency compared to fixed-size attacks, the sustained eralizes well to several unseen reflective attacks, its detection
+high packet rate inevitably forces the moving variance below rate drops when encountering highly irregular or zero-day
+the benign baseline. The primary defense successfully miti- protocols. Ensuring long-term practical feasibility in dynamic
+gates the threat, proving the robustness of the variance-rate industrial deployments requires shifting toward adaptive
+thresholding mechanism against dynamic evasions. architectures. Future iterations could establish unsupervised
+ Furthermore, the experiment evaluated the response time anomaly detection baselines (e.g., temporal autoencoders
+for attack detection and mitigation within the system, as trained exclusively on benign IoT features) and implement
+presented in Table VI. The total time from attack inception lightweight, online domain adaptation routines to rapidly
+to blocklisting was approximately 51 seconds. This delay is update model weights using newly collected statistical digests.
+4660 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+C. Real-World Environment Validation response requirements of scenarios like the Industrial Internet
+ While prototyped on a software switch, translating this of Things (IIoT). Our cross-plane framework complements
+framework to a physical programmable ASIC (e.g., Intel these deep-inspection methods by providing a lightweight,
+Tofino) introduces strict hardware constraints. Complex oper- protocol-agnostic first line of defense, filtering out volumetric,
+ations like EWMA multiplication must be adapted using low-variance attacks directly in the data plane before they
+hardware-specific MathUnit externs within stateful ALUs, can exhaust network resources. Only the features of initially
+and stateful metadata must be meticulously allocated across screened, suspicious traffic are sent to the control plane
+limited pipeline stages to satisfy memory access restrictions. server for more sophisticated temporal analysis. This approach
+Although hardware deployment will drastically reduce data- reduces unnecessary feature transmission overhead without
+plane processing latency from milliseconds to microseconds, sacrificing final detection accuracy.
+the overall control-plane mitigation latency will fundamentally
+remain bounded by the configured flow monitoring time slices. B. Programmable Switch-Based Detection Methods
+ Research in this area primarily focuses on optimizing the
+ VII. R ELATED W ORK speed and accuracy of malicious traffic detection. Work based
+ on programmable switches [11], [12], [13], [14], [15], [16],
+A. ML-Based Detection Methods [17], [18], [19], [20], [21] aims to fully leverage the hardware’s
+ To leverage the extensive information within public network line-rate, high-throughput packet processing capabilities while
+traffic datasets, machine learning (ML) models are widely circumventing the limitations of register resources and data
+employed in network anomaly detection [4], [5], [7], [8], [33], plane programming languages.
+[34], [35]. These models excel at mining traffic features to 1) Efficient Resource Management: These studies design
+build detection systems with high accuracy and generalization, mechanisms for updating, sharing, and migrating data to
+establishing this as a mainstream research direction. While ensure real-time dynamic recording despite the limited size
+some studies use unsupervised clustering methods to defend of registers used for monitoring tasks. For example, the work
+against unknown attacks [3], [16], the majority of works utilize in [13] dynamically allocates and shares registers between
+labeled datasets to train supervised ML models for accurate monitoring tasks and offloads low-frequency data records to
+attack type classification. the control plane to overcome resource shortages. Mirna-
+ For instance, Tang et al. [8] developed a lightweight, real- jafizadeh et al. [14] proposed a serverless in-network data
+time framework to detect and mitigate LDoS attacks in SDN; collection framework that uses a distributed protocol for
+it uses a GBDT model to detect the presence of an attack dynamic monitoring task migration, avoiding the overhead
+and a time-frequency analysis algorithm to identify traffic caused by negotiation during task allocation and ensuring full
+bursts. The work in [5] trains interpretable decision trees that traffic measurement coverage.
+achieve detection performance comparable to closed-box mod- 2) Optimized Recognition Mechanisms: These works focus
+els, using pruning to balance fidelity and complexity, thereby on distinguishing between normal and malicious traffic
+making pre-trained models more understandable. Wichtlhu- through attack source and packet feature distribution patterns.
+ber et al. [7] introduces a system that learns DDoS traffic For instance, Misa et al. [15] utilizes the prefix aggregacharacteristics from adjacent Autonomous Systems (ASes) tion characteristic of attack IPs to dynamically maintain the
+at Internet Exchange Points (IXPs), using BGP signals to granularity of traffic monitoring entries, thereby reducing
+blackhole and sample DDoS traffic, which enables learning resource consumption. Another, Alcoz et al. [16], designs an
+new attack vectors without carrier intervention. Wang et al. in-hardware distance function to perform online clustering of
+[4] proposed a method that constructs a digital twin of the packets for attack inference. Although these works can identify
+physical device topology. It identifies IoT attack behaviors by attack traffic in the data plane with high accuracy, their correparallelly extracting and fusing spatio-temporal features using sponding detection response times are in the tens of seconds,
+an attention mechanism. which fails to meet the real-time response requirements of
+ Moreover, the landscape of AI-driven security has actively resource-constrained IoT devices.
+evolved to address advanced threats hidden within special- 3) ML-Enabled Data Plane: These work focuses on
+ized channels [22]. While these protocol-specific AI methods enabling hardware with ML models by mapping them into
+excel at isolating complex and stealthy attacks within targeted the rule-matching tables available for packet processing.
+payloads, they are structurally designed for deep, localized For example, Yan et al. [17] implemented RNN feature
+inspection. Applying such resource-intensive, targeted infer- embedding, GRU units, and softmax layers in hardware.
+ence across the immense diversity of traffic forms in industrial Jafri et al. [18] supported the representation of arbitrary decinetworks is largely infeasible for real-time volumetric defense. sion tree structures. Dong et al. [19] generated hardware-based
+ Despite achieving high detection accuracy through complex access list matching rules from unsupervised isolation forest
+models and feature engineering, these approaches share a models. Zhou et al. [20] reduced table entry consumption
+core challenge: their complete reliance on external servers for tree and forest models. Akem et al. [21] implemented
+introduces unavoidable communication overhead and process- mapping strategies for Random Forests (RF). While such
+ing delay. The process of uploading traffic features or raw approaches can leverage switch tables to process packets at
+packets to a server for analysis and then relaying decisions line rate—achieving low latency and high throughput unattainback to network devices fails to meet the stringent real-time able by the control plane—they are limited by the complexity
+PU et al.: BALANCING TIMELINESS AND ACCURACY: A HYBRID DATA-CONTROL PLANE FRAMEWORK 4661
+
+(e.g., number of layers, trees) of the models they can map. As future work, we plan to extend the proposed solution
+Furthermore, models deployed in hardware are difficult to to detect and mitigate attacks beyond the high-volume DDoS
+update dynamically; the downtime required to redeploy a new category, such as low-rate attacks and link-flooding attacks.
+model creates a window of opportunity for attackers. This will involve developing timely rate-limiting responses
+ and high-precision source identification for these new threats,
+C. Programmable Switch-Based Mitigation Methods likely requiring further advances in statistical methods and
+ machine learning techniques.
+ 1) Modular Policy Design: Some studies provide simple,
+modular policy abstractions that shield developers from under- R EFERENCES
+lying hardware complexities, allowing them to use primitive
+ [1] State of IoT summer 2024. Accessed: Jul. 16, 2025. [Online]. Available:
+APIs to write defense scripts for various attacks. For example, https://iot-analytics.com/product/state-of-iot-summer-2024/
+Zhang et al. [36] proposed a framework that records packets [2] Nozomi Networks. Accessed: Jul. 16, 2025. [Online]. Available: https://
+in a sketch structure and uses statistical primitives to collect www.nozominetworks.com/
+ [3] C. Fu, Q. Li, K. Xu, and J. Wu, “Point cloud analysis for ML-based
+feature data in real-time. Liu et al. [37] proposed an ISP- malicious traffic detection: Reducing majorities of false positive alarms,”
+level defense against high-volume DDoS, abstracting primitive in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Nov. 2023,
+APIs into filtering, analysis, and updating components. pp. 1005–1019.
+ [4] H. Wang, X. Di, Y. Wang, B. Ren, G. Gao, and J. Deng, “An intelligent
+Xing et al. [38] built a decentralized defense network with digital twin method based on spatio-temporal feature fusion for IoT
+custom operators for traffic measurement, capturing network- attack behavior identification,” IEEE J. Sel. Areas Commun., vol. 41,
+wide records to form a panoramic view. Zhou et al. [39] no. 11, pp. 3561–3572, Nov. 2023.
+ [5] A. S. Jacobs, R. Beltiukov, W. Willinger, R. A. Ferreira, A. Gupta,
+designed a distributed defense system against LFA attacks, and L. Z. Granville, “AI/ML for network security: The emperor has no
+providing custom collaborative defense APIs to synchronize clothes,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Nov.
+information among device groups when predefined conditions 2022, pp. 1537–1551.
+ [6] D. Wagner et al., “United we stand: Collaborative detection and mitiare met. gation of amplification DDoS attacks at scale,” in Proc. ACM SIGSAC
+ 2) Refactoring Existing Defenses: Other works refactor Conf. Comput. Commun. Secur., Nov. 2021, pp. 970–987.
+traditional defense mechanisms, improving them with mod- [7] M. Wichtlhuber et al., “IXP scrubber: Learning from blackholing traffic
+ for ML-driven DDoS detection at scale,” in Proc. ACM SIGCOMM
+ern, higher-performance hardware to enhance their efficacy. Conf., Aug. 2022, pp. 707–722.
+For example, Yoo et al. [40] refactors the traditional SYN [8] D. Tang, Y. Yan, S. Zhang, J. Chen, and Z. Qin, “Performance and
+cookie into a collaborative switch and server proxy, where the features: Mitigating the low-rate TCP-targeted DoS attack via SDN,”
+ IEEE J. Sel. Areas Commun., vol. 40, no. 1, pp. 428–444, Jan. 2022.
+switch performs high-speed, secure cookie checks to defend [9] S. K. Fayaz, Y. Tobioka, V. Sekar, and M. Bailey, “Bohatei: Flexible
+against SYN floods. The work by Alcoz et al. [16] improves and elastic DDoS defense,” in Proc. 24th USENIX Secur. Symp., 2015,
+the ACC mechanism with an online aggregation module in pp. 817–832.
+ [10] T. Cai, T. Jia, S. Adepu, Y. Li, and Z. Yang, “ADAM: An adaptive DDoS
+the data plane, using a heuristic-based distance function to attack mitigation scheme in software-defined cyber-physical system,”
+aggregate similar packets and control the forwarding rate of IEEE Trans. Ind. Informat., vol. 19, no. 6, pp. 7802–7813, Jun. 2023.
+high-bandwidth clusters to defend against pulse-wave DDoS [11] H. Namkung, Z. Liu, D. Kim, V. Sekar, and P. Steenkiste, “Sketchovsky:
+ Enabling ensembles of sketches on programmable switches,” in
+attacks. Compared to the aforementioned works, the frame- Proc. 21st USENIX Symp. Networked Syst. Design Implement., 2023,
+work proposed in this paper does not merely optimize a pp. 1273–1292.
+single aspect within the data plane. Instead, it aims to build [12] R. Das and A. C. Snoeren, “Memory management in ActiveRMT:
+ Towards runtime-programmable switches,” in Proc. ACM SIGCOMM
+a complete, phased defense system where the data plane Conf., Sep. 2023, pp. 1043–1059.
+and control plane work in synergy. This approach achieves [13] H. Zhou and G. Gu, “Cerberus: Enabling efficient and effective ina better balance between detection timeliness, accuracy, and network monitoring on programmable switches,” in Proc. IEEE Symp.
+ Secur. Privacy (SP), May 2024, pp. 4424–4439.
+resource overhead, satisfying the defense requirements of IoT [14] S. M. M. Mirnajafizadeh, A. R. Sethuram, D. Mohaisen, D. Nyang, and
+environments. R. Jang, “Enhancing network attack detection with distributed and innetwork data collection system,” in Proc. 33rd USENIX Security Symp.,
+ 2024, pp. 5161–5178.
+ VIII. C ONCLUSION [15] C. Misa, R. Durairajan, A. Gupta, R. Rejaie, and W. Willinger,
+ “Leveraging prefix structure to detect volumetric DDoS attack signatures
+ In this paper, we proposed a two-stage detection and defense with programmable switches,” in Proc. IEEE Symp. Secur. Privacy (SP),
+framework targeting DDoS attacks in IoT environments. It May 2024, pp. 4535–4553.
+deploys a lightweight primary defense in the data plane to [16] A. G. Alcoz, M. Strohmeier, V. Lenders, and L. Vanbever, “Aggregatebased congestion control for pulse-wave DDoS defense,” in Proc. ACM
+handle suspicious traffic and, when necessary, records fine- SIGCOMM Conf., Aug. 2022, pp. 693–706.
+grained, flow-level features to enable more precise detection [17] J. Yan et al., “Brain-on-switch: Towards advanced intelligent network
+by the control plane. In the data plane, EWMA-based vari- data plane via NN-driven traffic analysis at line-speed,” in Proc. 21st
+ USENIX Symp. Networked Syst. DesignImplement., 2024, pp. 419–440.
+ance detection effectively identifies low-variance attack traffic, [18] S. U. Jafri, S. Rao, V. Shrivastav, and M. Tawarmalani, “Leo:
+while a bidirectional dual hash table architecture records Online ML-based traffic classification at multi-terabit line rate,” in
+features with low hash collision rates. In the control plane, Proc. 21st USENIX Symp. Networked Syst. Design Implement., 2024,
+ pp. 1573–1591.
+a temporal sequence-based detection model accurately iden- [19] Y. Dong et al., “HorusEye: A real-time IoT malicious traffic detection
+tifies malicious behavior. Our evaluation demonstrates that framework using programmable switches,” in Proc. 32nd USENIX
+the framework can mitigate the vast majority of suspicious Security Symp., 2023, pp. 571–588.
+ [20] G. Zhou, Z. Liu, C. Fu, Q. Li, and K. Xu, “An efficient design of
+attack traffic within milliseconds and can accurately locate and intelligent network data plane,” in Proc. 32nd USENIX Secur. Symp.,
+completely block attack sources within a minute. 2023, pp. 6203–6220.
+4662 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+[21] A. T.-J. Akem, M. Gucciardo, and M. Fiore, “Flowrest: Practical flow- Jiahang Pu received the B.S. degree in softlevel inference in programmable switches with random forests,” in Proc. ware engineering from Southeast University in
+ IEEE Conf. Comput. Commun., May 2023, pp. 1–10. 2023, where he is currently pursuing the combined
+[22] B. Ali and G. Chen, “Next-generation AI for advanced threat detection master’s and Ph.D. degree with the School of Comand security enhancement in DNS over HTTPS,” J. Netw. Comput. Appl., puter Science and Engineering. His research interests
+ vol. 244, Dec. 2025, Art. no. 104326. include network security and privacy and the Internet
+[23] J. J. Santanna et al., “Booters—An analysis of DDoS-as-a-service of Things.
+ attacks,” in Proc. IFIP/IEEE Int. Symp. Integr. Netw. Manage. (IM),
+ May 2015, pp. 243–251.
+[24] I. Sharafaldin, A. Habibi Lashkari, and A. A. Ghorbani, “Toward
+ generating a new intrusion detection dataset and intrusion traffic
+ characterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018,
+ pp. 108–116.
+[25] Behavioral Model (BMV2). Accessed: Jul. 16, 2025. [Online]. Available: Hongyu Ye received the B.S. degree from Sichuan
+ https://github.com/p4lang/behavioral-model University in 2023. He is currently pursuing the
+[26] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and master’s degree in computer science and technology
+ A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark with Southeast University. His research interests
+ for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13, include network security and privacy and the Internet
+ p. 5941, Jun. 2023. of Things.
+[27] I. Sharafaldin, A. H. Lashkari, S. Hakak, and A. A. Ghorbani,
+ “Developing realistic distributed denial of service (DDoS) attack dataset
+ and taxonomy,” in Proc. Int. Carnahan Conf. Secur. Technol. (ICCST),
+ Oct. 2019, pp. 1–8.
+[28] A. Sivanathan et al., “Classifying IoT devices in smart environments
+ using network traffic characteristics,” IEEE Trans. Mobile Comput.,
+ vol. 18, no. 8, pp. 1745–1759, Aug. 2019.
+[29] H. Mohammadian, A. Habibi Lashkari, and A. A. Ghorbani, “Poisoning Jing Cheng received the B.S. degree from Hefei
+ and evasion: Deep learning-based NIDS under adversarial attacks,” in University of Technology and the M.S. degree from
+ Proc. 21st Annu. Int. Conf. Privacy, Secur. Trust (PST), Aug. 2024, Southeast University, where she is currently pursuing
+ pp. 1–9. the Ph.D. degree with the School of Computer Sci-
+[30] A. D. S. Ilha, Â. C. Lapolli, J. A. Marques, and L. P. Gaspary, “Euclid: A ence and Engineering. Her research interests include
+ fully in-network, P4-based approach for real-time DDoS attack detection LoRa, the Internet of Things, and game theory.
+ and mitigation,” IEEE Trans. Netw. Service Manage., vol. 18, no. 3,
+ pp. 3121–3139, Sep. 2021.
+[31] A. A. Sadi, M. Savi, A. Melis, M. Prandini, and F. Callegati, “Unleashing
+ dynamic pipeline reconfiguration of P4 switches for efficient network monitoring,” IEEE Trans. Netw. Service Manage., vol. 21, no. 3,
+ pp. 3482–3497, Jun. 2024.
+[32] B. Ali and G. Chen, “Neuromorphic quantum adversarial learning (NQAL): A bio-inspired paradigm for DNS over HTTPS threat Feng Shan (Member, IEEE) received the Ph.D.
+ detection,” EURASIP J. Inf. Secur., vol. 2025, no. 1, p. 35, Dec. 2025. degree in computer science from Southeast Uni-
+[33] J. Holland, P. Schmitt, N. Feamster, and P. Mittal, “New directions versity, Nanjing, China, in 2015. He visited the
+ in automated traffic analysis,” in Proc. ACM IGSAC Conf. Comput. School of Computing and Engineering, University of
+ Commun. Secur., Nov. 2021, pp. 3366–3383. Missouri–Kansas City, Kansas City, MO, USA, from
+[34] X.-H. Nguyen and K.-H. Le, “Robust detection of unknown DoS/DDoS 2010 to 2012. He is currently an Associate Professor
+ attacks in IoT networks using a hybrid learning model,” Internet Things, with the School of Computer Science and Engivol. 23, Oct. 2023, Art. no. 100851. neering, Southeast University. His research interests
+[35] G. O. Anyanwu, C. I. Nwakanma, J.-M. Lee, and D.-S. Kim, “RBF- include the areas of Internet of Things, wireless
+ SVM kernel-based model for detecting DDoS attacks in SDN integrated networks, swarm intelligence, and algorithm design
+ vehicular network,” Ad Hoc Netw., vol. 140, Mar. 2023, Art. no. 103026. and analysis.
+[36] M. Zhang et al., “Poseidon: Mitigating volumetric DDoS attacks with
+ programmable switches,” in Proc. Netw. Distrib. Syst. Secur. Symp.,
+ 2020, pp. 1–9.
+[37] Z. Liu et al., “Jaqen: A high-performance switch-native approach for
+ detecting and mitigating volumetric DDoS attacks with programmable Runqun Xiong (Member, IEEE) received the Ph.D.
+ switches,” in Proc. USENIX Secur. Symp., 2021, pp. 3829–3846. degree in computer science from Southeast Uni-
+[38] J. Xing, W. Wu, and A. Chen, “Ripple: A programmable, decentral- versity, China. He was with European Organization
+ ized link-flooding defense against adaptive adversaries,” in Proc. 30th for Nuclear Research as a Research Associate for
+ USENIX Security Symp., 2021, pp. 3865–3881. the AMS-02 Experiment from 2011 to 2012. He is
+[39] H. Zhou, S. Hong, Y. Liu, X. Luo, W. Li, and G. Gu, “Mew: currently an Associate Professor with the School
+ Enabling large-scale and dynamic link-flooding defenses on pro- of Computer Science and Engineering, Southeast
+ grammable switches,” in Proc. IEEE Symp. Secur. Privacy (SP), May University, where he is involved in AMS-02 data
+ 2023, pp. 3178–3192. processing with the AMS Science Operations Center.
+[40] S. Yoo, X. Chen, and J. Rexford, “SMARTCOOKIE: Blocking large- His current research interests include the Internet
+ scale SYN floods with a split-proxy defense on programmable data of Things, cyber-physical systems, and wireless netplanes,” in Proc. 33rd USENIX Security Symp., 2024, pp. 217–234. works. He is a member of ACM and China Computer Federation.

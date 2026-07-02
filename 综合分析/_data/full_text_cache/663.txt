@@ -1,0 +1,889 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026 1347
+
+End-to-End Open-Set Semi-Supervised Learning for
+ Fine-Grained Encrypted Traffic Classification
+ Qian Yang, Wenxuan He, Minghao Chen, Hongyu Du, Sisi Shao, Fei Wu , Shangdong Liu , Yimu Ji ,
+ and Kui Ren , Fellow, IEEE
+
+ Abstract—Encrypted traffic classification is crucial for enhanc- I. I NTRODUCTION
+ing network management, service quality, and security. However,
+real-world network environments are inherently open-world scenarios in which traffic not only consists of known classes but also
+includes the continuous emergence of unknown classes. Existing
+deep learning methods typically rely on the closed-world assump-
+ W ITH the rapid advancement of network technologies,
+ traffic classification has become a core technology
+ for enhancing network management efficiency, optimizing the
+tion, which significantly limits their classification performance quality of service (QoS), and ensuring network security (e.g.,
+when dealing with unknown traffic types. This limitation makes malware identification and intrusion detection) [1]. However,
+it challenging to accurately classify known traffic classes and the proportion of encrypted traffic has increased dramatically
+effectively identify unknown ones. Although few studies have along with increasing awareness of user privacy protection and
+focused on open-world scenarios, these methods often use staged
+strategies and struggle to reliably detect unknown traffic or to the continuous advancement of encryption technology [2], [3],
+estimate novel classes. To address these challenges, we propose an [4]. Although encryption effectively safeguards user privacy,
+end-to-end Fine-grained Encrypted traffic Classification method it simultaneously introduces unprecedented challenges to netbased on Open-set Semi-supervised Learning, called FEC-OSL. work security monitoring. Traditional plaintext-based traffic
+This method comprises three mutually reinforcing core compo- analysis and detection methods [5], [6] are gradually becoming
+nents. First, we design a dual-branch flow feature extraction
+module to capture detailed and discriminative flow features. ineffective, as they cannot directly access packet payloads.
+Second, we introduce a novel energy-based perspective that lever- Moreover, an increasing number of malware and cyber attacks
+ages energy-boundary learning to distinguish known traffic from leverage encrypted channels, such as SSL/TLS, to evade detecunknown traffic, enabling precise detection of known classes. tion, making it more difficult for intrusion detection systems
+Finally, an adaptive deep clustering approach integrates feature (IDSs) and firewalls to identify threats promptly. According to
+learning with clustering to achieve fine-grained classification of
+unknown flows. We conduct extensive experiments on three real- the latest report from Zscaler, approximately 85.9% of network
+world datasets, and the results validate that our proposed method threats are now transmitted through encrypted channels [7],
+exhibits outstanding performance in handling both known and highlighting the urgent need for encrypted traffic analysis and
+unknown encrypted traffic in open-world scenarios. management.
+ Index Terms—Encrypted traffic classification, open-set semi- In recent years, encrypted traffic classification has made
+supervised learning, end-to-end, energy-based model, network significant progress with the use of deep learning techniques.
+security. However, most existing methods are based on the closed-
+ Received 13 January 2025; revised 8 August 2025, 14 October 2025, world assumption [8], [9], [10], [11], [12], which assumes
+and 18 November 2025; accepted 8 January 2026. Date of publication that the classes of test samples are already known during
+12 January 2026; date of current version 29 January 2026. This work was the training phase. As a result, these methods can only
+supported in part by the National Key R&D Program of China under Grant
+2023YFB2904000 and Grant 2023YFB2904004, in part by Jiangsu Key classify test samples into a predefined and limited set of
+Development Planning Project under Grant BE2023004-2, and in part by classes. However, in real-world network environments, traffic
+the Future Network Scientific Research Fund Project under Grant FNSRFP- classes are highly dynamic, with new applications and attack
+2021-YB-15. The associate editor coordinating the review of this article and
+approving it for publication was Dr. Prosanta Gope. (Corresponding author: methods emerging constantly. As a result, the testing phase
+Yimu Ji.) often encounters unknown classes that were never seen during
+ Qian Yang, Wenxuan He, Minghao Chen, Hongyu Du, Shangdong Liu, training. We define this as an open-world scenario, where
+and Yimu Ji are with the School of Computer Science, Nanjing University of Posts and Telecommunications, Nanjing 210023, China (e-mail: the model needs to handle entirely novel and unseen classes
+yq112641@163.com; 1223045429@njupt.edu.cn; 1224045412@njupt.edu.cn; that were not defined or labeled during the training phase.
+2024040408@njupt.edu.cn; lsd@njupt.edu.cn; jiym@njupt.edu.cn). Traditional closed-world classification models perform poorly
+ Sisi Shao is with the School of Internet of Things, Nanjing University of Posts and Telecommunications, Nanjing 210023, China (e-mail: in such scenarios and struggle to effectively identify unknown
+2021070701@njupt.edu.cn). traffic. As shown in Figure 1, compared with closed-world
+ Fei Wu is with the School of Automation, Nanjing University of Posts settings, open-world scenarios are more complex [13], as they
+and Telecommunications, Nanjing 210023, China (e-mail:
+wufei 8888@126.com). require addressing both the detection of unknown traffic and
+ Kui Ren is with the State Key Laboratory of Blockchain and Data the accurate classification of known classes.
+Security, Zhejiang University, Hangzhou, Zhejiang 310027, China (e-mail:
+kuiren@zju.edu.cn). (i) The first challenge is that traffic classification models
+ Digital Object Identifier 10.1109/TIFS.2026.3653575 must support open-set recognition (OSR) [14], [15],
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+1348 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ [16], enabling fine-grained classification of known traffic values, where low-energy samples are classified as known
+ classes while identifying novel and unknown classes. flows and high-energy samples are identified as unknown
+ One of the key factors in addressing this challenge is flows. Finally, feature learning is integrated with clustering
+ the ability to learn high-quality traffic representations. algorithms to iteratively refine the clustering of unknown flow
+ Existing OSR methods often rely on features from a sin- classes by updating sample feature representations. Through an
+ gle perspective, such as packet-level statistical features end-to-end collaborative optimization strategy, the three mod-
+ [17], [18], which fail to capture subtle variations among ules are jointly trained with a unified loss function, iteratively
+ complex traffic. This leads to limited class separability refining the feature space and improving both classification
+ in the feature space and compromises the performance and clustering performance. Overall, FEC-OSL achieves endof downstream classifiers. In addition, the classifier’s to-end open-set multitask learning, providing a novel and
+ ability to distinguish unknown classes plays a critical effective solution for encrypted traffic detection in open-world
+ role in overall OSR effectiveness, as it directly influ- scenarios.
+ ences the model’s ability to generalize in open-world In summary, the main contributions of this paper include
+ scenarios. Some studies [19], [20], [21] use classifier the following:
+ confidence scores to detect unknowns, but these meth- • We propose FEC-OSL, an end-to-end fine-grained trafods are often unreliable since high-confidence unknown fic classification framework. It effectively addresses key
+ samples may still be misclassified. Yang et al. [22] challenges in open-world scenarios, including distinguishproposed a multistage detection framework using class- ing flows from known and unknown traffic classes, clasconditioned autoencoders and extreme value theory to sifying known classes, and clustering unknown classes.
+ identify unknown attacks. However, this method requires • We design a dual-branch flow feature extraction module
+ separate training for each stage, which increases overall to capture fine-grained discriminative information from
+ complexity and introduces potential error propagation flows. Additionally, we introduce an energy-based conbetween stages. straint that effectively distinguishes between known and
+ (ii) Another challenge is enabling the model to efficiently unknown flows while ensuring reliable classification of
+ estimate unknown traffic classes. The goal is to allow the known flows. Furthermore, we propose an adaptive deep
+ model to autonomously learn novel classes, supporting clustering method that uses feature learning to refine
+ threat analysis and expanding the attack knowledge pseudo labels generated during clustering. By iteratively
+ base for security management [16]. Research on this optimizing the clustering process, the model progressively
+ issue remains limited in the field of traffic classification. adapts to unknown flow classes and achieves more accu-
+ Existing methods rely primarily on manual analysis or rate clustering results.
+ offline clustering [23], [24]. Zhao et al. [17] proposed • We conduct extensive experiments on three real-world
+ a method that integrates multiple clustering algorithms datasets to evaluate the performance of FEC-OSL. The
+ through adjacency matrices. The clustering results were results show that FEC-OSL outperforms existing methevaluated using cut-off point filtering and silhouette ods. In addition, a series of supplementary experiments
+ coefficients. However, this approach is heavily reliant on are performed to verify its superior generalization ability
+ expert knowledge, as each clustering algorithm requires and robustness.
+ manual parameter tuning.
+ In this study, we propose FEC-OSL, an end-to-end fine- II. R ELATED W ORK
+grained encrypted traffic classification method based on
+open-set semi-supervised learning. This method is designed A. Deep Learning for Encrypted Traffic Classification
+to address three challenges: distinguishing between known In recent years, deep learning has shown significant advanand unknown traffic flows, classifying known flow classes, tages in feature extraction and has become a key research
+and clustering unknown flows. FEC-OSL is composed of focus in encrypted traffic classification. These methods are
+three key modules: a dual-branch flow feature extraction mod- generally categorized into supervised, unsupervised, and semiule for capturing fine-grained flow features, an energy-based supervised learning approaches. Supervised learning relies on
+classification module for distinguishing between known and fully labeled datasets and uses models such as convolutional
+unknown flows, and an adaptive deep clustering module for neural networks (CNNs), transformers, and graph neural netunknown flow classes. First, flow byte sequences are reshaped works (GNNs) to automatically extract latent traffic features,
+into matrices and processed through a convolution-enhanced greatly increasing classification accuracy. For instance, Lotvision transformer network to extract byte-level features. Addi- follahi et al. [11] employed 1D-CNNs to capture the spatial
+tionally, we construct a flow interaction graph and apply dependencies of bytes within packets, extracting key discrimia topology-adaptive graph convolutional network to extract native patterns. Zhou et al. [25] applied transformers to extract
+interaction features. The dual-branch module extracts features temporal features from traffic traces, improving the classifrom complementary views of low-level byte patterns and fication of Tor-encrypted traffic. Hu et al. [10] constructed
+high-level interaction behaviors, reducing information loss and flow graphs from interactive packets in bidirectional flows
+enhancing the discriminative power of the feature space. The (biflows) and used graph2vec embeddings to represent these
+fused features yield a comprehensive flow representation. Sec- graphs as vectors. Unsupervised methods focus on normal
+ond, an energy-based model converts flow features into energy traffic patterns to detect anomalies by identifying deviations
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1349
+
+from typical behaviour. For example, Kitsune, proposed by
+Mirsky et al. [26], employs autoencoders to dynamically
+reconstruct features of normal traffic, enabling anomaly detection. semi-supervised learning methods address the challenge
+of obtaining large-scale labeled data by combining small
+amounts of labeled traffic with large volumes of unlabeled
+traffic. The study in [9] demonstrates that application fingerprints in encrypted traffic can be effectively extracted using
+semi-supervised learning, which improves the classification
+performance while reducing the labelling dependency. While
+these methods have achieved promising results in detecting
+known traffic within closed sets, their performance in identifying unknown attacks in open sets remains limited. In contrast,
+our proposed method combines the adaptability of open- Fig. 1. Schematic of an open-world fine-grained classification task for known
+ and unknown encrypted traffic, including the distinction between known and
+set learning with the low labelling cost of semi-supervised unknown traffic, classification of known classes, and clustering of unknown
+learning. Additionally, end-to-end joint training further reduces classes.
+silent misclassification in fine-grained encrypted traffic classification.
+ traffic set Dk and an auxiliary unknown class traffic set Dau .
+B. Open-Set Recognition for Encrypted Traffic Classification The known class set Dk contains traffic flows annotated with
+ explicit class labels drawn from the known label set Yk and
+ In open-world scenarios, encrypted traffic classification
+ is formally defined as Dk = {(xi , yi )|yi ∈ Yk }i=1
+ Nk
+ , where xi is
+must address two key tasks: fine-grained classification of
+ a network flow instance, yi is its corresponding label, and Nk
+known traffic classes and detection of unknown traffic
+classes, which falls under the framework of open-set recog- S totalk−1number of known class flows. The label set Yk =
+ is the
+ {B} {Ai }Ci=1 comprises Ck distinct classes, where B represents
+nition (OSR). OSR has received increasing attention, with
+ benign traffic and each Ai denotes a specific known attack
+methods broadly categorized as confidence-based, reconstructype. The set Dau = {xi }i=1 Nau
+ consists of unlabeled flows that
+tion error-based, and generative model-based approaches.
+ are treated as belonging to an auxiliary unknown class Uau ,
+Confidence-based methods assess whether a sample belongs
+to an unknown class through the classifier’s confidence. T set Yau strictly disjointed
+ which is associated with a latent label
+ from the known classes, i.e., Yk Yau = ∅. During testing,
+Hendrycks et al. [20] analyzed softmax output distributions
+ the model must handle a more complex open-world scenario.
+to detect unknown samples based on prediction confidence.
+ The test set Dtest includes traffic flows from known classes
+Reconstruction error-based methods leverage autoencoders to
+ Yk , from the auxiliary unknown class Yau , and from entirely
+model known traffic and identify unknown traffic through
+ novel unknown classes not seen during training, denoted as
+reconstruction errors. Yang et al. [27] improved the sample
+ Dnu with a label set Ynu . The novel unknown classes T are also
+distance metric in the latent space using a contrastive learningdisjointed from all previously observed classes: Ynu Yau = ∅
+based autoencoder. They applied a dynamic threshold based
+ and Ynu Yk = ∅.
+ T
+on the median absolute deviation to identify out-of-distribution
+ The goal is to train an end-to-end classification model M
+drifting samples. Zhao et al. [17] developed a one-class learner
+ that, at test time, (1) accurately classifies flows belonging to
+for each class. The traffic for each class was reconstructed,
+ known classes Yk ; (2) effectively detects and distinguishes
+and an outlier threshold was applied to detect unknown traffic.
+ flows from novel unknown classes Ynu ; and (3) performs
+However, these methods suffer from confidence misjudgement
+ fine-grained classification of flows in the auxiliary unknown
+and sensitivity to reconstruction errors, which reduces the
+ set Dau using pseudo labels. Reliably identified unknown
+overall effectiveness of OSR. Generative model-based methods
+ traffic flows are progressively accumulated and integrated with
+identify unknown traffic by generating samples or learning 0
+ the auxiliary set Dau to form an updated set Dau , which
+data distributions. Yang et al. [22] trained generative models
+ is periodically used for retraining to improve the model’s
+to learn feature distributions of known classes and identified
+ adaptability against evolving unknown traffic.
+unknown classes using reconstruction errors. In contrast, our
+method involves the construction of an efficient feature representation mechanism and introduces a classification method B. Method Overview
+using an energy-based model. This model achieves robust The overall framework of our proposed FEC-OSL is shown
+performance in distinguishing between known and unknown in Figure 2. It consists of three modules: i) Dual-branch
+flows, enhancing the detection of unknown classes while flow feature extraction module: This module preprocesses
+maintaining high accuracy for known classes. raw traffic pcap data and splits it into independent biflows.
+ Byte-level features and flow interaction features are extracted
+ III. M ETHODOLOGY
+ separately. These features are fused and concatenated to form
+A. Problem Statement a comprehensive representation. ii) Energy-based model for
+ In the open-world traffic classification task, we are given known/unknown class classification module: The energy funca training dataset Dtrain consisting of a labeled known class tion maps flow samples to energy values, with the Weibull
+1350 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 2. Overall structure of FEC-OSL. The model is trained in an end-to-end manner using a combination of cross-entropy loss, energy-based boundary
+regularization loss and clustering loss.
+
+distribution modeling known and unknown sample boundaries. packets per flow in this study to strike a reasonable balance
+Energy values are compared to a threshold to classify samples between performance and efficiency.
+as known or unknown. iii) Unknown class adaptive deep clus- Convolution-Enhanced ViT Feature Extraction: The vision
+tering module: This module iteratively optimizes the clustering transformer (ViT) [32] applies the transformer [33] to comof unknown flows by jointly updating flow sample feature puter vision. However, ViT lacks locality and translation
+representations through clustering and feature learning. invariance, limiting its performance on small-scale datasets
+ [34]. To address this, we propose a convolution-enhanced ViT
+ (CViT), which combines convolutional local feature extraction
+C. Dual-Branch Flow Feature Extraction
+ with ViT’s global modeling to efficiently extract multilevel
+ To improve the accuracy of encrypted traffic classification, features from raw byte matrices.
+we propose a dual-branch flow feature extraction module that For both the flow header matrix xh and payload matrix x p ,
+integrates byte-level and flow interaction features. the same feature extraction process is applied. Taking xh as
+ 1) Byte-Level Flow Feature Extraction: In encrypted traffic an example, it is divided into P × P patches that do not cross
+classification, the raw byte information of network flows is packet boundaries. The total number of patches is N p , and
+critically important. Compared with statistical features [12], 2
+ the patches are represented as x̃h ∈ RN p ×P . Convolutional
+[28], raw byte data retain fine-grained content and better operations are then applied to each patch to extract local
+reflect the inherent characteristics of flows [29]. To preserve features:
+the interaction patterns between endpoints, the raw pcap data ch,i = Conv( x̃h,i ; θ) (1)
+are segmented into independent biflows using the Splitcap
+tool. For each packet, Ethernet headers are removed, and IP where θ is the convolution kernel. The features are flattened
+addresses and port numbers are anonymized. and embedded into high-dimensional space and augmented
+ Byte Matrix Reshaping: For each input flow sample x, we with positional embeddings to retain spatial information:
+select the first M consecutive packets to ensure traffic data z(0)
+ h = [ch,1 E emb ; ch,2 E emb ; · · · ; ch,N p E emb ] + E pos (2)
+consistency. Each packet is divided into two parts, the header
+and the payload, which differ in semantics and length [11], where Eemb denotes the embedding matrix and E pos denotes
+[30]. These parts are processed separately and reshaped into the positional embedding.
+fixed-size matrices for model input. The byte sequence of each The embedded features are fed into a transformer encoder
+packet header is reshaped into a matrix of size mrh × mch , with with L layers. For the l-th layer:
+zero-padding applied for uniformity. The header matrices of M z̄(l) (l−1)
+ h = MHA(LN(zh )) + zh(l−1) (3)
+packets are concatenated along the packet sequence dimension
+ r c z(l) (l) (l)
+ h = FFN(LN(z̄h )) + z̄h (4)
+to form a fixed-size flow header matrix xh ∈ R(M×mh )×mh ,
+where M ×mrh = mch . Similarly, the payloads are processed into where MHA(·) denotes the multi-head attention mechanism,
+ r c
+a flow payload matrix x p ∈ R(M×m p )×m p , where M × mrp = mcp . FFN(·) denotes the feed-forwards network, and LN(·) denotes
+Given that prior studies have shown that selecting the first the layer normalization.
+few packets of a flow is generally sufficient to capture its After processing, global pooling is applied to the flow
+fundamental characteristics [31], we uniformly set M = 5 header matrix and payload matrix, resulting in flow-level
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1351
+
+feature representations zh and z p . These features are then com- is denoted as h(0) i , where i = 1, 2, · · · , Nv and Nv is the
+bined to form the final flow-level byte feature representation, number of nodes. All node features form a feature matrix
+hb = [zh , z p ]. Ĥ = [â1 , â2 , · · · , âD ] ∈ RNv ×D , where the d-th feature dimen-
+ 2) Flow Interaction Feature Extraction: In encrypted flows, sion is given by vector âd ∈ RNv . The TAGCN network consists
+attributes such as packet time intervals and transmission direc- of L0 layers. The input, including Ĥ and the adjacency matrix
+tions (e.g., upstream or downstream) reflect the interaction A, is passed into a set of graph filters to perform convolution
+patterns between hosts. These features are crucial for distin- operations across different 0
+ dimensions of node features. The
+guishing between normal and malicious behaviors [28], [35]. f -th graph filter G(ld, f) ∈ RNv ×Nv in the l0 -th layer is defined as
+ Flow Interaction Graph Construction: To capture such a polynomial of A:
+features, we construct a flow interaction graph (FIG), where K
+ 0 X 0
+each biflow is represented as a graph, providing an intu- G(ld, f) = w(ld, f) ,k Ak (5)
+itive representation of the communication patterns between k=1
+endpoints. Specifically, we follow the graph construction pro- 0
+
+cedure proposed in the seminal work [35], where each packet where w(ld, f) ,k are learnable coefficients that determine the
+within a flow is regarded as a node in the graph. The concept contribution of k-hop neighbourhood information. The term
+of a burst, which refers to a sequence of consecutive packets Ak denotes the k-th power of the adjacency matrix, where
+transmitted in the same direction within a short time interval, Aki, j is the number of paths of length k from node j to node i.
+is introduced to define the connections between nodes. This The f -th output feature mapping of node i is calculated as
+forms a graph G = (V, E), where nodes V and edges E are follows:
+defined as follows: D D
+ K X
+ 0 X 0 X 0
+ Nodes: Node features are crucial for accurate classification. hi,(l f) = G(ld, f) âd + b f = (l )
+ wd, k
+ f ,k A âd + b f (6)
+On the basis of the approach in [35], we expand it by extracting d=1 k=1 d=1
+
+key attributes from packets across multiple dimensions as node where b f is a learnable bias term. After filtering, the output
+embeddings. These features include packet direction, length, feature 0 maps are concatenated to update the node representatimestamp, total number of packets in a burst, total number of tion h(li ) .
+bytes in a burst, the ratio of packet counts between consecutive Readout Layer: After the node features are obtained, the
+bursts, and the ratio of total bytes between consecutive bursts. readout layer generates the graph-level representation of the
+These seven types of features provide strong discriminative flow. This is defined as follows:
+power for encrypted traffic classification: packet direction 0 0 0
+
+captures host interaction patterns, length is a critical attribute hg = Readout(h(l1 ) , h2(l ) , · · · , h(lNv) ) (7)
+for identifying encrypted fingerprints [36], timestamp reflects 3) Feature Fusion: We concatenate the byte-level flow
+temporal dynamics, and burst-related features reveal commu- features hb and flow interaction features hg obtained from
+nication density and stage-wise behaviors. All the features are the dual-branch feature extraction process to form a more
+concatenated into a vector to serve as the initial representation comprehensive flow representation h = [hb , hg ].
+of each node. From the traffic feature perspective, the byte-level branch
+ Edges: The packet sequence within a biflow is divided focuses on fine-grained packet composition that encodes strucinto multiple bursts based on a predefined burst threshold. In tural patterns, whereas the interaction branch captures flow
+FIG, nodes are connected through intra-burst and inter-burst characteristics such as temporal dependencies, burst behaviour,
+edges. Within the same burst, intra-burst edges are constructed and direction correlation between hosts. These complementary
+sequentially according to timestamps, connecting each pair representations jointly reflect both intrinsic packet characof adjacent nodes. This captures the temporal sequence of teristics and extrinsic communication behaviors, leading to
+packets while reducing the computational complexity of fully more discriminative feature embeddings for clustering and
+connecting all nodes. For nodes across adjacent bursts, inter- classification.
+burst edges are added: the first node of each burst is connected
+to the first node of the previous burst, and the last node is
+connected to the last node of the previous burst. This preserves D. Energy-Based Model for Known/Unknown Class
+the relationships between bursts and the temporal continuity Classification
+of the flows. Additionally, undirected edges are used in the In open-world detection, the presence of unknown class
+graph to flexibly represent the relationships between packets. traffic is inevitable. Softmax-based methods perform well for
+ Graph Representation Learning: We construct a FIG G known classes but often produce high-confidence predictions
+for each flow x and input the graph into a GNN consisting for unknown classes, leading to misclassification [19], [20].
+of topology-adaptive graph convolutional network (TAGCN) To address this, we design a module for distinguishing known
+[37] layers and a readout layer. and unknown classes based on an energy-based model (EBM)
+ TAGCN Layer: Given the complex behavioural patterns [38], [39]. This module identifies known and unknown traffic
+in flows, such as packet bursts and frequent interactions, by evaluating the compatibility between the input features and
+we employ TAGCN to aggregate multi-hop neighbourhood class labels.
+information for feature extraction and iteratively update node Given a flow sample x, its feature representation h ∈ H
+representations. In the FIG G, the initial feature of node i in the latent space, and its label, we aim to learn an energy
+1352 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+function E(h) that assigns lower energy values to known
+classes and higher energy values to unknown classes. E(h)
+is defined as the Helmholtz free energy of h, computed by
+marginalizing over the energy values E(h, y0 ) corresponding
+to individual classes y0 . This is expressed as follows:
+ Z
+ E(h) = −T log exp(−E(h, y0 )/T ) (8)
+ y0
+
+where T is a temperature parameter that regulates the energy
+scale. E(h, y0 ) quantifies the compatibility between h and class
+y0 , while E(h) aggregates these values into a holistic energy
+representation. Fig. 3. Comparison of the negative energy Weibull distributions for known
+ and unknown flows. The histogram shows the density distributions of known
+ EBMs are naturally related to traditional discriminative classes (blue) and unknown classes (red) across different energy ranges. The
+models [39]. We employ a discriminative classifier g(h) with dashed line indicates the threshold used to distinguish between known and
+Ck + 1 classes, where the first Ck represents known classes unknown classes.
+and the additional class represents all unknown classes. The
+classifier maps h to Ck + 1 logits. The energy values are then
+ bound mk , whereas the second term treats auxiliary unknown
+converted into a class probability distribution using the Gibbs
+ class flows (without labels) as negative examples, encouraging
+distribution, similar to the output of a softmax layer:
+ their energy to exceed the lower bound mau . The regularization
+ exp(−E(h, y)/T ) exp(−E(h, y)/T ) mechanism enables the model to form a distinct and general-
+ P(y|h) = R 0 )/T )
+ =
+ y0 exp(−E(h, y exp(−E(h)/T ) izable boundary between known and unknown classes in the
+ exp(gy (h)/T ) energy space. Consequently, it can effectively separate the two
+ = PCk +1 (9) classes and better generalize them to identify novel unknown
+ j=1 exp(gy j (h)/T ) classes during testing.
+where gy (h) is the logit value for class y and E(h, y) is its In the inference phase, the learned energy function E(h; g)
+corresponding energy value, where E(h, y) = −gy (h). Using computes the energy values of flows. To distinguish between
+Equation (9), the free energy function can be expressed as known and unknown flows, the negated energy values −E(h; g)
+follows: of known class samples are modeled using the Weibull distri-
+ 0 1 bution [40], as illustrated in Figure 3. By comparing the energy
+ k +1
+ CX
+ value with a threshold τ, flows are classified as either known
+ E(h; g) = −T log @
+ 
+ exp gy j (h)/T A (10)
+ or unknown:
+ j=1 8
+ <arg min E(h, y), if − E(h; g) ≥ τ,
+The energy function E(h; g) provides a global representation of
+ r= y∈Yk (13)
+h by considering all classes. Unlike softmax, which relies only :U, otherwise.
+on the relative magnitudes of logits, the energy-based model
+effectively avoids false high-confidence predictions through If −E(h; g) exceeds τ, the flow is assigned to the known
+global modeling. class with the minimum energy value. Otherwise, it is clas-
+ During training, we design a total loss function that sified as unknown. The term −E(h; g) is used to ensure
+combines cross-entropy loss and energy-based boundary reg- that higher scores correspond to positive samples, following
+ularization loss. This function improves the classification conventional definitions.
+accuracy for known classes and enhances the ability to distinguish between known and unknown classes. The total loss
+ E. Unknown Class Adaptive Deep Clustering
+function is given as follows:
+ In an open-world scenario, novel classes constantly emerge,
+ L1 = E(h,y)∼Htrain [− log P(y|h)] + λLenergy (11) making it crucial to generate effective pseudo labels for
+ unknown class samples. To address this challenge, we design
+where Htrain denotes training flow samples in the latent space
+ an adaptive deep clustering module that integrates deep feature
+and λ denotes the weight factor that balances the two loss
+ extraction with clustering techniques to adaptively cluster
+terms. The energy-based boundary regularization loss Lenergy
+ unknown flows.
+is defined as follows:
+ For unknown flow x, the dual-branch feature extraction
+ Lenergy = E(h,y)∼Hk (max(0, E(h) − mk ))2 module first generates its feature representation. To mitigate
+ + E(h,y)∼Hau (max(0, mau − E(h)))2 (12) the feature bias caused by the EBM, which might incorrectly
+ map unknown flows to an auxiliary (Ck +1)-th class, we apply
+where Hk and Hau denote the training distributions of known a CNN to refine the feature representations. The overall feature
+class flows and auxiliary unknown class flows, respectively. extraction network is denoted as ψθ (·). A classifier g0 (·) is then
+mk and mau are energy-boundary parameters for known and applied, where the initial number of classes is set to a value
+auxiliary unknown classes, respectively. Specifically, the first larger than the potential true number of unknown classes. In
+term drives the energy of known class flows below the upper the initialization phase, we employ a clustering algorithm to
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1353
+
+assign initial pseudo labels ỹ to x. A sample base is constructed During testing, we incrementally identify credible novel
+to store flow features and their pseudo labels, while a centroid unknown flows, denoted as Dnu , with energy values in the
+base maintains the current feature representation of the cluster tail (p <0.01) of the Weibull distribution of known classes
+centroid. We obtain the corresponding pseudo labels of xau and with feature distances lying in the top 5% tail region and
+from the sample base and update the parameters of ψθ (·) by forming high-density clusters. These samples are merged with
+minimizing the following loss function: the original auxiliary unknown set Dau to form an updated
+ 0
+ set Dau , which is periodically used to refine model parameters
+ L2 = E(x,ỹ)∼Dau [CE(g0 (ψθ (x), ỹ)] (14) and enhance adaptability to emerging unknown traffic.
+where CE(·) denotes the cross-entropy loss function. After
+updating the feature representations, to ensure a smoother
+ IV. E VALUATION
+transition of the features in the sample base, we adopt the
+following momentum update formula to update the features A. Experimental Overview
+stored in the sample base:
+ In this section, the performance of FEC-OSL is thoroughly
+ ψθ (xu )
+ Fβ (x) ← β · + (1 − β) · Fβ (x) (15) evaluated through comparisons with baseline methods in
+ kψθ (x)k2 closed-set and open-set scenarios, an analysis of adaptability
+where β ∈ (0, 1] is the momentum coefficient, balancing the to concept drift, ablation studies of key components, and a
+contributions between the new and old features. Moreover, sensitivity analysis of hyperparameter effects.
+the pseudo labels of the flow samples are reassigned based on
+their current features by finding the nearest cluster center as
+follows: B. Experimental Setup
+ ỹ0 = arg min kFβ (x) − cỹ k22 (16) 1) Datasets: The proposed method is extensively evaluated
+ ỹ∈{1,··· ,Cau }
+ on three real-world benchmark datasets: USTC-TFC-2016
+where cỹ denotes the cluster center feature of class ỹ. As [41], CIC-IDS-2018 [42], and ISCX-Tor-2016 [43]. The details
+the network iteratively updates, the feature representations of the datasets are as follows:
+of the flow samples and their pseudo label assignments are
+progressively refined. Erroneous features and labels are grad- • USTC-TFC-2016: Released by researchers from the Uniually corrected, uncovering the fine-grained classes within the versity of Science and Technology of China (USTC),
+unknown flows. this dataset contains encrypted traffic from 10 types of
+ malware and 10 types of benign applications.
+ • CIC-IDS-2018: Collected by the Canadian Institute for
+F. End-to-End Training Cybersecurity, this dataset serves as a benchmark for
+ During training, the FEC-OSL model is trained using an intrusion detection systems. It includes normal traffic as
+end-to-end joint training strategy, where the known/unknown well as six types of malicious traffic, such as brute force
+class classification module and the unknown class adaptive attacks, botnets, and denial-of-service (DoS) attacks.
+deep clustering module are alternately optimized in an iterative • ISCX-Tor-2016: This dataset contains encrypted traffic
+manner. The dual-branch flow feature extraction module is from 16 types of applications that use the Onion Router
+shared by both modules and provides consistent and informa- (Tor) for communication, such as e-mail, Chat, and FTP.
+tive flow features. The joint loss function for the model is Owing to the considerable disparity in the number of
+defined as follows: samples across different classes in the employed datasets, a
+ class-balanced sampling strategy is adopted to alleviate the
+ Ltotal = L1 + L2 (17)
+ impact of class imbalance on model training and evaluation.
+where L1 is the loss for the known/unknown classification 2) Baselines: To comprehensively evaluate the performance
+task. It includes cross-entropy loss and energy-based boundary of FEC-OSL, we conduct experimental comparisons with nine
+regularization loss. L2 denotes the clustering loss for unknown baseline methods under both closed-set and open-set scenarios:
+classes. i) For the traditional closed-set scenario, we include supervised
+ The alternating optimization strategy guides known class methods (GraphDApp [35], Deeppacket [11], PERT [44], and
+features towards low-energy regions and auxiliary unknown ET-BERT [45]), unsupervised methods (Kitsune [26]), and
+features towards high-energy regions, thereby reducing intr- semi-supervised methods (FlowPrint [9]). ii) For the openaclass variance for known classes and enlarging the feature set scenario, we compare it with open-set learning methods
+margin between known and unknown classes. Moreover, specifically designed for this setting (CVAE-EVT [22], ECNet
+the clustering module refines pseudo labels and aggregates [31], and Trident [17]).
+features to increase the intraclass compactness of auxiliary 3) Evaluation Metrics: We evaluate our method and baseunknown flows, reinforcing separability in the energy space. lines using accuracy (AC), precision (PR), recall (RC), and
+This synergy improves classification accuracy for known F1 score (F1) for known class classification; AUC of the
+classes, generalization to novel unknowns, and fine-grained ROC curve for distinguishing between known and unknown
+clustering of auxiliary unknown flows, fulfilling the multi-task classes; and adjusted mutual information (AMI) for clustering
+objective of open-world traffic classification. unknown classes.
+1354 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE I
+ C OMPARISON OF C LASSIFICATION R ESULTS IN THE C LOSED -S ET S CENARIO (%)
+
+ 4) Implementation Details: Our proposed method is imple- interpacket interactions, allowing it to extract more compremented using Python 3.8.19, PyTorch 1.8.1, and trained on a hensive feature representations. As a result, FEC-OSL achieves
+server equipped with NVIDIA GeForce RTX 3090 GPUs. We superior performance, with AC improvements of 1.56%,
+train the model using the SGD optimizer. The learning rate 0.43%, and 1.4% and F1 score increases of 1.16%, 0.42%,
+is set to 0.0001 for the dual-branch flow feature extraction and 1.1% on the three datasets, respectively. The unsupervised
+module and the known/unknown classification module and method Kitsune, which focuses only on individual packets and
+0.001 for the unknown class clustering module. The flow ignores correlations between packets, performs significantly
+header matrix dimensions mch and payload matrix dimensions worse than FEC-OSL on the two malicious traffic datasets.
+mcp are set to 20 and 40, respectively. The number of nodes in Similarly, the semi-supervised method FlowPrint, which conthe flow interaction graph Nv is set to 30. Energy thresholds τ siders only interaction-related information, also shows weaker
+are determined separately for each dataset by fitting a Weibull performance than FEC-OSL does.
+distribution to the negated energy values of known samples. With respect to the open-set learning methods, CVAE-EVT
+The threshold for each dataset is then set to the value at a and ECNet achieve relatively good results but still fall slightly
+specified quantile of the fitted distribution, with quantile levels behind FEC-OSL. The Trident series (AE, RNN, and GNN)
+of 0.05 for USTC-TFC-2016, 0.05 for CIC-IDS-2018, and 0.1 performs well on the CIC-IDS-2018 dataset, with Trident
+for ISCX-Tor-2016. The weight λ is set to 0.1. The temperature (RNN) achieving the highest accuracy, ranking FEC-OSL
+parameter T is set to 10, determined via grid search in the second. Trident (RNN) has lower F1 scores and significantly
+range from 0.01 to 100 in steps of the base-10 scale. The decreases in performance on the USTC-TFC-2016 and ISCXenergy-boundary parameters mk and mu are set to −10 and Tor-2016 datasets. This indicates a lack of stability and
+−5, respectively, and are selected by performing a grid search generalizability when diverse traffic environments are considover candidate sets constructed based on the statistics of the ered. In contrast, FEC-OSL integrates features from packet
+energy distribution. The training process uses 50 epochs with headers, payloads, and interpacket interactions, enabling it to
+a batch size of 64. capture fine-grained discriminative details of network traffic.
+ As a result, FEC-OSL consistently delivers outstanding perfor-
+C. Closed-Set Classification Evaluation mance across varying network scenarios and complex traffic
+ To evaluate the classification performance of FEC-OSL on characteristics.
+known traffic classes in a closed-set scenario, we conduct
+experiments with all classes known. Table I compares the
+performance of FEC-OSL with eight other closed-set classi- D. Open-Set Classification Evaluation
+fication methods, including supervised (SUM), unsupervised 1) Open-Set Traffic Classification: In this section, we
+(USM), semi-supervised (SSM), and open-set learning (OSM) evaluate the performance of the FEC-OSL model in openapproaches. The results indicate that FEC-OSL achieves set traffic classification, aiming to simulate and assess its
+the best overall classification performance across the three applicability in real-world open environments. Experiments
+datasets. are conducted on the USTC-TFC-2016, CIC-IDS-2018, and
+ Among the supervised methods, ET-BERT is the most stable ISCX-Tor-2016 datasets. To simulate open-set conditions,
+and has the best performance. However, it relies mainly on we divide the selected classes into three parts: labeled
+packet payload information, which limits its ability to utilize known classes, unlabeled auxiliary unknown classes, and novel
+useful information from packet headers. In contrast, FEC- unknown classes that only appear during testing. The auxiliary
+OSL integrates information from packet headers, payloads, and unknown classes constitute half (rounded down) of the total
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1355
+
+ Fig. 4. Evaluation of the AUC, F1 score, and AMI metrics under different known/unknown class ratios on the USTC-TFC-2016 dataset.
+
+ Fig. 5. Evaluation of the AUC, F1 score, and AMI metrics under different known/unknown class ratios on the CIC-IDS-2018 dataset.
+
+ Fig. 6. Evaluation of the AUC, F1 score, and AMI metrics under different known/unknown class ratios on the ISCX-Tor-2016 dataset.
+
+unknown classes and participate in training without labels into the open-set classification capabilities of the FEC-OSL
+to support energy-boundary learning and deep clustering. model.
+The remaining unknown classes are held out for testing to Figures 4-6 compare the performance of FEC-OSL with that
+evaluate generalizability. Specifically, for the USTC-TFC- of various baseline methods (e.g., CVAE-EVT, ECNet, and the
+2016 dataset, we set multiple known/unknown class ratios Trident series) across the three datasets. Notably, the baseline
+as Nk : Nu = {16 : 4, 12 : 8, 8 : 12, 4 : 16}. In each methods CVAE-EVT and ECNet are not capable of clustering
+case, half of the Nu classes (rounded down if Nu is odd) unknown classes.
+are selected as auxiliary unknown classes and included in For the task of distinguishing between known and unknown
+training without labels, while the other half are used as novel classes, as shown by the AUC results in Figure 4(a), Figunknown classes during testing. Similarly, for CIC-IDS-2018, ure 5(a), and Figure 6(a), FEC-OSL consistently maintains
+the class ratio is Nk : Nu = {5 : 2, 4 : 3, 3 : 4, 2 : 5}, and a high level of AUC across all ratio settings. Notably, when
+for ISCX-Tor-2016, it is Nk : Nu = {6 : 2, 4 : 4, 2 : 6}, the degree of openness is low (i.e., a higher proportion of
+following the same auxiliary/novel split policy. Under these known classes), the corresponding AUC values approach 1,
+ratio settings, we conduct comparative experiments with vari- demonstrating the excellent ability of FEC-OSL to distinguish
+ous open-set learning methods. The evaluation focuses on key between known and unknown classes. Moreover, as the propormetrics for the three tasks (AUC, F1, and AMI) and exam- tion of unknown classes increases, the decline in the AUC for
+ines how these metrics vary under different known/unknown FEC-OSL is significantly smaller than that for the other baseclass ratios. This comprehensive analysis provides insight line methods. In contrast, the performance of the other models
+1356 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 7. Visualization of feature space at different stages. (a) Before training: known (colored) and auxiliary unknown (grey) flows are mixed. (b) After training:
+known flows form compact clusters, and unknown flows are well separated. (c) Testing: novel unknown flows (purple) remain clearly separated from known
+clusters.
+
+appears to be less robust across the various ratio settings. For increases), FEC-OSL consistently outperforms the baseline
+instance, on the USTC-TFC-2016 dataset, when the ratio of methods. This finding indicates that FEC-OSL can more
+known to unknown classes is 4:16, FEC-OSL still maintains effectively capture the differences between unknown classes
+a high AUC value, while the AUC values for the CVAE-EVT to achieve effective clustering. In summary, the experimenand the Trident series (AE, RNN, and GNN) decrease sharply tal results demonstrate that FEC-OSL exhibits exceptional
+to approximately 80%. These results highlight that FEC-OSL effectiveness and robustness in open-set traffic classification
+effectively distinguishes between known and unknown classes tasks. Across various known/unknown class ratios, FEC-OSL
+under varying known/unknown class ratios. Even in highly consistently outperforms the other methods in terms of the
+open environments, it demonstrates superior differentiation AUC, F1, and AMI metrics while maintaining high stability.
+ability and robustness. This strong performance lays a solid These findings strongly validate the efficiency of the proposed
+foundation for the subsequent tasks of classifying known method in addressing the challenges of encrypted malicious
+classes and clustering unknown classes. traffic detection in open-world scenarios.
+ For the task of classifying known classes, we use the F1 2) Feature Space Visualization and Feature-Level Interprescore as a comprehensive metric to evaluate the classification tation: To verify the discriminative ability of the dual-branch
+performance. From the results in Figure 4(b), Figure 5(b), design in FEC-OSL, we visualize feature distributions on the
+and Figure 6(b), it can be observed that FEC-OSL achieves USTC-TFC2016 dataset with a known/unknown class ratio of
+significantly higher F1 scores across all the ratio settings on 12:8. As shown in Figure 7, before training, the features of
+the three datasets, demonstrating its strong classification capa- different classes are highly mixed without clear boundaries.
+bility for known classes. This is primarily due to the strong After training, the known class flows form compact, lowcorrelation between the AUC and F1 metrics: an increase in variance clusters, whereas the auxiliary unknown flows are
+the AUC indicates that the model is more effective at avoiding distributed in separate and concentrated regions that are clearly
+misclassifying unknown class flows as known classes, which separated from the known clusters. This finding demonstrates
+directly enhances the classification performance of known that the model effectively learns a discriminative feature space
+classes and leads to an improvement in the F1 score, and vice during training. During testing, most novel unknown flows
+versa. This correlation is also reflected in the stability of the F1 (purple) fall within the regions previously occupied by auxilscore. Although the F1 score for the known class classification iary unknown classes and remain clearly separated from the
+task gradually decreases as the proportion of unknown classes known class clusters. These results confirm that the feature
+increases, the decrease is relatively small and less pronounced space learned through the joint optimization of classification
+than that of the baseline methods. This finding indicates that and clustering has a strong discriminative ability for open-
+FEC-OSL can still classify known classes accurately and world traffic recognition.
+reliably in scenarios with high openness. These experimental To further explain this from the feature perspective, Weibo
+results further validate that the advantage of FEC-OSL in traffic (known) and Zeus traffic (auxiliary unknown) are
+terms of the AUC directly contributes to the stability of the selected, with two random flow samples from each class. The
+F1 score, enabling effective recognition of known traffic in attention heatmaps of the byte branch, generated via attention
+open-set scenarios. rollout by aggregating multilayer attention weights and map-
+ For the task of clustering unknown classes, we use the ping them back to the original packet header-byte matrices,
+AMI metric to evaluate clustering performance. As shown are shown in Figure 8. The model focuses mainly on stable
+in Figure 4(c), Figure 5(c), and Figure 6(c), although the fields such as the TCP window size in Weibo traffic while
+AMI values for all the methods inevitably decrease as open- emphasizing variable fields such as TCP flags and SYN-related
+ness increases (i.e., as the proportion of unknown classes options in Zeus traffic. This finding indicates that FEC-OSL
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1357
+
+ TABLE II
+D ETAILS OF T RAINING AND T ESTING S ET A LLOCATIONS FOR THE CIC-IDS-2018 DATASET AND THE R ESTRUCTURED CIC-IDS-2018-N EW DATASET
+
+ Fig. 10. Results of concept drift evaluation.
+
+ Overall, the byte branch captures fine-grained structural
+Fig. 8. Header-byte attention heatmaps for Weibo and Zeus flows. Darker patterns, whereas the interaction branch models communicacolors indicate higher model attention to the corresponding byte regions during tion behaviors. Their complementarity enables FEC-OSL to
+inference.
+ learn interpretable and discriminative representations, effectively separating known and unknown traffic in open-world
+ scenarios.
+
+ E. Concept Drift Evaluation
+ In traffic classification tasks, concept drift often manifests as
+ changes in attack strategies, tools, or characteristics, causing
+ discrepancies between training and testing feature distributions. To evaluate the FEC-OSL model under concept drift,
+ experiments are conducted using the CIC-IDS-2018 dataset.
+ A new dataset, CIC-IDS-2018-new, is created by restructuring
+Fig. 9. Feature importance for Weibo and Zeus flows. The violins depict the the training and testing sets to simulate real-world drift, with
+per-sample |shape| distributions of each interaction feature. The vertical bars
+indicate the median SHAP values, reflecting the central contribution of each benign traffic from different dates and similar attacks executed
+feature for Weibo (left, blue) and Zeus (right, red) flows. with different tools assigned to separate sets. For instance,
+ the DDoS traffic in the training set originates from the LOIC
+ for HTTP attacks, whereas the DDoS traffic in the testing
+distinguishes traffic by learning structural discrepancies at the set originates from the LOIC for UDP attacks. The detailed
+byte level. dataset allocation is shown in Table II.
+ Similarly, we take Weibo and Zeus traffic as examples and We conduct experiments under both the closed-set scenario
+compute the importance of their interaction features using the (CIC-IDS-2018 dataset) and the concept drift scenario (CIC-
+SHapley Additive exPlanations (SHAP) method. The top six IDS-2018-new dataset), with the results shown in Figure 10.
+key features identified are direction-length, timestamp, packets While the performance of the FEC-OSL model decreases
+in a burst, bytes in a burst, packet-count ratio, and byte ratio. under concept drift, it still achieves high classification metrics,
+Since direction is encoded as ±1, it is combined with length with F1 scores close to 90% and accuracy, precision, and
+to capture directional correlations. The distributions of feature recall values all exceeding 90%. Despite the introduction of
+importance for Weibo and Zeus traffic are shown in Figure 9. new attack tools and traffic patterns, the model leverages fine-
+We observe that Weibo traffic relies primarily on direction- grained features of known classes to extract transferable and
+length and bytes in a burst, whereas Zeus traffic relies mainly generalized feature representations. This allows FEC-OSL to
+on the timestamp and direction-length. This finding indicates associate concept drift samples with the most similar known
+that interaction features differ across traffic types. classes, effectively minimizing significant classification errors.
+1358 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE III
+ A BLATION S TUDY OF K EY C OMPONENTS IN THE
+ C LOSED -S ET S CENARIO (%)
+
+ Fig. 11. Comparison between the distributions of (a) Softmax confidence
+ scores and (b) energy values from the EBM.
+
+ TABLE IV
+ A BLATION S TUDY OF K EY C OMPONENTS IN
+F. Ablation Study THE O PEN -S ET S CENARIO (%)
+ To evaluate the impact of key components on the overall
+performance of the model, we design and conduct ablation
+experiments on the USTC-TFC-2016 dataset. The experiments
+are carried out in both closed-set and open-set scenarios, with
+the open-set scenario using a known/unknown class ratio of
+16:4. The specific test configurations are as follows:
+ • w/o BFE: FEC-OSL without the byte-level flow feature
+ extraction branch. To further analyze the contribution of
+ specific components within the BFE module, we conduct
+ additional fine-grained ablation experiments.
+ • w/o header: FEC-OSL relies solely on packet pay- class distinction from 99.13% to 86.42% and 80.35%, respecload features, with the header features removed. tively, highlighting the critical role of byte-level flow and
+ • w/o payload: FEC-OSL relies solely on packet flow interaction features in capturing fine-grained details for
+ header features, with the payload features removed. distinguishing traffic. Similarly, removing header and payload
+ • w/o FIE: FEC-OSL without the flow interaction feature features causes performance declines, with header features
+ extraction branch. contributing more substantially. To further investigate the
+ • w/ Softmax: FEC-OSL with the energy-based classifier effectiveness of the EBM classifier, we replace the EBM clasreplaced by a conventional softmax classifier. sification head with a conventional softmax confidence-based
+ In the closed-set scenario, several ablation configurations classifier and extend the classification task to a Ck + 1 setting
+are analyzed to assess the contributions of different feature to simulate open-set scenarios. In this setting, the softmax
+extraction components, including “w/o BFE”, “w/o header”, approach achieves an AUC of only 89.65%. Furthermore,
+“w/o payload”, and “w/o FIE”, as shown in Table III. The we visualize the distribution of softmax confidence scores
+complete FEC-OSL model achieves optimal performance, and EBM energy values for known and unknown class flows
+demonstrating the effectiveness of combining all the compo- under both methods, as depicted in Figure 11. The results
+nents. Removing the byte-level flow feature extraction branch indicate that under the conventional softmax approach, the
+reduces the F1 score by 1.80%, highlighting its role in confidence scores for known flows cluster tightly within a
+capturing fine-grained patterns in encrypted traffic. Removing high confidence range (0.8 1.0), whereas those for unknown
+header features results in the largest performance decrease flows are mainly at lower confidence levels. However, there
+(2.61%), highlighting the critical role of structured header is significant overlap between these distributions, highlighting
+information. In contrast, removing payload features causes that the softmax method is prone to misclassifying unknown
+a smaller decrease (1.52%), as payload features alone are flows with high confidence in open-set tasks. In contrast,
+less useful and may introduce noise when combined with the EBM method clearly separates known and unknown
+flow interaction features. Removing flow interaction features distributions with distinctly defined energy boundaries and
+reduces the F1 score by 2.29%, further confirming their minimal overlap. These findings demonstrate the inherent limsignificance. Overall, the results show that byte-level and flow itation of softmax normalization in reliably rejecting unseen
+interaction features are complementary, and their integration classes, whereas the EBM approach explicitly captures global
+improves classification accuracy. distribution differences between known and unknown flows,
+ In the open-set scenario, we additionally evaluate the significantly enhancing robustness and generalization in openperformance under the “w/Softmax” setting to analyze the set recognition.
+impact of the EBM classifier. The results are shown in
+Table IV, where Kn/Unk, Kn, and Unk represent the tasks of
+known/unknown class distinction, known class classification, G. Sensitivity Analysis
+and unknown class clustering, respectively. Removing the BFE To investigate the impact of hyperparameters on the perand FIE significantly reduces the AUC for known/unknown formance of the FEC-OSL model, we conduct an in-depth
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1359
+
+ of consecutive packets selected from a flow. We evaluate the
+ impact of different numbers of nodes on the performance of
+ FEC-OSL, and the results are shown in Figure 12(c). The
+ results indicate that the overall impact of the number of nodes
+ on performance is relatively small. When the number of nodes
+ is low (e.g., 10 or 20), the performance is slightly reduced
+ because of insufficient feature capture. The model achieves
+ the best performance when the number of nodes is set to
+ 30. However, when the number of nodes increases to 40,
+ the performance decreases. Therefore, setting Nv = 30 is an
+ optimal configuration.
+ 3) Energy Threshold: We evaluate the impact of different
+ quantile levels used to determine the energy threshold τ on the
+ performance of FEC-OSL using the USTC-TFC-2016 dataset
+ with a known/unknown class ratio of 16:4. The experimental
+ results are shown in Figure 12(d). Varying the quantile level
+ significantly affects the model’s F1 score and AUC. When the
+ quantile is low (e.g., between 0.1 and 0.5), the corresponding
+ thresholds yield stable and near-optimal performance. However, as the quantile increases further (e.g., above 0.5), the
+ performance gradually decreases. These results suggest that
+ lower quantile levels lead to more effective separation between
+ known and unknown flows. Therefore, selecting a quantile
+ level of 0.1 to derive the energy threshold τ is a reasonable
+ choice.
+ 4) Temperature Parameter: The temperature parameter T
+ serves to smooth the model’s output logits and to regulate the
+ sensitivity of the energy function. We evaluate its impact on
+ FEC-OSL through a grid search to determine the optimal value
+ Fig. 12. Impact of various hyperparameters on FEC-OSL performance.
+ of T . We perform a grid search over the range from 10−2 to
+ 102 with logarithmic step sizes, resulting in the candidate set
+sensitivity analysis on the USTC-TFC-2016 dataset. The ana- {0.01, 0.1, 1.0, 10, 100}. Each candidate is experimentally
+lyzed parameters include the dimensions of the flow header evaluated, and the optimal value is selected based on the AUC
+matrix mch and payload matrix mcp , the number of nodes in the performance in distinguishing between known and unknown
+flow interaction graph Nv , and the energy threshold τ used to classes. As shown in Figure 12(e), the model achieves the best
+distinguish between known and unknown classes. separation performance when T = 10. Therefore, T = 10 is
+ 1) Flow Header/Payload Matrix Dimension: In the dual- adopted as the optimal temperature parameter.
+branch flow feature extraction module, we evaluate the 5) Energy-Boundary Parameters: The parameters mk and
+model’s performance under different matrix dimensions. As mau are used to explicitly define the upper and lower bounds
+illustrated in Figure 12(a), smaller flow header matrix dimen- of energy values for known and unknown classes, respectively.
+sions (e.g., 10×10) lead to slightly lower performance because We construct the candidate set for mk based on the mean
+of insufficient information representation, resulting in informa- energy of known class flows in the training set and apply
+tion loss. Increasing the size to 20 × 20 significantly enhances empirically determined downwards offsets in steps of 2 to genthe performance, achieving an F1 score of 99.59%. Beyond erate values {−8, −10, −12, −14, −16}. Similarly, we build
+this point, performance stabilizes with minimal fluctuations, the candidate set for mau from the mean energy of auxiliary
+indicating that mch = 20 is sufficient to represent traffic packet unknown class flows and apply an upwards offset in steps of 1
+headers, whereas larger sizes introduce redundancy without to produce values {−7, −6, −5, −4, −3}. We then evaluate all
+notable gains. Similarly, Figure 12(b) shows the performance the valid combinations (mk , mau ) formed from these sets. To
+of FEC-OSL with different flow payload matrix dimensions. maintain a clear margin between known and unknown energy
+As the matrix size increases from 20 × 20 to 50 × 50, the distributions, we impose a constraint such that mau > mk . The
+performance generally tends to improve, especially reaching experimental results are shown in Figure 13, where parameter
+the best performance at 40×40. Therefore, mcp = 40 is selected combinations with a margin |mau − mk | ∈ [5, 7] consistently
+because it provides a good trade-off between performance and lead to higher AUC values. Among these, the combination
+computational cost. of mk = −10 and mau = −5 results in the best performance,
+ 2) Number of Nodes in the Flow Interaction Graph: In the with the most distinct separation between known and unknown
+flow interaction feature extraction branch, the number of nodes energy distributions. We therefore select this setting as the final
+Nv in the flow interaction graph Nv corresponds to the number configuration for energy-boundary regularization.
+1360 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ VI. C ONCLUSION
+ In this study, we propose a novel end-to-end multitask
+ encrypted traffic classification method, FEC-OSL, designed
+ for open-set scenarios, to achieve fine-grained classification
+ of both known and unknown traffic. The method begins with
+ a dual-branch flow feature extraction module, which extracts
+ both byte-level and interaction-level features to capture finegrained discriminative information within traffic flows. Next,
+ we introduce an energy-based model that maps traffic features
+ to energy values, enabling precise classification of known
+ traffic and effective identification of unknown traffic through
+Fig. 13. Impact of energy-boundary parameter combinations (mk , mu ) on energy-boundary learning. Finally, we integrate feature learnopen-set recognition performance. The x-axis represents the absolute margin ing with clustering techniques to achieve further fine-grained
+|mau − mk |, while the y-axis shows the AUC values for each parameter pair. classification of unknown traffic.
+The color of each point represents the corresponding performance, with darker
+shades indicating a higher AUC. Extensive experiments on widely used benchmark datasets
+ demonstrate the significant performance advantages of the proposed method in both known traffic classification and unknown
+ V. D ISCUSSION traffic identification. In future work, we plan to further explore
+ In this section, we analyze and discuss the FEC-OSL test-time training/adaptation approaches to enable the model
+framework in terms of feature separability, model scalability to dynamically adjust its parameters through adaptive learning
+and robustness, and methodological limitations. during the testing phase. This will enhance the model’s ability
+ to address entirely new and unknown traffic patterns, improv-
+A. Feature Representation and Class Separability ing its robustness and effectiveness in recognizing evolving
+ Effective open-world encrypted traffic classification relies attack strategies. Ultimately, this research aims to provide
+on constructing a feature space where known and unknown more reliable and flexible solutions for network security.
+classes are clearly distinguishable. FEC-OSL employs a dualbranch feature extractor that captures both byte-level and R EFERENCES
+interaction-level features. The convolution-enhanced trans-
+ [1] F. Santoso and A. Finn, “An in-depth examination of artificial
+former models fine-grained structural patterns, while the flow intelligence-enhanced cybersecurity in robotics, autonomous systems,
+interaction graph captures temporal and directional dependen- and critical infrastructures,” IEEE Trans. Services Comput., vol. 17,
+cies via graph convolution. These features are complementary no. 3, pp. 1293–1310, May 2024.
+ [2] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+and, under the joint supervision of classification and clustering traffic analysis applications, techniques, and countermeasures,” ACM
+losses, promote tighter intraclass cohesion and clearer inter- Comput. Surv., vol. 54, no. 6, pp. 1–35, Jul. 2022.
+class boundaries. This representation improves both known [3] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification:
+class classification and unknown class clustering. An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81, May
+ 2019.
+ [4] M. Shen, M. Wei, L. Zhu, and M. Wang, “Classification of
+B. Scalability and Robustness encrypted traffic with second-order Markov chains and application
+ attribute bigrams,” IEEE Trans. Inf. Forensics Security, vol. 12, no. 8,
+ The byte matrix and interaction graph, used in the dual- pp. 1830–1843, Aug. 2017.
+branch feature extraction module, are constructed with fixed [5] Z. Ling, J. Luo, K. Wu, W. Yu, and X. Fu, “TorWard: Discovery of
+dimensions, ensuring consistent per-flow computation. The malicious traffic over tor,” in Proc. IEEE Conf. Comput. Commun.
+ (INFOCOM), Apr. 2014, pp. 1402–1410.
+overall cost scales linearly with the number of flows, support- [6] N. Hua, H. Song, and T. V. Lakshman, “Variable-stride multi-pattern
+ing the scalability of the framework to large traffic volumes. matching for scalable deep packet inspection,” in Proc. IEEE Conf.
+In concept drift evaluations, FEC-OSL maintains stable per- Comput. Commun. (INFOCOM), Apr. 2009, pp. 415–423.
+ [7] Zscaler ThreatLabz. (Dec. 2023). 2023 State of Encrypted Attacks
+formance, demonstrating adaptability to shifting traffic patterns Report. Zscaler. [Online]. Available: https://www.zscaler.com/resources/
+and robustness in real-world environments. industry-reports/threatlabz-2023-state-of-encrypted-attacks-report.pdf
+ [8] R. R. Jagat, D. S. Sisodia, and P. Singh, “Detecting web attacks from
+ HTTP weblogs using variational LSTM autoencoder deviation network,”
+C. Limitations and Future Work IEEE Trans. Services Comput., vol. 17, no. 5, pp. 2210–2222, Sep.
+ FEC-OSL currently depends on the first 30 packets for 2024.
+ [9] T. van Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting
+byte-level features, which may fail to capture late-stage on encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp.
+attack behaviors. Future work may explore variable-length (NDSS), Feb. 2020, pp. 1–18.
+or context-aware flow modeling. Moreover, the dual-branch [10] X. Hu, W. Gao, G. Cheng, R. Li, Y. Zhou, and H. Wu, “Toward early
+ and accurate network intrusion detection using graph embedding,” IEEE
+feature extraction and clustering processes may introduce Trans. Inf. Forensics Security, vol. 18, pp. 5817–5831, 2023.
+additional computational overhead, which could limit the [11] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+applicability of the method in low-latency or resource- packet: A novel approach for encrypted traffic classification using deep
+ learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020.
+constrained environments. Exploring lightweight alternatives [12] Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+or approximation strategies could help reduce the overall enhanced intrusion detection,” IEEE Trans. Netw. Service Manage.,
+computational burden. vol. 19, no. 4, pp. 4232–4247, Dec. 2022.
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING 1361
+
+[13] E. M. Rudd, A. Rozsa, M. Günther, and T. E. Boult, “A survey of stealth [36] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage
+ malware attacks, mitigation measures, and steps toward autonomous fingerprinting using only packet length information of encrypted traffic,”
+ open world solutions,” IEEE Commun. Surveys Tuts., vol. 19, no. 2, IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021.
+ pp. 1145–1172, 2017. [37] J. Du, S. Zhang, G. Wu, J. M. F. Moura, and S. Kar, “Topology adaptive
+[14] W. J. Scheirer, A. de Rezende Rocha, A. Sapkota, and T. E. Boult, graph convolutional networks,” in Proc. Int. Conf. Learn. Represent.
+ “Toward open set recognition,” IEEE Trans. Pattern Anal. Mach. Intell., (ICLR), 2017, pp. 1–13.
+ vol. 35, no. 7, pp. 1757–1772, Jul. 2013. [38] W. Grathwohl et al., “Your classifier is secretly an energy-based model
+[15] J. Jia and P. K. Chan, “Representation learning with function call graph and you should treat it like one,” in Proc. Int. Conf. Learn. Represent.
+ transformations for malware open set recognition,” in Proc. Int. Joint (ICLR), Apr. 2020, pp. 1–23.
+ Conf. Neural Netw. (IJCNN), Jul. 2022, pp. 1–8. [39] R. Peng, H. Zou, H. Wang, Z. YaWen, Z. Huang, and J. Zhao, “Energy-
+[16] S. Dang, Z. Cao, Z. Cui, Y. Pi, and N. Liu, “Open set incremental based automated model evaluation,” in Proc. Int. Conf. Learn. Represent.
+ learning for automatic target recognition,” IEEE Trans. Geosci. Remote (ICLR), May 2024, pp. 1–39.
+ Sens., vol. 57, no. 7, pp. 4445–4456, Jul. 2019. [40] C. Lai, D. N. P. Murthy, and M. Xie, “Weibull distributions and their
+[17] Z. Zhao, Z. Li, Z. Song, W. Li, and F. Zhang, “Trident: A univer- applications,” in Springer Handbooks. Cham, Switzerland: Springer,
+ sal framework for fine-grained and class-incremental unknown traffic 2006, pp. 63–78.
+ detection,” in Proc. ACM Web Conf., May 2024, pp. 1608–1619. [41] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ classification using convolutional neural network for representation
+[18] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, and J. Weng, “Seeing traffic
+ learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+ paths: Encrypted traffic classification with path signature features,” IEEE
+ [42] Canadian Institute for Cybersecurity. (2018). CSE-CIC-IDS2018 on
+ Trans. Inf. Forensics Security, vol. 17, pp. 2166–2181, 2022.
+ AWS. Canadian Institute for Cybersecurity. [Online]. Available: https://
+[19] H. Jiang, B. Kim, M. Y. Guan, and M. R. Gupta, “To trust or not to trust www.unb.ca/cic/datasets/ids-2018.html
+ a classifier,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS), 2018, [43] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani,
+ pp. 5546–5557. “Characterization of Tor traffic using time based features,” in Proc. 3rd
+[20] D. Hendrycks, “A baseline for detecting misclassified and out- Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), Feb. 2017, pp. 253–262.
+ ofdistribution examples in neural networks,” in Proc. Int. Conf. Learn. [44] H. Y. He, Z. Guo Yang, and X. N. Chen, “PERT: Payload encoding
+ Represent. (ICLR), Apr. 2017, pp. 1–12. representation from transformer for encrypted traffic classification,” in
+[21] J. Zhang, F. Li, F. Ye, and H. Wu, “Autonomous unknown-application Proc. ITU Kaleidoscope, Ind.-Driven Digit. Transformation (ITU K),
+ filtering and labeling for DL-based traffic classifier update,” in Proc. Dec. 2020, pp. 1–8.
+ IEEE Conf. Comput. Commun. (INFOCOM), Jul. 2020, pp. 397–405. [45] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+[22] J. Yang, X. Chen, S. Chen, X. Jiang, and X. Tan, “Conditional contextualized datagram representation with pre-training transformers
+ variational auto-encoder and extreme value theory aided two-stage for encrypted traffic classification,” in Proc. ACM Web Conf., Apr. 2022,
+ learning approach for intelligent fine-grained known/unknown intrusion pp. 633–642.
+ detection,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 3538–3553,
+ 2021.
+[23] M. Ester, H. Kriegel, J. Sander, and X. Xu, “A density-based algorithm for discovering clusters in large spatial databases with noise,”
+ in Proc. 2nd Int. Conf. Knowl. Discovery Data Mining (KDD), 1996,
+ pp. 226–231.
+ Qian Yang received the M.S. degree from Nan-
+[24] A. M. Ikotun, A. E. Ezugwu, L. Abualigah, B. Abuhaija, and J. Hem- jing University of Posts and Telecommunications
+ ing, “K-means clustering algorithms: A comprehensive review, variants (NJUPT) in 2021, where she is currently pursuing
+ analysis, and advances in the era of big data,” Inf. Sci., vol. 622, the Ph.D. degree with the School of Computer
+ pp. 178–210, Apr. 2023. Science. Her main research interests include network
+[25] Q. Zhou, L. Wang, H. Zhu, T. Lu, and V. S. Sheng, “WF-transformer: security and encrypted traffic classification.
+ Learning temporal features for accurate anonymous traffic identification
+ by using transformer networks,” IEEE Trans. Inf. Forensics Security,
+ vol. 19, pp. 30–43, 2024.
+[26] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ ensemble of autoencoders for online network intrusion detection,” in
+ Proc. Netw. Distrib. Syst. Secur. Symp. (NDSS), Feb. 2018, pp. 1–15.
+[27] L. Yang et al., “CADE: Detecting and explaining concept drift samples
+ for security applications,” in Proc. 30th USENIX Secur. Symp. (USENIX
+ Secur.), Aug. 2021, pp. 2327–2344.
+[28] X. Han et al., “ContraMTD: An unsupervised malicious network traffic Wenxuan He received the B.S. degree from Nanjing
+ detection method based on contrastive learning,” in Proc. ACM Web University of Information Science and Technology,
+ Conf., May 2024, pp. 1680–1689. Nanjing, China, in 2023. She is currently pursu-
+[29] X. Han et al., “DE-GNN: Dual embedding with graph neural network for ing the M.S. degree with the School of Computer
+ fine-grained encrypted traffic classification,” Comput. Netw., vol. 245, Science, Nanjing University of Posts and Telecom-
+ May 2024, Art. no. 110372. munications. Her research interests include artificial
+[30] H. Zhang et al., “TFE-GNN: A temporal fusion encoder using graph intelligence and encrypted traffic classification.
+ neural networks for fine-grained encrypted traffic classification,” in Proc.
+ ACM Web Conf., Apr. 2023, pp. 2066–2075.
+[31] X. Han, S. Liu, J. Liu, B. Jiang, Z. Lu, and B. Liu, “ECNet:
+ Robust malicious network traffic detection with multi-view feature and
+ confidence mechanism,” IEEE Trans. Inf. Forensics Security, vol. 19,
+ pp. 6871–6885, 2024.
+[32] A. Dosovitskiy et al., “An image is worth 16x16 words: Transformers
+ for image recognition at scale,” in Proc. Int. Conf. Learn. Represent.
+ (ICLR), May 2021, pp. 1–22. Minghao Chen received the B.S. degree from the
+[33] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf. Southwest University of Science and Technology,
+ Process. Syst. (NeurIPS), vol. 30, 2025, pp. 5998–6008. Sichuan, China, in 2024. He is currently pursuing the
+[34] Y.-H. Cao, H. Yu, and J. Wu, “Training vision transformers with M.S. degree with the School of Computer Science,
+ only 2040 images,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2022, Nanjing University of Posts and Telecommunicapp. 220–237. tions. His research interests include deep learning
+[35] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decen- and network intrusion detection.
+ tralized application identification via encrypted traffic analysis using
+ graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+ pp. 2367–2380, 2021.
+1362 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Hongyu Du received the B.S. degree from Nan- Shangdong Liu received the Ph.D. degree from
+ jing University of Posts and Telecommunications Southeast University in 2019. He is currently a Lec-
+ (NJUPT) in 2023, where he is currently pursuing the turer with the School of Computer Science, Nanjing
+ Ph.D. degree with the School of Computer Science. University of Posts and Telecommunications. His
+ His research interests include vulnerability detection main research interests include network behavior
+ and cyberspace threat sensing. analysis, big data, and AI. He has published more
+ than 20 high-level papers. His research interests
+ include cyberspace security, big data, and artificial
+ intelligence.
+
+ Yimu Ji received the Ph.D. degree from Nanjing
+ University of Posts and Telecommunications
+ (NJUPT) in 2007. He is currently a Professor
+ with the School of Computer Science,
+ NJUPT. His main research interests include
+ Sisi Shao received the master’s degree from Nan- security and applications in cloud computing,
+ jing University of Posts and Telecommunications big data, the IoT, and AI. He has presided over
+ (NJUPT) in 2021, where she is currently pursu- and participated in many national, provincial, and
+ ing the Ph.D. degree with the School of Internet ministerial projects; obtained seven provincial and
+ of Things. Her main research interests include municipal science and technology progress awards;
+ cyberspace security and endogenous safety. published and employed more than 30 SCI papers;
+ and obtained 15 authorized invention patents.
+
+ Kui Ren (Fellow, IEEE) is currently a Qiushi Chair
+ Professor with Zhejiang University, AAAS, ACM,
+ and CCF. He is also the Dean of the College of
+ Computer Science and Technology, Zhejiang University, and the Executive Deputy Director of the State
+ Key Laboratory of Blockchain and Data Security.
+ His main research interests include data security
+ Fei Wu received the Ph.D. degree in information and privacy protection, AI security, and security in
+ and communication engineering from Nanjing Uni- intelligent devices and vehicular networks. He has
+ versity of Posts and Telecommunications (NJUPT), presided over major domestic and foreign scientific
+ China, in 2016. Currently, he is a Professor with the research projects, such as the Ministry of Science
+ College of Automation and the College of Artificial and Technology, the National Natural Science Foundation of China, and the
+ Intelligence, NJUPT. He has authored more than 40 National Science Foundation, USA. He was a recipient of the First Prize of
+ scientific papers. His research interests include arti- Zhejiang Provincial Natural Science Award, the First Prize in Natural Science
+ ficial intelligence and cyber science and technology. of the Chinese Institute of Electronics Science and Technology Award, and the
+ CISTC Technology Achievement Award of the IEEE Communications Society. He has published more than 400 peer-reviewed journals and conference
+ articles, with an H-Index of 94 and more than 48 000 citations.

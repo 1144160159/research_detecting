@@ -1,0 +1,155 @@
+16840                                          IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+
+Guarding Graph Neural Networks for Unsupervised
+           Graph Anomaly Detection
+                    Yuanchen Bei , Sheng Zhou , Jinke Shi, Yao Ma, Member, IEEE, Haishuai Wang,
+                                           and Jiajun Bu , Member, IEEE
+
+
+
+   Abstract—Unsupervised graph anomaly detection aims at                          V                     Set of nodes in G.
+identifying rare patterns that deviate from the majority in                       E                     Set of edges in G.
+a graph without the aid of labels, which is important for a                       Ni                    Neighborhood set of node vi .
+variety of real-world applications. Recent advances have uti-
+lized graph neural networks (GNNs) to learn effective node
+                                                                                  n = |V|               Number of nodes in G.
+representations by aggregating information from neighborhoods.                    d                     Dimension of node attributes in G.
+This is motivated by the hypothesis that nodes in the graph                       k                     Number of graph anomalies in G.
+tend to exhibit consistent behaviors with their neighborhoods.                    Y                     Anomaly label set of nodes.
+However, such consistency can be disrupted by graph anomalies                     S                     Anomaly score vector indicating node
+in multiple ways. Most existing methods directly employ GNNs to                                         abnormalities.
+learn representations, disregarding the negative impact of graph
+anomalies on GNNs, resulting in suboptimal node representa-
+tions and anomaly detection performance. While a few recent                                               I. I NTRODUCTION
+approaches have redesigned GNNs for graph anomaly detection
+                                                                                      RAPH anomaly detection aims to identify rare patterns
+under semi-supervised label guidance, how to address the adverse
+effects of graph anomalies on GNNs in unsupervised scenarios
+and learn effective representations for anomaly detection are still
+                                                                               G      or behaviors that significantly deviate from the majority
+                                                                               of a graph [1], [2], [3]. It has attracted increasing attention
+underexplored. To bridge this gap, in this article, we propose a
+simple, yet effective framework for guarding GNNs for unsu-
+                                                                               from both academia and industry due to its practical applica-
+pervised graph anomaly detection (G3AD). Specifically, G3AD                    tions, such as network intrusion detection [1], social spammer
+first introduces two auxiliary networks along with correlation                 detection [4], and financial fraud detection [5]. The scarcity
+constraints to guard the GNNs against inconsistent information                 of anomaly labels in real-world applications, coupled with the
+encoding. Furthermore, G3AD introduces an adaptive caching                     challenge of acquiring such labels, has led to a widespread
+(AC) module to guard the GNNs from directly reconstructing                     study of unsupervised graph anomaly detection [6], [7]. Pio-
+the observed graph data that contains anomalies. Exten-
+sive experiments demonstrate that our G3AD can outperform                      neer works on graph anomaly detection have separately mined
+20 state-of-the-art methods on both synthetic and real-world                   the attributed anomalies and topological anomalies by feature
+graph anomaly datasets, with flexible generalization ability in                engineering and graph structure encoding, respectively [8], [9].
+different GNN backbones.                                                       Recent breakthroughs in graph neural networks (GNNs) have
+  Index Terms—Graph anomaly detection, graph learning, graph                   empowered the unified modeling of attributes and topology,
+neural networks (GNNs), unsupervised anomaly detection.                        leading to significant advancements in unsupervised graph
+                                                                               anomaly detection [10], [11], [12].
+                          N OMENCLATURE                                           The success of representative GNNs, as illustrated in
+  Abbreviation          Expansion                                              Fig. 1(a), has heavily relied on aggregating information
+  G = ( A, X)           Attributed graph with anomalies.                       from neighborhoods sharing similar patterns, for example,
+  A                     Graph adjacency matrix.                                label homophily and feature consistency [13], [14]. Although
+  X                     Node attribute matrix.                                 successful, in graphs with anomalies, we argue that this foun-
+                                                                               dation can be easily undermined by various graph anomalies
+  Received 25 April 2024; revised 20 February 2025; accepted 4 May 2025.       in multiple ways [15]. Fig. 1(b)–(d) illustrates toy examples
+Date of publication 29 May 2025; date of current version 4 September 2025.
+This work was supported in part by the National Natural Science Foundation     of the three main types of graph anomaly impacts on GNNs.
+of China under Grant 62476245 and in part by Zhejiang Provincial Natural          1) As illustrated in Fig. 1(b), the attributed-induced anoma-
+Science Foundation of China under Grant LTGG23F030005. (Corresponding
+author: Sheng Zhou.)                                                                  lies where node features are corrupted, such as the
+  Yuanchen Bei, Jinke Shi, and Haishuai Wang are with the College                     account takeover in social networks, will directly result
+of Computer Science and Technology, Zhejiang University, Hangzhou                     in aggregating incorrect information from neighbor-
+310058, China (e-mail: yuanchenbei@zju.edu.cn; shijinke@zju.edu.cn;
+haishuai.wang@zju.edu.cn).
+                                                                                      hoods.
+  Sheng Zhou and Jiajun Bu are with Zhejiang Key Laboratory of Accessible         2) As illustrated in Fig. 1(c), the topological-induced
+Perception and Intelligent Systems, Zhejiang University, Hangzhou 310058,             anomalies that connect to incorrect neighborhoods,
+China (e-mail: zhousheng zju@zju.edu.cn; bjj@zju.edu.cn).                             such as the fraudsters in E-commerce systems, will
+  Yao Ma is with the Department of Computer Science, Rensselaer Polytech-
+nic Institute, Troy, NY 12180 USA (e-mail: majunyao@gmail.com).                       result in aggregating information from inconsistent
+  Digital Object Identifier 10.1109/TNNLS.2025.3569526                                neighborhoods.
+             2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+BEI et al.: GUARDING GRAPH NEURAL NETWORKS FOR UNSUPERVISED GRAPH ANOMALY DETECTION                                                                16841
+
+
+
+
+                                                                               Fig. 2. Concept maps between the (a) existing GNN-based unsupervised graph
+                                                                               anomaly detection paradigm and (b) our proposed GNN-guarded unsupervised
+                                                                               graph anomaly detection paradigm.
+
+
+
+                                                                               observed graph with anomalies, G3AD first introduces two
+Fig. 1. Toy examples of GNN message passing on clear graphs and the graphs     auxiliary encoders tailored with correlation constraints to
+under three types of anomaly impacts. (a) Clean graph; (b) attribute-induced
+anomaly; (c) topology-induced anomaly; and (d) mixed anomalies.                guard the GNNs against encoding inconsistent information.
+                                                                               Subsequently, to optimize GNNs in an unsupervised manner
+   3) More seriously, as illustrated in Fig. 1(d), the mixed                   and detect multiple types of unknown anomalies, G3AD
+       anomalies that simultaneous occurrence of multiple                      proposes a comprehensive learning objective that includes both
+       anomaly types is a more common situation and will have                  local attribute/topology reconstruction and global consistency
+       a significantly more detrimental impact on GNNs.                        alignment, which also serves as anomaly scoring. During
+                                                                               this process, to avoid directly reconstructing the observed
+Existing unsupervised graph anomaly detection methods
+                                                                               graph with anomalies G3AD introduces an adaptive caching
+have primarily focused on designing effective unsupervised
+                                                                               (AC) module to guard the GNNs from misleading learn-
+anomaly scoring functions in the representation space learned
+                                                                               ing objectives during model training. Fig. 2 illustrates the
+directly from GNNs while overlooking the negative impact
+                                                                               comparison between the existing GNN-based unsupervised
+of anomalies on the inherent GNNs themselves [3], [16],
+                                                                               graph anomaly detection paradigm and the one under G3AD
+[17]. This is crucial for accurate anomaly detection, which
+                                                                               framework. Extensive experiments on both four synthetic and
+is indispensable to discriminative node representations. Under
+                                                                               two real-world graph anomaly datasets demonstrate that G3AD
+this limitation, the representation learning ability of GNNs is
+                                                                               outperforms 20 state-of-the-art unsupervised graph anomaly
+hampered from adequately capturing normal patterns in the
+                                                                               detection models. Further in-depth analysis from diverse per-
+graph, thereby leading to suboptimal representation learning
+                                                                               spectives also demonstrates the strengths of G3AD. The main
+and anomaly detection performance. Hence, it is crucial to
+                                                                               contributions of this article are summarized as follows.
+alleviate the negative impact of anomalies and fully release
+the power of GNNs for anomaly detection.                                          1) We emphasize the negative impact of unknown anoma-
+   Although important, addressing the negative impacts of                             lies on GNNs, which is crucial for graph anomaly
+graph anomalies on GNNs in unsupervised scenarios is non-                             detection under unsupervised settings while overlooked
+trivial. An intuitive solution might involve the development                          by most existing unsupervised works.
+of innovative GNNs that adapt to certain graph anomalies.                         2) We propose G3AD, a simple yet effective framework
+This has attracted increasing attention, and a few very recent                        to guard GNNs from encoding inconsistent information
+works have achieved tremendous success in semi-supervised                             and directly reconstructing the abnormal graph in unsu-
+scenarios [18], [19]. However, the lack of labels in unsu-                            pervised graph anomaly detection.
+pervised anomaly detection poses a significant challenge in                       3) We conduct extensive experiments on 20 widely used
+guiding the redesign of GNNs, which is more commonly                                  datasets, including both synthetic and real-world scenar-
+encountered in practice. More importantly, while anomalies                            ios. Experimental results show that the proposed G3AD
+do exist on the graph and exert certain effects on GNNs, they                         outperforms 20 state-of-the-art baselines.
+account for only a small fraction of the total. The majority                      In the following sections, we will first review the previous
+of patterns remain normal and can be effectively captured                      work related to our method in Section II. Second, we will give
+by GNNs. Therefore, a complete redesign or deprecation                         some key preliminaries of our work in Section III. Then, the
+of GNNs could risk compromising the identification of the                      detailed description of the proposed G3AD will be introduced
+majority of normal patterns due to the influence of a minor                    in Section IV. To further verify the effectiveness of G3AD,
+proportion of anomalies, especially in unsupervised contexts.                  we conduct various experiments in Section V. Finally, the
+Therefore, how to reduce the impact of anomalies on GNNs                       conclusion of this article is posed in Section VI.
+while enabling them to capture the majority of normal patterns
+effectively and aid in unsupervised anomaly detection?                                                II. R ELATED W ORKS
+   To answer the above underexplored research question, in
+this article, we propose a simple, yet effective framework                     A. Graph Neural Networks
+for guarding graph neural networks for unsupervised graph                        GNNs are a series of deep learning models specifically
+anomaly detection (G3AD). Instead of directly encoding the                     designed for processing graph-structured data [20], [21]. The
+16842                                 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+core design of GNNs is to learn node representations by aggre-     4) Graph Contrastive Learning Methods: CoLA [42]
+gating and propagating information from neighborhoods to the           exploits the local information and introduces a self-
+central nodes. This information propagation (message passing)          supervised graph contrastive learning method to detect
+allows GNNs to capture complex topology dependencies and               anomalies. Furthermore, ANEMONE [43] utilizes the
+contextual information among nodes [22], [23].                         graph contrastive learning method at multiple scales.
+   Typically, in GNNs, each node has an initial feature repre-         SL-GAD [16] further performs anomaly detection from
+sentation, and through multiple layers of message aggregation          both generat

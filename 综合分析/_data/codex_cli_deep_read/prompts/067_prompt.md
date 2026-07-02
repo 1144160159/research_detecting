@@ -1,0 +1,845 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [067] Traffic Classification of User Behaviors in Tor, I2P, ZeroNet, Freenet
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：067
+题名：Traffic Classification of User Behaviors in Tor, I2P, ZeroNet, Freenet
+年份：2020
+DOI：10.1109/trustcom50675.2020.00064
+来源：2020 IEEE 19th International Conference on Trust, Security and Privacy in Computing and Communications (TrustCom)
+PDF：paper/10.1109_trustcom50675.2020.00064.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 12
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\067.txt
+- 原始字符数：35226
+- 本次发送字符数：35226
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+2020 IEEE 19th International Conference on Trust, Security and Privacy in Computing and Communications (TrustCom)
+
+Trafﬁc Classiﬁcation of User Behaviors in Tor, I2P,
+ZeroNet, Freenet
+Yuzong Hu1 , Futai Zou2 (*), Linsen Li3 , Ping Yi4
+School of Cyber Science and Engineering, Shanghai Jiao Tong University, Shanghai 200240, China
+{huyz97,zoufutai,lsli,yiping}@sjtu.edu.cn
+ﬁeld that worth further study. According to our knowledge,
+there are few studies on the analysis of user behavior in
+darknet, especially for the new type of darknet(like ZeroNet)
+and new applications in mature darknets. For this reason, we
+conducted research on darknet trafﬁc classiﬁcation, and reﬁned
+the granularity of classiﬁcation to the level of user behavior.
+The foundation of darknet trafﬁc research lies in dataset,
+the lack of public datasets is also a challenge for study. Many
+previous works[13] are based on dataset captured in simulation
+environments which can not represent the trafﬁc in the real
+world. However, the author of the dataset generated in real
+environments[14] often refuses to make it public due to privacy
+considerations. To overcome this challenge, we deployed trafﬁc collecting probes in the real darknet environment to capture
+and label user behaviors trafﬁc by ourselves. After researching
+on the possible users behaviors in Tor, I2P, ZeroNet, Freenet,
+we divide user behaviors into 8 categories: Browsing, Chat,
+E-mail, Audio-streaming, Video-streaming, File Transfer, P2P,
+VoIP. The dataset we used in experiment has been published
+on the web after anonymization.
+When the trafﬁc classiﬁcation is extended to the level
+of user behaviors for 4 types of darknet, the number of
+classiﬁcation categories becomes a new problem for training
+(In this paper, there is 25 types of user behaviors). In order to
+improve the accuracy of identiﬁcation and avoid the mistake
+of recognizing Tor’s File Transfer behavior as Freenet’s Web
+Browsing behavior, we purposed a hierarchical classiﬁcation
+method with three layers. The hierarchical classiﬁer we trained
+ﬁrst determines whether it is darknet trafﬁc, then determines
+the type of darknet, and ﬁnally predicts what user behavior is.
+The accuracy of darknet trafﬁc classiﬁcation is 99.42%, and
+the accuracy of darknet type classiﬁcation is 96.9%, while the
+accuracy of user behavior classiﬁcation is 91.6% on average.
+The experiment show that the hierarchical classiﬁer performs
+better than the best ﬂat classiﬁer.
+In the procedure of training local classiﬁers of the hierarchical classiﬁer, we considered six machine learning algorithms(LR, DT, RF, GBDT, XGBoost, LightGBM) and two
+deep learning algorithms(MLP, LSTM) to test which algorithm
+is more suitable for the darknet trafﬁc scenario. The results
+show that ML classiﬁers generally perform better than DL
+classiﬁers when the feature extraction can well represent the
+characteristics of trafﬁc (In this paper, we extract 26 timebased ﬂow feature from pcap for training). Among them,
+XGBoost algorithm performs the best, which is also used as
+
+Abstract—In recent years, more and more anonymous network
+have been developed. Since user’s identity is difﬁcult to trace in
+anonymous networks, many illegal activities are carried out in
+darknet. In this paper, we propose a hierarchical classiﬁer of
+darknet trafﬁc which can distinguish four types of darknet(Tor,
+I2P, ZeroNet, Freenet) and 25 darknet users’ behavior. Due to the
+lack of public datasets, we deployed a darknet data probe that can
+capture real darknet trafﬁc in Tor, I2P, ZeroNet, Freenet. After
+collecting and labeling darknet trafﬁc, we extract 26 time-based
+ﬂow features that can represent the characteristics of darknet
+trafﬁc and train a hierarchical classiﬁer constructed by 6 local
+classiﬁers. Results show that the classiﬁer can easily distinguish
+Tor, I2P, ZeroNet, Freenet four kinds of darknet clients with an
+accuracy of 96.9% and identify 8 kinds of user behaviors for
+each type of darknet with an accuracy of 91.6% on average.
+With the help of this hierarchical classiﬁcation method, darknet
+user behaviors can be accurately distinguished at the trafﬁc exit.
+Keywords—Darknet, Trafﬁc Classiﬁcation, User Behavior, Hierarchical Classiﬁcation, Tor, I2P, Freenet, ZeroNet
+
+I. I NTRODUCTION
+Darknet[1] is deﬁned as a kind of network that can only
+be accessed through special conﬁguration, software, authorization, or non-standard communication protocols and ports.
+Addresses of darknet users and the content of communication
+are usually anonymous and hard to trace back. As various
+darknet become more and more mature, darknet has gradually
+become a breeding ground for terrorism and crimes[2]. The
+anonymity of the darknet makes it a trading platform for
+political intelligence and personal privacy data. From the perspective of network administrators, in order to better supervise
+or even block the possible illegal activities in darknet, the
+capability of classiﬁng users’ behavior in darknet is extremely
+needed.
+Among the various darknet developed in recent years, The
+Onion Router(Tor) [3], Invisible Internet Project(I2P) [4],
+ZeroNet [5], Freenet [6] are the most popular. In the trafﬁc
+classiﬁcation of darknet, many studies only focused on a
+single type of darknet, among which the most researched
+is Tor [7][8]. I2P [9] and Freenet [10] are also discussed
+in a similar way. However, these studies did not go deep
+into the level of user behaviors. Montieri et al [11][12] have
+studied the classiﬁcation of three types of darknet(Tor, I2P,
+and JonDonym), and the applications in the three types of
+darknet. But it only covered a small range of applications, and
+performed not well enough(with an accuracy of 66.76%). It
+can be seen that darknet trafﬁc classiﬁctaion is a new research
+978-1-6654-0392-4/20/$31.00 ©2020 IEEE
+DOI 10.1109/TrustCom50675.2020.00064
+
+418
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+the best ﬂat classiﬁer to be compared with our hierarchical
+classiﬁer.
+Contribution. The main contributions of this paper are as
+follows:
+1) Due to the lack of public darknet datasets, we deployed
+trafﬁc collecting probes in the real darknet environment to capture and label 8 kinds of user behavior
+trafﬁc(Browsing, Chat, E-mail, Audio-streaming, Videostreaming, File Transfer, P2P, VoIP) in Tor, I2P, ZeroNet,
+Freenet and published the dataset on the web1 .
+2) We propose a three-layer hierarchical classiﬁcation
+method for Tor, I2P, ZeroNet, Freenet trafﬁc, which can
+reﬁne the granularity to the level of user behavior. Compared with the best ﬂat classiﬁer, hierarchical classiﬁer
+has higher accuracy in the scenario with large number of
+classiﬁcation categories(In this paper, there is 25 types
+of user behaviors).
+3) We considered six machine learning classiﬁers(LR, DT,
+RF, GBDT, XGBoost, LightGBM) and two deep learing
+classiﬁers(MLP, LSTM) for the training of local classiﬁers. The results show that the XGBoost algorithm
+performs best in this darknet scenario. DL algorithm
+does not perform well when the feature extraction can
+well represent the characteristics of trafﬁc. The hierarchical classiﬁer constructed by 6 local classiﬁers has
+an accuracy of 96.9% in darknet type classiﬁcation,
+and an accuracy of 91.6% on average in user behavior
+classiﬁcation.
+The rest of this paper is organized as follows. Section II
+dicusses related works, whereas Section III introduces the
+generation of datasets including the collection of trafﬁc and
+ﬂow features extraction. Section IV describes the algorithms
+used in training our hierarchical classiﬁer. In Section V we
+present the experimental results of 6 local classiﬁers under
+8 algorithms and the comparison between our hierarchical
+classiﬁer and the best ﬂat classiﬁer. Finally, in Section VI,
+the conclusion and future work of this research are outlined.
+
+[18] collected normal HTTPS trafﬁc, Tor HTTPS trafﬁc to
+design an unsupervised classiﬁer based on the length of the
+packet. He Yongzhong et al. [19] adopted a feature matching
+classsiﬁcation method based on SVM for the meek-based Tor
+anonymous trafﬁc. Some typical static and dynamic trafﬁc
+features are extracted, including sequence of sending and
+receiving, length entropy and length variation.
+In recent years, new darknet like I2P and Freenet have
+gradually become another option for anonymous communication. Antonio Montieri et al. [11][12] have studied the
+trafﬁc classiﬁcation of different anonymous communication
+networks. In these two papers, they designed a classiﬁcation
+for Tor, I2P, and JonDonym and compared four algorithms
+Naı̈ve Bayes, Bayesian Network, C4.5, Random Forest.
+Identifying user behavior on darknet plays an important role
+in darknet traceability and management. He Gaofeng et al. [20]
+established HMM model (Hidden Markov Models) to identify
+four types of user behaviors in darknet: P2P, FTP, IM, and
+Web. Rob Jansen et al. [21] proposed the Web Fingerprinting
+(WF) method by deploying it on the Tor middle relay. This
+method can accurately identify which Web site the user visits.
+It can be seen that most of the research on darknet trafﬁc
+focus on a single type of darknet like Tor, less care about
+some nearly-emerged darknet like ZeroNet. In addition, there
+are few studies go deep into the user behavior in darknet.
+Most of them only focus on whether it is darknet trafﬁc, and
+the dataset is often kept in secret which brings difﬁculties to
+further research. In the view of these reason, we conduct indepth research on the issue of user behavior in Tor, I2P, Freenet
+and the emerging darknet, ZeroNet. We collect and publish the
+darknet user behavior dataset, and reﬁnes the granularity of
+darknet trafﬁc identiﬁcation to user behavior so as to advance
+related work.
+III. DATASET G ENERATION
+In this section, we will introduce the generation of dataset
+that used in our experiment, including the procedure of trafﬁc collection and ﬂow feature extraction which can convert
+continuous packets data into discrete feature vectors.
+
+II. R ELATED W ORK
+
+A. Darknet Trafﬁc Collection
+One of the contributions of this paper is the Tor, I2P,
+ZeroNet, Freenet trafﬁc datasets that we used in our experiments. To generate dataset that contains eight types of user
+behaviors trafﬁc(Browsing, Chat, E-mail, Audio-streaming,
+Video-streaming, File Transfer, P2P, VoIP) in four darknets,
+we built four darknet trafﬁc probes and created accounts for
+each darknet to use speciﬁc applications. Following, we give
+a detailed description of eigth types of user behaviors trafﬁc.
+Browsing: Under this label, We simulate web browsing
+behaviors in Tor, I2P, ZeroNet, Freenet. We visit DuckDuckGo, Twitter and other forums, social media, and some
+hidden sites(domains ending in .onion) by Tor proxy; I2P
+forums(i2pforum.i2p), documents(echelon.i2p) and news communities(planet.i2p) with I2P http proxy.index sites(Enzo’s index,ZeroSites), forum(ZeroTalk), blogs(ZeroBlog) in Freenet
+and ZeroNet.
+
+Trafﬁc Classiﬁcation is a very important part of network
+defense, supervision and anomaly detection, so it has been the
+focus of security researchers for many years. JV Gomes[15]
+presented a survey that described existing trafﬁc classiﬁcation
+approaches, including port-based, DPI-based and ﬂow-based
+methods. In this paper, we will focus on the trafﬁc classiﬁcation in darknet scenarios. As darknet trafﬁc is only a drop of
+the bucket compared to Internet trafﬁc, darknet researchers
+ﬁrst pay attention to how to classify darknet trafﬁc from
+the complex Internet trafﬁc. Hodo Elike et al. [16] proposed
+a solution to the classiﬁcation problem of Tor trafﬁc and
+nonTor trafﬁc. In feature extraction, ISCXFlowMeter [17] is
+used to extract time-based features and ﬂow features. Two
+algorithms, ANN and SVM, are selected for experimental
+testing, and the results show a high accuracy. Barker et al.
+1 https://github.com/huyz97/darknet-dataset-2020
+
+419
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE I: Darknet Dataset at User Behavior Granularity
+Darknet
+Type
+Tor
+I2P
+ZeroNet
+Freenet
+
+Browsing
+1281
+1921
+7972
+4990
+
+Chat
+841
+442
+1531
+1123
+
+Email
+553
+1084
+352
+2980
+
+User Behavior
+File Transfer
+P2P
+1077
+1018
+1791
+2910
+2157
+1394
+4897
+-
+
+Email: In Tor, emails through SMTP/S, POP3/SSL,
+IMAP/SSL are forwarded through socks5 Tor proxy. In I2P,
+we send and receive emails by susimail(an I2P email application) after conﬁguring the smtp server(smtp.postman.i2p:25)
+and pop3 server(pop3.postman.i2p:110). Emails in Freenet
+are only supported under IMAP protocol by Freemail which
+listens 127.0.0.1:4025 by default. Emails in ZeroNet are endto-end encrypted emails by ZeroMail and ZeroID is needed to
+used as user identity.
+Chat: This label represents the instant-messageing behavior
+including text, picture, ﬁle. In Tor, we use ICQ and Skype to
+simulate the chat behavior between users by using Tor socks5
+proxy. In I2P, after enabling SAM protocol bridge, I2P will
+listen port 7656 on localhost by default. I2P-Messenger and
+I2Ptalk, open source chat application in I2P, can be used for
+peer-to-peer chat. FMS(Freenet Message System) is a popular
+chat application on Freenet in which users take their SSK as
+identity. As for ZeroNet, there are many chat rooms in different
+languages instead of peer-to-peer chat behavior since ZeroNet
+is developed based on BitTorrent protocol.
+File Transfer: This label represents the user behavior of
+downloading and uploading ﬁle, which is also the focus in
+darknet supervision. Within this label we captured FTP trafﬁc
+using socks5 proxy in Tor. For the other three darknets, we
+visit muwire.i2p for I2P trafﬁc collection, IFS site for ZeroNet,
+and Fuqid application for Freenet.
+P2P:This label is used to identify ﬁle-sharing protocols.
+Vuze application is used for ﬁnding peers and downloading
+ﬁles through Tor socks5 proxy. As for I2P, we use I2Psnark
+as anonymous BitTorrent client to download shared-ﬁle in I2P
+which can be obtained from PaTracker site.
+Audio-streaming: Audio label represents a continuous and
+steady stream of audio data. We captured this type of trafﬁc
+from Spotify in Tor, and from IFS site in ZeroNet.
+Video-streaming: This label identiﬁes a continuous stearm
+of video data. We captured trafﬁc from Youtube by Tor socks5
+proxy and ZeroNet trafﬁc from Zerotube site.
+VoIP: The voice over IP label represents the trafﬁc generated by voice applications which is only available in Tor. We
+captured phone-call trafﬁc by using Skype through Tor proxy.
+
+Audio
+1567
+820
+-
+
+Video
+1703
+1251
+2397
+
+VoIP
+592
+-
+
+Total
+8632
+8148
+15477
+16387
+
+network scenarios like darknet, it is hard to distinguish different ﬂow only relying on these 5 feature dimensions. We
+extracted 26 features from the darknet trafﬁc with the help
+of CICFlowMeter [17]. These trafﬁc features are extracted in
+both directions where the ﬁrst arrived packet determines the
+forward and backward directions. A detailed description of 26
+features we used in experiment is as follows:
+Flow Duration: The duration of the ﬂow. TCP packets use
+the FIN ﬂag packet as the end of the ﬂow, while the
+UDP packets use the ﬂow timeout as the end mark. The
+timeout period in this paper is 12 seconds.
+Total Fwd/Bwd Packets: The number of packets in forward/backward direction.
+Packet Length : The length of the packet (Min/Mean).
+Fwd/Bwd/Flow IAT: The value of Inter Arrival Time
+between two packets in forward/backward/both direction
+(Total/Min/Max/Mean).
+Flow Packets/s: The number of ﬂow packets per second.
+Flow Bytes/s: The Byte rate of ﬂow packets per second.
+Idle: The amount of time that a ﬂow was idle before
+becoming active (Min/Max/Mean/Std).
+Fwd/Bwd Init Win Bytes: The init window size in forward/backward direction.
+ACK Flag Count: The count of ACK packet in TCP ﬂows.
+Hence one can see that except the easily forged elements
+such as port and IP, these 26 time-based ﬂow features can well
+represent the characteristics of the trafﬁc ﬂow. After feature
+extraction, the statistical results of the dataset are shown in
+Table 1.
+IV. C LASSIFICATION A LGORITHMS
+In this section, we will introduce the hierarchial classiﬁcation method used in the experiment, and review 6 ML
+algorithms and 2 DL algorithms, which are compared in the
+selection of local classiﬁers.
+A. Hierarchical Classiﬁcation
+Since each darknet has 5 to 8 user behaviors, directly training a multi-class classiﬁer will result in too many categories
+and lower accuracy. In this scenario, we propose a hierarchical
+classiﬁcation method as darknet trafﬁc identiﬁcation model.
+The hierarchical classiﬁer structure is shown in Fig.1.
+The darknet trafﬁc classiﬁer has three layers. First, determine whether it is darknet trafﬁc or normal internet trafﬁc.
+If it is darknet trafﬁc, continue to identify what darknet type
+it is, and then determine what user behavior is conducted.
+The advantage of using a hierarchical classiﬁer is that the
+
+B. Flow Features Extraction
+After ﬁnishing the data collection, it is necessary to extract
+the characteristics of the trafﬁc. The general deﬁnition of ﬂow
+is often a ﬁve tuple {source IP, destination IP, source port,
+destination port, communication protocol}. But in complex
+
+420
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+Fig. 1: Hierarchical classiﬁer structure.
+OvR (one-vs-rest) and MvM (many-vs-many). The essence
+of logistic regression is to assume that the data obey the
+distribution, and then use maximum likelihood estimation to
+estimate the parameters. In this experiment, OvR method is
+adopted, class weight parameter is balanced, which means the
+weight of each categories will be considered, cross-validation
+parameter is 5 and the maximum number of iterations is 1000.
+The remaining parameters are set to default values.
+Decision Tree (DT): It is a non-parameter supervised
+learning method used for classiﬁcation and regression. Its
+purpose is to create a model to learn simple decision rules
+from data features to predict the value of a target variable. The
+decision tree can handle the problem of multi-classiﬁcation
+well, but it is also easy to produce an overly complex model,
+which leads to poor generalization performance of the model
+and causes over-ﬁtting. By controlling the maximum depth of
+the decision tree and the number of samples of leaf nodes,
+the occurrence of overﬁtting can be prevented. Decision tree
+algorithms include ID3, C4.5, C5.0 and CART. In this paper
+we use the tuned CART tree algorithm in Sklearn [24], and
+the remaining parameters are set to default values.
+Random Forest (RF):[25] A type of ensemble learning that
+combines the prediction results of the multiple estimators to
+obtain better generalization. The randomness of sampling and
+node spliting can reduce the variance of the DT and avoid
+overﬁtting. The randomness of the random forest construction
+process can produce a set of different decision trees. By
+taking the average of each decision tree, better results can
+be obtained. In this paper, the number of estimators is 100,
+the maximum feature number is 5, and the sampling method is
+bootstrap sample. The remaining parameters are set to default
+values.
+Gradient Boosting Decision Tree (GBDT): A type of ensemble learning. GBDT is an iterative decision tree algorithm
+composed of multiple decision trees. The core of the GBDT
+is to use the value of the negative gradient of the loss function
+
+local classiﬁer of each parent node can be trained separately,
+and different classiﬁcation algorithms can be selected for
+each local classiﬁer, which is more ﬂexible for training.
+The disadvantage of this method is that there may be error
+propagation. Once an error occurs in the classiﬁcation of one
+layer, it will directly affect the ﬁnal classiﬁcation result.
+The hierarchical classiﬁer is composed of the local classiﬁers of each sub-task, and there are three training methods:
+1) Training a binary classiﬁer for each node, similar to oneversus-rest method, has a large performance overhead.
+2) Train a multi-classiﬁer for each layer. In the darknet
+trafﬁc scenario, only three classiﬁers need to be trained,
+which has low overhead and poor accuracy. And because
+the behaviors of different types of dark web users are
+not similar, it is not applicable.
+3) Train a multi-classiﬁer for each parent node, and each
+classiﬁer is independent and judged according to a tree
+structure. This training method is relatively intuitive and
+has a compromised performance.
+In the darknet trafﬁc scenario of this paper, the third type of
+hierarchical classiﬁer training method is adopted, which means
+6 independent classiﬁers need to be trained separately. Since
+each classiﬁer is independent, each parent node can choose
+the best performance Classiﬁcation algorithm. Therefore, in
+order to achieve the best hierarchical classiﬁcation effect, it
+is necessary to select the best local classiﬁer for each parent
+node.
+B. Local Classiﬁer
+We compared the result of six ML classiﬁers(LR, DT, RF,
+GBDT, XGBoost, LightGBM) which is commonly used in
+trafﬁc classiﬁcation[22][23] and two basic DL classiﬁers(MLP,
+LSTM) as local classiﬁers in this darknet scenario.
+Logistic Regression (LR): It belongs to supervised learning
+which is often used for binary classiﬁcations. It can also be
+applied to multi-class scenarios according to the methods of
+
+421
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+in the current model as approximations of the residual. In this
+paper, we use the GBDT classiﬁer implemented in sklearn,
+and the number of estimators is 100.
+Extreme Gradient Boosting (XGBoost):[26] The XGBoost method published by the author Tianqi Chen at the KDD
+conference is essentially a Boosting algorithm. Compared with
+the GBDT implemented in sklearn, XGBoost can be regarded
+as an upgraded version. The boosting strategies of the two are
+similar, but the ﬁtting direction of XGBoost is more accurate
+and faster. In this paper, the number of estimators of XGBoost
+is 100.
+LightGBM:[27] It is also a gradient boosting algorithm
+based on decision trees proposed by Microsoft. Compared with
+XGBoost and traditional GBDT algorithms, LightGBM uses
+histogram algorithm to replace Pre-Sorted algorithm in ﬁnding
+the optimal partition node, which consumes lower memory and
+
+faster data segmentation. Different from the level-wise growth
+strategy adopted by XGBoost, LightGBM adopts a leaf-wise
+growth strategy which can grow a deeper decision tree.
+Multilayer Perceptron (MLP): One of the artiﬁcial neural
+networks. By mapping a set of input vectors to output vectors,
+each layer is fully connected to the next layer. Each node
+in MLP is a non-linear activation function neuron and each
+connection is equipped with a weight. The MLP contains
+at least one hidden layer in addition to the input layer and
+output layer. In this paper, the number of hidden layers is
+10, each layer has 128 neurons, the optimization algorithm
+is Adam, the activation function is softmax, the loss function
+is binary crossentropy, batch size is 100, and the number of
+iterations is 100.
+Long short-term memory (LSTM):[28] It is a special
+recurrent neural network (RNN), mainly to solve the problem
+
+TABLE II: Accuracy and F1-score of 6 local classiﬁer in darknet hierarchical classiﬁcation under 8 algorithms
+
+Model
+LR
+DT
+RF
+GBDT
+XGBoost
+LightGBM
+MLP
+LSTM
+
+Local Classiﬁers
+Tor-behavior
+I2P-behavior
+accuracy
+F1-score
+accuracy
+F1-score
+52.26%
+51.89%
+33.91%
+29.20%
+83.79%
+83.82%
+90.51%
+90.52%
+84.64%
+84.65%
+90.76%
+90.76%
+84.29%
+84.27%
+90.84%
+90.82%
+85.35%
+85.38%
+91.29%
+91.28%
+85.24%
+85.28%
+90.27%
+90.25%
+94.82%
+71.13%
+73.04%
+73.48%
+-
+
+Freenet-behavior
+accuracy
+F1-score
+41.79%
+36.42%
+96.66%
+96.66%
+96.66%
+96.67%
+96.85%
+96.85%
+96.75%
+96.74%
+96.46%
+96.46%
+-
+
+(a) Darknet-Normal(XGBoost)
+
+(b) Darknet-type(XGBoost)
+
+(c) Tor-behavior(XGBoost)
+
+(d) I2P-behavior(XGBoost)
+
+(e) Freenet-behavior(GBDT)
+
+(f) ZeroNet-behavior(LigthGBM)
+
+Darknet-Normal
+accuracy F1-score
+93.71%
+94.26%
+99.30%
+99.33%
+99.38%
+99.41%
+98.51%
+98.58%
+99.42%
+99.45%
+99.34%
+99.37%
+-
+
+Darknet-type
+accuracy F1-score
+62.80%
+62.89%
+96.16%
+96.16%
+96.55%
+96.55%
+95.23%
+95.23%
+96.85%
+96.85%
+96.33%
+96.33%
+94.27%
+88.09%
+87.18%
+87.17%
+
+ZeroNet-behavior
+accuracy
+F1-score
+51.42%
+48.11%
+90.63%
+90.65%
+91.23%
+91.18%
+86.67%
+86.16%
+92.98%
+92.98%
+93.17%
+93.18%
+92.02%
+65.05%
+66.31%
+63.76%
+
+Fig. 2: Confusion Matrix for 6 Local Classiﬁers
+
+422
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+B. Local Classiﬁer Performance
+In order to choose the most suitable classiﬁcation algorithm
+for each local classiﬁer, we use the dataset collected in Section
+III as darknet trafﬁc and dataset from Stratosphere Lab [29]
+as normal internet trafﬁc. 6 local classiﬁers are DarknetNormal, Darknet-type, Tor-behavior, I2P-behavior, Freenetbehavior, ZeroNet-behavior. For the ﬁrst two classiﬁers, we
+split train-test dataset with corresponding percentages 70%30%, while the last four classiﬁers use 80%-20% train-test set
+splitting. We take accuracy and F1-score as the criteria. The
+performance results are shown in Table II, where the bold is
+the best performed one in local classiﬁers.
+According to the performance results of each local classiﬁer,
+we found that in the darknet trafﬁc scenario, the ML method
+generally performs well. By contrast, DL method has a higher
+training cost, and the performance is not as good as the
+ML method when the feature extraction can well represent
+the trafﬁc. We ﬁnally choose XGBoost for Darknet-Normal
+classiﬁer, Darknet-type classiﬁer, Tor-behavior classiﬁer, I2Pbehavior classiﬁer, GBDT for Freenet-behavior classiﬁer and
+LightGBM for ZeroNet-behavior classiﬁer. Fig.2 shows the
+confusion matrix of 6 local classiﬁers.
+
+of gradient disappearance and gradient explosion during long
+sequence training. Compared to ordinary RNNs, LSTM can
+perform better in longer sequences. In this paper, the number
+of hidden layers is 1, each layer has 128 neurons, the activation
+function is softmax, the optimization algorithm is rmsprop,
+batch size is 64, and the number of iterations is 100.
+We trained each parent node of hierarchical classiﬁer separately and select the best performed algorithm for local
+classiﬁer. Performance comparison results will be introduced
+in section V.
+V. E XPERIMENTS AND R ESULTS
+In this section, we will introduce the performance comparison of 6 local classiﬁers with different algorithms, and then
+introduce the user behaviors identifying performance of the
+hierarchical classiﬁers we proposed. We compare hierarchical
+classiﬁcation method with ﬂat classiﬁcation method to prove
+the improvement.
+A. Performance Evaluation Metrics
+We used accuracy, precision, recall, F1-score and confusion
+matrix to evaluate the performance of classiﬁers.
+Accuracy =
+
+TP + TN
+TP + TN + FP + FN
+
+P recision =
+Recall =
+F 1 − score =
+
+C. Hierarchical Classiﬁer vs. Flat Classiﬁer
+The darknet trafﬁc hierarchical classiﬁer has 25 classes
+of different user behavior. we compared our Hierarchical
+Classiﬁer with the Best Flat Classiﬁer in darknet user behavior
+identiﬁcation with a train-test dataset splitting in 70%-30%.
+We take XGBoost model as the ﬂat classiﬁer since it performed well in this scenario. The accuracy, precision, recall,
+F1-score of the hierarchical classiﬁer and the ﬂat classiﬁer in
+25 types of user behavior on the test dataset are shown in
+Table III. The confusion matrix of the hierarchical classiﬁer
+and ﬂat classiﬁer on the test dataset is shown in Fig.3. Label
+
+TP
+TP + FP
+
+TP
+TP + FN
+
+2 × P recision × Recall
+P recision + Recall
+
+(a) Confusion Matrix of Hierarchical Classiﬁer
+
+(b) Confusion Matrix of Flat Classiﬁer
+
+Fig. 3: Confusion Matrix
+
+423
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE III: Performance Comparsion of Hierarchical Classiﬁer and Flat Classiﬁer of Darknet user behaviors
+Model
+Hierarchical Classiﬁer
+Flat Classiﬁer
+
+Accuracy
+92.46%
+88.57%
+
+a to aa in the matrix represent user behavior such as torbrowsing,i2p-chat. From the confusion matrix, it can be seen
+that the false predicted rate of ﬂat classiﬁer is signiﬁcantly
+higher than that of the hierarchical classiﬁer. It prove that our
+hierarchical classiﬁer has a better recognition effect in this
+darknet scene, and there are few cases of error propagation.
+Thus this classiﬁcation method has a certain capability of
+detecting darknet user behaviors.
+
+Precision
+93.25%
+88.66%
+
+Recall
+92.47%
+88.57%
+
+F1-score
+92.06%
+88.35%
+
+[7] Cuzzocrea A, Martinelli F, Mercaldo F, et al. Tor trafﬁc analysis and
+detection via machine learning techniques[C].2017 IEEE International
+Conference on Big Data (Big Data). IEEE, 2017. 4474-4480.
+[8] Jansen R, Juarez M, Galvez R, et al. Inside Job: Applying Trafﬁc
+Analysis to Measure Tor from Within[C].NDSS. 2018.
+[9] Yin H, He Y. I2P Anonymous Trafﬁc Detection and Identiﬁcation[C].
+2019 5th International Conference on Advanced Computing & Communication Systems (ICACCS). IEEE, 2019. 157-162.
+[10] Lee S, Shin S H, Roh B H. Classiﬁcation of Freenet Trafﬁc Flow Based
+on Machine Learning[J]. JCM, 2018, 13(November). 654-660.
+[11] Montieri A, Ciuonzo D, Bovenzi G, et al. A dive into the dark web: Hierarchical trafﬁc classiﬁcation of anonymity tools[J]. IEEE Transactions
+on Network Science and Engineering, 2019.
+[12] Montieri A, Ciuonzo D, Aceto G, et al. Anonymity services Tor, I2P,
+JonDonym: classifying in the dark[C].2017 29th International Teletrafﬁc
+Congress (ITC 29). IEEE, 2017, 1. 81-89.
+[13] Bauer K S, Sherr M, Grunwald D. ExperimenTor: A Testbed for Safe
+and Realistic Tor Experimentation[C].CSET. 2011.
+[14] AlSabah M, Bauer K, Goldberg I. Enhancing Tor’s performance using
+real-time trafﬁc classiﬁcation[C].Proceedings of the 2012 ACM conference on Computer and communications security. 2012. 73-84.
+[15] Gomes J V, Inácio P R M, Pereira M, et al. Detection and classiﬁcation
+of peer-to-peer trafﬁc: A survey[J]. ACM Computing Surveys (CSUR),
+2013, 45(3). 1-40.
+[16] Hodo E, Bellekens X, Iorkyase E, et al. Machine learning approach
+for detection of nontor trafﬁc[C].Proceedings of the 12th International
+Conference on Availability, Reliability and Security. 2017. 1-6.
+[17] Lashkari A H, Draper-Gil G, Mamun M S I, et al. Characterization of
+Tor Trafﬁc using Time based Features[C].ICISSP. 2017. 253-262.
+[18] Barker J, Hannay P, Szewczyk P. Using trafﬁc analysis to identify the
+second generation onion router[C].2011 IFIP 9th International Conference on Embedded and Ubiquitous Computing. IEEE, 2011. 72-78.
+[19] HE Yongzhong, LI Xiang, CHEN Meiling, WANG Wei. Identiﬁcation
+of Tor Anonymous Communication with Cloud Trafﬁc Obfuscation[J].
+Advanced Engineering Sciences, 2017, 49(2). 121-132.
+[20] He G, Yang M, Luo J, et al. Inferring application type information
+from tor encrypted trafﬁc[C].2014 Second International Conference on
+Advanced Cloud and Big Data. IEEE, 2014. 220-227.
+[21] Jansen R, Juarez M, Galvez R, et al. Inside Job: Applying Trafﬁc
+Analysis to Measure Tor from Within[C].NDSS. 2018.
+[22] Wang C, Xu T, Qin X. Network trafﬁc classiﬁcation with improved
+random forest[C]. 2015 11th International Conference on Computational
+Intelligence and Security (CIS). IEEE, 2015. 78-81.
+[23] Cai Z, Jiang B, Lu Z, et al. isAnon: Flow-Based Anonymity Network
+Trafﬁc Identiﬁcation Using Extreme Gradient Boosting[C]. 2019 International Joint Conference on Neural Networks (IJCNN). IEEE, 2019.
+1-8.
+[24] Loh W Y. Classiﬁcation and regression trees[J]. Wiley Interdisciplinary
+Reviews: Data Mining and Knowledge Discovery, 2011, 1(1). 14-23.
+[25] Breiman L. Random forests[J]. Machine learning, 2001, 45(1). 5-32.
+[26] Chen T, Guestrin C. Xgboost: A scalable tree boosting system[C].Proceedings of the 22nd acm sigkdd international conference
+on knowledge discovery and data mining. 2016. 785-794.
+[27] Ke G, Meng Q, Finley T, et al. Lightgbm: A highly efﬁcient gradient
+boosting decision tree[C].Advances in neural information processing
+systems. 2017. 3146-3154.
+[28] Hochreiter S, Schmidhuber J. Long short-term memory[J]. Neural computation, 1997, 9(8). 1735-1780.
+[29] Stratosphere. (2015). Stratosphere Laboratory Datasets. Retrieved July
+13, 2020, from https://www.stratosphereips.org/datasets-overview
+
+VI. C ONCLUSION
+This paper researches on the trafﬁc classiﬁcation of user
+behavior in Tor, I2P, ZeroNet, Freenet. According to our
+knowledge, there are few studies on the analysis of darknet
+user behaviors, especially for the new type of darknet like
+ZeroNet and new applications in mature darknets. We propose
+a hierarchical classiﬁcation method for the identiﬁcation of
+darknet user behavior which is more suitable in this darknet
+scenario than ﬂat classiﬁcation method since there is a large
+number of predicted categories. The experiment shows that
+this method can recognize 4 types of darknet with an accuracy
+of 96.9% and recognize 25 user behaviors with an accuracy
+of 92.46%. Since the previous research did not give out
+public trafﬁc datasets on the granularity of user behavior, we
+deployed a trafﬁc collection probe in real darknet environment
+and published the dataset we used in the experiment. In
+the experiment, we extract 26 time-based ﬂow feature from
+trafﬁc ﬁle to train 6 local classiﬁers which consitute the threelayer hierarchical classiﬁer. The result also shows that the DL
+method does not perform well when the feature extraction can
+accurately represent trafﬁc characteristics. In the future, we
+plan to further supplement the trafﬁc under multiple network
+bandwidths to expand the darknet dataset, which can be useful
+for improving the generalization of the model. We also try to
+link it with IDS to provide a supervision method that detects
+and blocks dangerous behaviors on the darknet.
+R EFERENCES
+[1] Wang M, Wang X, Shi J, et al. Who are in the Darknet? Measurement
+and Analysis of Darknet Person Attributes[C]. 2018 IEEE Third International Conference on Data Science in Cyberspace (DSC). IEEE, 2018.
+948-955.
+[2] Fachkha C, Debbabi M. Darknet as a source of cyber intelligence: Survey, taxonomy, and characterization[J]. IEEE Communications Surveys
+& Tutorials, 2015, 18(2). 1197-1227.
+[3] Syverson P, Dingledine R, Mathewson N. Tor: The secondgeneration
+onion router[C].Usenix Security, 2004. 303-320.
+[4] The Invisible Internet Project (I2P). Jul. 2020. [Online]. Available:
+https://geti2p.net/en/
+[5] ZeroNet. Jul. 2020. [Online]. Available: https://zeronet.io/
+[6] Clarke I, Sandberg O, Wiley B, et al. Freenet: A distributed anonymous
+information storage and retrieval system[C].Designing privacy enhancing technologies. Springer, Berlin, Heidelberg, 2001. 46-66.
+
+424
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 02:21:54 UTC from IEEE Xplore. Restrictions apply.
+PAPER_TEXT

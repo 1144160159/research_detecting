@@ -1,0 +1,141 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025                                                    2675
+
+
+
+
+      Self-Supervised Random Forest on Transformed
+            Distribution for Anomaly Detection
+Jiabin Liu , Huadong Wang , Hanyuan Hang, Shumin Ma , Xin Shen , and Yong Shi , Senior Member, IEEE
+
+
+
+   Abstract— Anomaly detection, the task of differentiating                                            I. I NTRODUCTION
+abnormal data points from normal ones, presents a significant
+challenge in the realm of machine learning. Numerous strategies
+have been proposed to tackle this task, with classification-based
+methods, specifically those utilizing a self-supervised approach via
+                                                                               D      EEP learning, with its demonstrated efficacy in a plethora
+                                                                                      of domains, heavily depends on the availability of large-
+                                                                               scale, high-quality, and accurately labeled data to effectively
+random affine transformations (RATs), demonstrating remark-                    train deep neural networks. However, due to privacy and
+able performance on both image and non-image data. However,
+                                                                               security issues, it is usually difficult to obtain trustworthy
+these methods encounter a notable bottleneck, the overlap of
+constructed labeled datasets across categories, which hampers the              ground-truth labels in practice [1], [2]. For instance, in the
+subsequent classifiers’ ability to detect anomalies. Consequently,             field of cybersecurity, identification of novel, unknown attacks
+the creation of an effective data distribution becomes the pivotal             is frequently hampered due to the absence of patterns or
+factor for success. In this article, we introduce a model called               signatures of these attacks, which are essential for a super-
+“self-supervised forest (sForest),” which leverages the random
+                                                                               vised classifier. Similar problems arise in industrial detection,
+Fourier transform (RFT) and random orthogonal rotations to
+craft a controlled data distribution. Our model utilizes the                   wherein we often find ourselves unable to anticipate all possi-
+RFT to map input data into a new feature space. With this                      ble fault situations. This shortage of labeled data considerably
+transformed data, we create a self-labeled training dataset using              impedes the process of supervised learning.
+random orthogonal rotations. We theoretically prove that the                      Anomaly detection, also referred to as outlier detection,
+data distribution formulated by our methodology is more stable
+                                                                               fault detection, or novelty detection, emerges as a solution to
+compared to one derived from RATs. We then use the self-labeled
+dataset in a random forest (RF) classifier to distinguish between              the challenges previously discussed. The key concept involves
+normal and anomalous data points. Comprehensive experiments                    training exclusively with “normal” samples and identifying
+conducted on both real and artificial datasets illustrate that                 “abnormal” samples within the test dataset. This is accom-
+sForest outperforms other anomaly detection methods, including                 plished by labeling all test samples as either normal or
+distance-based, kernel-based, forest-based, and network-based
+                                                                               anomalous. Researchers have successfully designed effective
+benchmarks.
+                                                                               anomaly detection techniques applicable across a myriad of
+   Index Terms— Anomaly detection, data distribution, random                   fields. For instance, within the realm of computer vision, the
+forest (RF) classifier, random Fourier transform (RFT), random
+orthogonal rotations, self-supervised learning.
+                                                                               techniques have been applied to identify abnormal trajectories
+                                                                               and moving objects [3], [4], [5], [6]. Within the finance sector,
+   Manuscript received 7 October 2022; revised 1 February 2023, 24 August      anomaly detection plays a crucial role in fraud detection [7],
+2023, and 22 October 2023; accepted 22 December 2023. Date of pub-
+lication 23 January 2024; date of current version 6 February 2025. This        [8], [9], [10], [11], [12]. Moreover, in healthcare and medicine,
+work was supported in part by the National Natural Science Foundation          the technique proves useful for monitoring and addressing
+of China under Grant 62306036, Grant 62306159, Grant 72231010, and             abnormalities within medical records [13]. For a more com-
+Grant 71932008. The work of Shumin Ma was supported in part by the
+Guangdong Provincial Key Laboratory of Interdisciplinary Research and          prehensive understanding of this topic, readers are encouraged
+Application for Data Science (IRADS) under Grant 2022B1212010006 and           to refer to the surveys in [14] and [15].
+Grant R0400001-22, in part by the Guangdong Higher Education Upgrading            Self-supervised learning has recently emerged as a promis-
+Plan under Project UIC-R0400024-21, and in part by the Beijing Normal
+University-Hong Kong Baptist University United International College (UIC)     ing approach, demonstrating an impressive capability to
+under Grant UICR0700019-22. (Corresponding author: Huadong Wang.)              generate better feature representations. Techniques widely
+   Jiabin Liu is with the School of Information and Electronics, Beijing       employed in self-supervised learning for image data encom-
+Institute of Technology, Beijing 100081, China, and also with the Laboratory
+of Electromagnetic Space Cognition and Intelligent Control, Beijing 100191,    pass geometric transformations [16], [17], [18], patching [19],
+China.                                                                         [20], and color permutations [21], [22]. This learning paradigm
+   Huadong Wang is with ModelBest Inc., Beijing 100084, China (e-mail:         has recently been adopted to address anomaly detection prob-
+huadw2012@163.com).
+   Hanyuan Hang is with the Department of Applied Mathematics, University      lems [17], [23] for image data. Here, image rotations are
+of Twente, 7522 NB Enschede, The Netherlands.                                  leveraged to generate distinct categories, and a neural network
+   Shumin Ma is with the Guangdong Provincial Key Laboratory IRADS and         is trained based on these “supervised” data. Since these pretext
+the Department of Mathematical Science, BNU-HKBU United International
+College, Zhuhai 519087, China.                                                 tasks are largely inapplicable to the analysis of structured
+   Xin Shen is with the Academy of Mathematics and Systems Science,            data, Bergman and Hoshen [24] broadened the application of
+Chinese Academy of Sciences, Beijing 100190, China.                            classification-based pretext tasks to outlier detection with gen-
+   Yong Shi is with the School of Economics and Management, University of
+Chinese Academy of Sciences, Beijing 100190, China.                            eral data by defining multiple random affine transformations
+   Digital Object Identifier 10.1109/TNNLS.2023.3348833                        (RATs) as different categories. It is noteworthy, however, that
+                      2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+2676                                                IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+
+
+                                                                                     classifier will then be used on the self-labeled testing data.
+                                                                                     Ultimately, samples with low testing accuracy are categorized
+                                                                                     as anomalies.
+                                                                                        In summary, the main contributions of this article are
+                                                                                     mentioned as follows.
+                                                                                        1) We develop a self-supervised anomaly detection method
+                                                                                            for structured data, dubbed “self-supervised forest (sFor-
+                                                                                            est).” This method introduces a novel self-labeled data
+                                                                                            distribution, derived from the application of RFT and
+                                                                                            orthogonal rotation, for self-supervised anomaly detec-
+                                                                                            tion methodologies.
+                                                                                        2) We provide a theoretical rationale for our method’s
+                                                                                            superiority. The data distribution obtained through the
+                                                                                            combination of RFT and orthogonal rotation is more
+                                                                                            stable (“kernel approximation with lower expected vari-
+                                                                                            ance”) than that acquired through RAT.
+                                                                                        3) The superiority and robustness of our proposed
+Fig. 1. Effect of data distribution in a 2-D space. (a) Original data. (b) Rotated          method have been examined on various artificial
+data based on the original data in (a), where the transformed abnormal data                 and benchmark datasets. The performance of “sFor-
+is specially marked by adding a black edge. (c) Transformed data based on                   est” is contrasted with several state-of-the-art anomaly
+a random Fourier transform (RFT) ψ : R2 → R2 . (d) Rotated data based
+on the transformed data in (c). The {Ri }i=0  3
+                                                  represent the four categories             detection algorithms, encompassing forest-based meth-
+of self-labeled data, and each category corresponds to a random rotation                    ods isolation forest (iForest) and partial identi-
+transformation.                                                                             fication forest (PIDforest), distance-based methods
+                                                                                            [i.e., k-nearest neighbor (k-NN) and local outlier factor
+                                                                                            (LOF)], kernel-based method one-class support vec-
+the distribution of data procured from affine transformation                                tor machine (OCSVM), and the self-supervised-based
+is of great importance, as it directly influences the performance                           method geometric-transformation anomaly detection
+of the final classifier. As an illustration, we display the effect                          (GOAD).
+of kernel feature transformation in a 2-D space in Fig. 1.
+In Fig. 1(b), the four categories of self-supervised data are
+                                                                                                         II. R ELATED W ORKS
+intensely mixed, making it challenging for the subsequent
+classifier to distinguish features and thereby leading to failure                       The study of anomaly detection, alternatively termed as
+in anomaly detection. Therefore, we propose that an opti-                            outlier detection, fault detection, or novelty detection, has
+mal approach to implementing self-supervised-based anomaly                           gained substantial traction within the field of machine learning.
+detection on general data involves “creating” a superior data                        Broadly, it encompasses three distinct methodologies: super-
+distribution for the ensuing classifier.                                             vised, unsupervised, and semi-supervised learning, the choice
+   In this article, we introduce a novel distribution for                            of which hinges on the accessibility of labeled data. In this
+self-supervised-based anomaly detection, which incorporates                          research paper, our primary focus rests on semi-supervised
+RFT [25] and random orthogonal rotations. This new method-                           anomaly detection, a scenario wherein only a minimal number
+ology supplants the RAT, previously used in research [24],                           of samples are labeled, leaving the majority without ground-
+thereby enabling more effective control over the distribution                        truth labels. Notably, based on the strategies applied to this
+of the generated data. Our proposed method initially maps the                        learning paradigm, it can be segmented into distance-based
+input data into a feature space at the onset of the learning                         methods [26], [27], [28], density estimation and probabilistic
+process, applying RFT [25] to the original data. Subsequently,                       models [29], [30], as well as classification-based methods [17],
+these newly generated, less correlated, or redundant features                        [23], [24], [31].
+are used to train a random forest (RF) classifier via super-                            In recent years, the field of anomaly detection has witnessed
+vised learning with self-labeled data. This self-labeled data is                     an evolutionary leap, wherein the self-supervised mechanism
+produced through random orthogonal rotations. In this article,                       within this learning paradigm has been leveraged to reframe
+we primarily employ our data distribution methodology with                           anomaly detection as a classification problem. This novel
+RF to underscore the advantages of our data distribution.                            approach has delivered substantial enhancements in perfor-
+However, it is essential to note that our data distribution can                      mance across both image and non-image datasets. In fact,
+be applied to any classifiers, including neural networks, not                        it transforms the structured data into different categories by
+just the RF classifier. In Fig. 1(d), there is a pronounced                          defining a set of geometric transformations and makes the
+separation between the four categories of normal data follow-                        anomaly detec

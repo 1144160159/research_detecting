@@ -1,0 +1,149 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026                                                                            1347
+
+
+
+
+End-to-End Open-Set Semi-Supervised Learning for
+   Fine-Grained Encrypted Traffic Classification
+     Qian Yang, Wenxuan He, Minghao Chen, Hongyu Du, Sisi Shao, Fei Wu , Shangdong Liu , Yimu Ji ,
+                                      and Kui Ren , Fellow, IEEE
+
+
+
+   Abstract—Encrypted traffic classification is crucial for enhanc-                                       I. I NTRODUCTION
+ing network management, service quality, and security. However,
+real-world network environments are inherently open-world sce-
+narios in which traffic not only consists of known classes but also
+includes the continuous emergence of unknown classes. Existing
+deep learning methods typically rely on the closed-world assump-
+                                                                               W        ITH the rapid advancement of network technologies,
+                                                                                        traffic classification has become a core technology
+                                                                               for enhancing network management efficiency, optimizing the
+tion, which significantly limits their classification performance              quality of service (QoS), and ensuring network security (e.g.,
+when dealing with unknown traffic types. This limitation makes                 malware identification and intrusion detection) [1]. However,
+it challenging to accurately classify known traffic classes and                the proportion of encrypted traffic has increased dramatically
+effectively identify unknown ones. Although few studies have                   along with increasing awareness of user privacy protection and
+focused on open-world scenarios, these methods often use staged
+strategies and struggle to reliably detect unknown traffic or to               the continuous advancement of encryption technology [2], [3],
+estimate novel classes. To address these challenges, we propose an             [4]. Although encryption effectively safeguards user privacy,
+end-to-end Fine-grained Encrypted traffic Classification method                it simultaneously introduces unprecedented challenges to net-
+based on Open-set Semi-supervised Learning, called FEC-OSL.                    work security monitoring. Traditional plaintext-based traffic
+This method comprises three mutually reinforcing core compo-                   analysis and detection methods [5], [6] are gradually becoming
+nents. First, we design a dual-branch flow feature extraction
+module to capture detailed and discriminative flow features.                   ineffective, as they cannot directly access packet payloads.
+Second, we introduce a novel energy-based perspective that lever-              Moreover, an increasing number of malware and cyber attacks
+ages energy-boundary learning to distinguish known traffic from                leverage encrypted channels, such as SSL/TLS, to evade detec-
+unknown traffic, enabling precise detection of known classes.                  tion, making it more difficult for intrusion detection systems
+Finally, an adaptive deep clustering approach integrates feature               (IDSs) and firewalls to identify threats promptly. According to
+learning with clustering to achieve fine-grained classification of
+unknown flows. We conduct extensive experiments on three real-                 the latest report from Zscaler, approximately 85.9% of network
+world datasets, and the results validate that our proposed method              threats are now transmitted through encrypted channels [7],
+exhibits outstanding performance in handling both known and                    highlighting the urgent need for encrypted traffic analysis and
+unknown encrypted traffic in open-world scenarios.                             management.
+   Index Terms—Encrypted traffic classification, open-set semi-                   In recent years, encrypted traffic classification has made
+supervised learning, end-to-end, energy-based model, network                   significant progress with the use of deep learning techniques.
+security.                                                                      However, most existing methods are based on the closed-
+   Received 13 January 2025; revised 8 August 2025, 14 October 2025,           world assumption [8], [9], [10], [11], [12], which assumes
+and 18 November 2025; accepted 8 January 2026. Date of publication             that the classes of test samples are already known during
+12 January 2026; date of current version 29 January 2026. This work was        the training phase. As a result, these methods can only
+supported in part by the National Key R&D Program of China under Grant
+2023YFB2904000 and Grant 2023YFB2904004, in part by Jiangsu Key                classify test samples into a predefined and limited set of
+Development Planning Project under Grant BE2023004-2, and in part by           classes. However, in real-world network environments, traffic
+the Future Network Scientific Research Fund Project under Grant FNSRFP-        classes are highly dynamic, with new applications and attack
+2021-YB-15. The associate editor coordinating the review of this article and
+approving it for publication was Dr. Prosanta Gope. (Corresponding author:     methods emerging constantly. As a result, the testing phase
+Yimu Ji.)                                                                      often encounters unknown classes that were never seen during
+   Qian Yang, Wenxuan He, Minghao Chen, Hongyu Du, Shangdong Liu,              training. We define this as an open-world scenario, where
+and Yimu Ji are with the School of Computer Science, Nanjing Uni-
+versity of Posts and Telecommunications, Nanjing 210023, China (e-mail:        the model needs to handle entirely novel and unseen classes
+yq112641@163.com; 1223045429@njupt.edu.cn; 1224045412@njupt.edu.cn;            that were not defined or labeled during the training phase.
+2024040408@njupt.edu.cn; lsd@njupt.edu.cn; jiym@njupt.edu.cn).                 Traditional closed-world classification models perform poorly
+   Sisi Shao is with the School of Internet of Things, Nanjing Univer-
+sity of Posts and Telecommunications, Nanjing 210023, China (e-mail:           in such scenarios and struggle to effectively identify unknown
+2021070701@njupt.edu.cn).                                                      traffic. As shown in Figure 1, compared with closed-world
+   Fei Wu is with the School of Automation, Nanjing University of Posts        settings, open-world scenarios are more complex [13], as they
+and      Telecommunications,       Nanjing    210023,    China      (e-mail:
+wufei 8888@126.com).                                                           require addressing both the detection of unknown traffic and
+   Kui Ren is with the State Key Laboratory of Blockchain and Data             the accurate classification of known classes.
+Security, Zhejiang University, Hangzhou, Zhejiang 310027, China (e-mail:
+kuiren@zju.edu.cn).                                                               (i) The first challenge is that traffic classification models
+   Digital Object Identifier 10.1109/TIFS.2026.3653575                                must support open-set recognition (OSR) [14], [15],
+             1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+1348                                                             IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+       [16], enabling fine-grained classification of known traffic     values, where low-energy samples are classified as known
+       classes while identifying novel and unknown classes.            flows and high-energy samples are identified as unknown
+       One of the key factors in addressing this challenge is          flows. Finally, feature learning is integrated with clustering
+       the ability to learn high-quality traffic representations.      algorithms to iteratively refine the clustering of unknown flow
+       Existing OSR methods often rely on features from a sin-         classes by updating sample feature representations. Through an
+       gle perspective, such as packet-level statistical features      end-to-end collaborative optimization strategy, the three mod-
+       [17], [18], which fail to capture subtle variations among       ules are jointly trained with a unified loss function, iteratively
+       complex traffic. This leads to limited class separability       refining the feature space and improving both classification
+       in the feature space and compromises the performance            and clustering performance. Overall, FEC-OSL achieves end-
+       of downstream classifiers. In addition, the classifier’s        to-end open-set multitask learning, providing a novel and
+       ability to distinguish unknown classes plays a critical         effective solution for encrypted traffic detection in open-world
+       role in overall OSR effectiveness, as it directly influ-        scenarios.
+       ences the model’s ability to generalize in open-world              In summary, the main contributions of this paper include
+       scenarios. Some studies [19], [20], [21] use classifier         the following:
+       confidence scores to detect unknowns, but these meth-              • We propose FEC-OSL, an end-to-end fine-grained traf-
+       ods are often unreliable since high-confidence unknown               fic classification framework. It effectively addresses key
+       samples may still be misclassified. Yang et al. [22]                 challenges in open-world scenarios, including distinguish-
+       proposed a multistage detection framework using class-               ing flows from known and unknown traffic classes, clas-
+       conditioned autoencoders and extreme value theory to                 sifying known classes, and clustering unknown classes.
+       identify unknown attacks. However, this method requires            • We design a dual-branch flow feature extraction module
+       separate training for each stage, which increases overall            to capture fine-grained discriminative information from
+       complexity and introduces potential error propagation                flows. Additionally, we introduce an energy-based con-
+       between stages.                                                      straint that effectively distinguishes between known and
+  (ii) Another challenge is enabling the model to efficiently               unknown flows while ensuring reliable classification of
+       estimate unknown traffic classes. The goal is to allow the           known flows. Furthermore, we propose an adaptive deep
+       model to autonomously learn novel classes, supporting                clustering method that uses feature learning to refine
+       threat analysis and expanding the attack knowledge                   pseudo labels generated during clustering. By iteratively
+       base for security management [16]. Research on this                  optimizing the clustering process, the model progressively
+       issue remains limited in the field of traffic classification.        adapts to unknown flow classes and achieves more accu-
+       Existing methods rely primarily on manual analysis or                rate clustering results.
+       offline clustering [23], [24]. Zhao et al. [17] proposed           • We conduct extensive experiments on three real-world
+       a method that integrates multiple clustering algorithms              datasets to evaluate the performance of FEC-OSL. The
+       through adjacency matrices. The clustering results were              results show that FEC-OSL outperforms existing meth-
+       evaluated using cut-off point filtering and silhouette               ods. In addition, a series of supplementary experiments
+       coefficients. However, this approach is heavily reliant on           are performed to verify its superior generalization ability
+       expert knowledge, as each clustering algorithm requires              and robustness.
+       manual parameter tuning.
+   In this study, we propose FEC-OSL, an end-to-end fine-                                   II. R ELATED W ORK
+grained encrypted traffic classification method based on
+open-set semi-supervised learning. This method is designed             A. Deep Learning for Encrypted Traffic Classification
+to address three challenges: distinguishing between known                 In recent years, deep learning has shown significant advan-
+and unknown traffic flows, classifying known flow classes,             tages in feature extraction and has become a key research
+and clustering unknown flows. FEC-OSL is composed of                   focus in encrypted traffic classification. These methods are
+three key modules: a dual-branch flow feature extraction mod-          generally categorized into supervised, unsupervised, and semi-
+ule for capturing fine-grained flow features, an energy-based          supervised learning approaches. Supervised learning relies on
+classification module for distinguishing between known and             fully labeled datasets and uses models such as convolutional
+unknown flows, and an adaptive deep clustering module for              neural networks (CNNs), transformers, and graph neural net-
+unknown flow classes. First, flow byte sequences are reshaped          works (GNNs) to automatically extract latent traffic features,
+into matrices and processed through a convolution-enhanced             greatly increasing classification accuracy. For instance, Lot-
+vision transformer network to extract byte-level features. Addi-       follahi et al. [11] employed 1D-CNNs to capture the spatial
+tionally, we construct a flow interaction graph and apply              dependencies of bytes within packets, extracting key discrimi-
+a topology-adaptive graph convolutional network to extract             native patterns. Zhou et al. [25] applied transformers to extract
+interaction features. The dual-branch module extracts features         temporal features from traffic traces, improving the classi-
+from complementary views of low-level byte patterns and                fication of Tor-encrypted traffic. Hu et al. [10] constructed
+high-level interaction behaviors, reducing information loss and        flow graphs from interactive packets in bidirectional flows
+enhancing the discriminative power of the feature space. The           (biflows) and used graph2vec embeddings to represent these
+fused features yield a comprehensive flow representation. Sec-         graphs as vectors. Unsupervised methods focus on normal
+ond, an energy-based model converts flow features into energy          traffic patterns to detect anomalies by identifying deviations
+YANG et al.: END-TO-END OPEN-SET SEMI-SUPERVISED LEARNING                                                                                    1349
+
+
+
+from typical behaviour. For example, Kitsune, proposed by
+Mirsky et al. [26], employs autoencoders to dynamically
+reconstruct features of normal traffic, enabling anomaly detec-
+tion. semi-supervised learning methods address the challenge
+of obtaining large-scale labeled data by combining small
+amounts of labeled traffic with large volumes of unlabeled
+traffic. The study in [9] demonstrates that application finger-
+prints in encrypted traffic can be effectively extracted using
+semi-supervised learning, which improves the classification
+performance while reducing the 

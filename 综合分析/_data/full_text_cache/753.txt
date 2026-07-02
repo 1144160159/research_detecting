@@ -1,0 +1,816 @@
+1422 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+ Multimodal Anomaly Detection for Microservice
+ Systems via Grassmann Manifolds-Based
+ Graph Fusion
+ Shiming He , Keyao Feng, Kaixuan Meng, Kun Xie , Member, IEEE, and Xibin Zhao , Senior Member, IEEE
+
+ Abstract—Microservice architecture decomposes complex appli- detection method, AnoFusion, MGFusion achieves an improvement
+cations into multiple small, independent services, enabling indepen- in the F1 score ranging from 11.1% to 15.3%.
+dent deployment and scaling. However, microservice systems introduce complex and dynamic interactions between service instances. Index Terms—Anomaly detection, multimodal data, graph
+When a service instance fails, it can significantly degrade the per- structure learning, graph fusion, grassmann manifolds.
+formance of the entire system, harm the user experience, and cause
+substantial economic losses. Therefore, effective anomaly detection
+for service instances is crucial to ensure system reliability. Metrics, I. INTRODUCTION
+logs, and traces provide complementary insights into microservice
+ ICROSERVICE architecture has emerged as the domioperations, and recent approaches have attempted to jointly exploit
+these modalities for anomaly detection. However, the varying data
+volumes per interval and heterogeneous data types across modali-
+ M nant paradigm in modern software system design due to
+ its modularity, scalability, and ease of maintenance. By decomties, combined with the complex and elusive relationships between posing complex applications into small, independently deploythem, make effective representation and learning challenging. To able services, the microservice architecture enhances system
+address these limitations, we propose MGFusion, an unsupervised, flexibility and maintainability. Instances (e.g., virtual machines
+end-to-end multimodal anomaly detection method for microservice or containers) serve as operational entities of these services.
+systems using Grassmann manifolds-based graph fusion. MGFu- Microservice systems involve intricate and dynamic interacsion employs a robust method to unify metrics, logs, and traces
+into time series, enabling consistent processing across modalities.
+ tions among instances, including service invocations and re-
+It leverages multiple graph structure learning (GSL) techniques to source competition [1], [2]. Anomalies in instances significantly
+explore multi-view relationships between the modalities. To miti- degrade system performance, adversely impacting user experigate the impact of data noise, we further introduce prior knowledge ence, and causing potential economic losses. Instance anomaly
+based on the Adamic-Adar Index (AAI) and employ a Grass- detection, which identifies Anomalies or abnormal behaviors of
+mann manifolds-based graph fusion method to combine multiple microservice instances by analyzing monitoring data, is essential
+basic graph structures. Finally, anomaly detection is achieved us- to ensure service reliability [3].
+ing Diffusion Convolutional Recurrent Neural Network (DCRNN) Microservice systems collect three primary types of status
+predictors and anomaly score calculation. Extensive experiments data [4]: metrics, logs, and traces, as illustrated in Fig. 1. Metrics
+on a public dataset demonstrate that MGFusion effectively fuses are quantitative measures of system performance, typically premultimodal data and captures complex relationships, significantly
+improving the accuracy and efficiency of anomaly detection. Comsented as time series. Logs are semi-structured data generated
+pared to the state-of-the-art unsupervised multimodal anomaly by “printf” statements or logging frameworks, recording key
+ system events [5]. Traces capture complete invocation chains
+ between services, with each invocation represented as a “span”
+ [6].
+ Received 30 June 2025; revised 11 December 2025; accepted 11 February Fig. 1 shows an example of these data types. Metrics include
+2026. Date of publication 16 February 2026; date of current version 10 April
+2026. This work was supported in part by the National Natural Science Founda- CPU usage rate, memory usage, and throughput, etc. Logs
+tion of China under Grant 62025201, Grant 62272062, and Grant 62321166652, contain timestamped entries with levels (e.g., ERROR) and
+in part by the Science and Technology Innovation Program of Hunan Province messages (e.g., “Try to get service’s inst, retry for 1 time... ”).
+under Grant 2023RC3139, in part by the Natural Science Foundation of Hunan Traces include service caller, callee, timestamp, response time
+Province under Grant 2025JJ50373 and Grant 2024JJ3014, and in part by the
+Research Foundation of Education Bureau of Hunan Province under Grant
+ (RT), and status codes. For instance, at timestamp 1625104624
+25A0188. (Corresponding author: Kun Xie.) (2021-07-01 09:57:04), the RT from service S3 to S4 is 10
+ Shiming He, Keyao Feng, and Kaixuan Meng are with the School of Com- seconds, with a status code of 200 (success). At timestamp
+puter Science and Technology, Hunan Provincial Key Laboratory of Intelligent 1625104625, the RT from S2 to S4 is 15 seconds, but the
+Processing of Big Data on Transportation, Changsha University of Science status code is 500 (server error). These multimodal data offer
+and Technology, Changsha 410114, China (e-mail: smhe_cs@csust.edu.cn;
+kyfeng@stu.csust.edu.cn; kaixuan@stu.csust.edu.cn). complementary insights into the system’s status, making them
+ Kun Xie is with the College of Computer Science and Electronics Engineering, invaluable for anomaly detection.
+Ministry of Education Key Laboratory of “Fusion Computing of Supercomput- While single-modal anomaly detection methods [7], [8],
+ing and Artificial Intelligence”, Hunan University, Changsha 410082, China [9], [10] have achieved some success, they are inherently
+(e-mail: xiekun@hnu.edu.cn).
+ Xibin Zhao is with the School of Software, Tsinghua University, Beijing
+ limited. Anomalies often manifest differently across modalities,
+100084, China (e-mail: zxb@tsinghua.edu.cn). as shown in Table I. For example, CPU contention is detectable
+ Digital Object Identifier 10.1109/TSC.2026.3665382 via metrics but not logs or traces. Conversely, code logic errors
+
+ 1939-1374 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1423
+
+ TABLE I
+ MULTIMODAL DATA ABNORMAL MODES FOR DIFFERENT ANOMALIES (‘−’ INDICATES NO DETECTABLE ABNORMALITY)
+
+ using Graph Neural Networks (GNNs). However, early fusion
+ faces several challenges:
+ r Inconsistent Data Volume and Type in Time Series Conversion: Conversion should align multimodal data to a unified
+ time interval. Multiple records may appear in a single
+ interval, and the data volume per interval and data type
+ often varies across modalities. While continuous data can
+ be averaged, event-based data (e.g., logs or traces) require
+ more nuanced handling to preserve semantic integrity.
+ Naive averaging of discrete data, such as status codes, can
+ lead to meaningless results. For example, for spans T1 and
+ T2 in the same interval (such as one minute), a status code
+ average of 350 (redirection) from 200 (success) and 500
+ (server error) is meaningless. Some works [19], [20] ignore
+Fig. 1. Multimodal status data. The metrics fail to capture anomalous behavthem directly, and some works [18] retain only the value of
+iors in this case because the example represents a configuration error, as shown the first span, discarding critical information (500 server
+in Table I. Such anomalies are exclusively reflected in logs and traces, rather error).
+than in metrics. r Noise in Raw Data Adversely Affects Relationship Learning: Accurate modeling of inter-time series dependencies forms the foundation of graph-based anomaly detection. Current approaches typically mine these relationships
+ guided by raw data. Noise in raw data, which includes
+ errors, interference, or loss that may occur during the
+ processes of data collection, transmission, and storage, can
+ mislead relationship learning and degrade the performance
+ of graph-based anomaly detection models.
+ r Limitations of Existing Relationship Learning Methods:
+ Current methods often fail to capture complex, multi-
+Fig. 2. Key processes of early fusion-based multimodal anomaly detection,
+with the unified conversion into time series as an example.
+ view dependencies across modalities. For example, mutual information-based methods [18] can handle linear
+ correlations but struggle with nonlinear or hierarchical
+are reflected in logs and traces but not metrics. No single-modal dependencies. Graph structure learning (GSL) in singledata can cover all anomaly types. Thus, multimodal analysis is modal anomaly detection learns relationships among hoessential for comprehensive and accurate anomaly detection. mogeneous nodes (e.g., metrics) but cannot generalize to
+ Data fusion is at the core of multimodal anomaly detection. heterogeneous node types (e.g., cross-modal interactions)
+Based on the fusion stage, existing methods fall into three cate- directly.
+gories: late fusion, early fusion, and intermediate fusion [11]. To address these challenges, we propose MGFusion, a multi-
+Late fusion [12], [13], [14] combines independent detection modal anomaly detection framework for microservice systems
+results from each modality using voting or weighting. Early based on Grassmann manifolds and graph structure learning.
+fusion [15], [16], [17], [18], [19], [20] converts multimodal The key innovations of MGFusion include:
+data into a unified format, while intermediate fusion [21], [22],
+ r Robust Time Series Conversion: MGFusion statistically
+[23], [24] extracts features independently for each modality and aggregates continuous data, and employs frequency encombines them. coding to convert discrete data while preserving critical
+ Early fusion has gained prominence due to its ability to information, addressing inconsistencies in data type.
+capture inter-modal interactions early in the processing pipeline.
+ r Noise-Resilient Relationship Learning: MGFusion lever-
+The core steps in early fusion-based multimodal anomaly detec- ages the Adamic-Adar Index similarity metric [25] to
+tion consist of unified modality conversion, relationship learn- guide relationship learning, reducing the impact of noise
+ing, and graph-based anomaly detection. To illustrate this pro- by emphasizing meaningful node similarities.
+cess, we take the conversion of data into a unified time series
+ r Grassmann Manifolds-Based Graph Fusion: MGFusion
+format as an example, as illustrated in Fig. 2. In this approach, learns multiple basic graph structures using different graph
+multimodal data are transformed into time series and relation- structure learning methods and combines them via Grassships between time series are modeled for anomaly detection mann manifolds-based fusion to preserve unique structural
+1424 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+ properties and model complex and multi-view interdepen- accuracy. Based on the stage of data fusion, multimodal methods
+ dencies. are categorized into late fusion, early fusion, and intermediate
+ Experimental results on public datasets demonstrate that fusion, as shown in Fig. 3.
+MGFusion outperforms nine state-of-the-art single-modal and 1) Late Fusion: Late fusion was among the earliest apmultimodal anomaly detection methods. For example, MGFu- proaches in multimodal anomaly detection. In this approach,
+sion improves the F1 score by 11.1% to 15.3% compared to each modality is processed independently and the results
+AnoFusion. are combined using voting or weighting. PDiagnose [12],
+ The remainder of this paper is organized as follows. Section II MADMM [13], and MicroCBR [14] follow this approach. Howreviews related work. Sections III to VII detail the MGFusion ever, late fusion methods fail to model the interactions and
+framework and its components. Section VIII evaluates the pro- relationships between different modalities, limiting their ability
+posed method and Section IX concludes the paper. to capture complex cross-modal dependencies.
+ 2) Early Fusion: Early fusion combines multimodal data at
+ II. RELATED WORK the preprocessing stage by converting them into a unified format,
+ such as events or time series.
+ In this section, we summarize the related work on single- r Events: DeepTraLog [15] represents traces and logs as
+modal and multimodal anomaly detection, highlighting key invocation chain events. DiagFusion [16] constructs an
+methods, and their limitations. event dependency graph using embedding and data augmentation for anomaly classification. Nezha [17] builds
+A. Single-Modal Anomaly Detection an event graph to locate anomalies, providing a graphical
+ explanation of root causes.
+ Single-modal anomaly detection focuses on analyzing indi- r Time Series: AnoFusion [18] converts multimodal data
+vidual data modalities such as metrics, logs, or traces to identify
+anomalies. Each modality provides unique insight but is inher- into multivariate time series and constructs a multimodal
+ently limited in its ability to cover all possible anomaly types. graph using mutual information to generate six adjacency
+ 1) Metric-Based Anomaly Detection: Metrics, typically rep- matrices for different modalities. MSTGAD [19] builds
+resented as time series, exhibit both intra-time series (within a microservice graph from traces after converting multiindividual metrics) and inter-time series (between different met- modal data into time series. MRCA [20] uses variational
+rics) relationships. To effectively capture these relationships, autoencoders (VAE) to learn normal patterns from multigraph-based methods [26], [27] have been widely adopted. GSL modal data converted into time series.
+learns an optimal graph structure jointly with the downstream In summary, events-based approaches are better suited for
+anomaly detection task. GDN (Graph Deviation Network) [28] root cause analysis due to their discrete nature, while time
+is a pioneering GSL-based method that learns graph structures series-based approaches are more effective for anomaly detecusing learnable node embeddings. Subsequent works, such as tion as they preserve temporal ordering. This ordering enables
+FuSAGNet [29], GTA [30], and FuGLAD [31], extend this idea the identification of evolving patterns and deviations over time.
+by introducing sparse or multiple graph structures for better Therefore, our method employs early fusion, converting multianomaly detection performance. modal data into time series for anomaly detection.
+ 2) Log-Based Anomaly Detection: Log anomaly detection 3) Intermediate Fusion: Intermediate fusion combines feaprimarily employs sequence-learning models like Long Short- tures extracted independently from different modalities.
+Term Memory (LSTM) networks or Transformers. These mod- SCWarn [21] uses LSTM to learn the temporal dependencies
+els learn normal sequence patterns and predict the next log in multimodal data. UAC-AD [22] combines modality-specific
+template in an unsupervised manner. If the actual template is not features in a shared space. Hades [39] employs dual attention
+among the top k predictions, it is flagged as an anomaly. Rep- layers to extract both cross-modal interactions and intra-modal
+resentative methods include: DeepLog [9], LogAnomaly [32], dependencies. Eadro [24] utilizes Hawkes processes and diand Logsy [33]. Supervised or semi-supervised methods, such lated causal convolution (DCC) layers to integrate multimodal
+as LogRobust [34] and NeuralLog [35], learn to distinguish be- features. SIADA [23] fuses multimodal features using contexttween normal and abnormal sequences. LogBP-LoRA [36] com- aware multigraph representation and recurrent encoders.
+bines pre-trained models with parameter-efficient fine-tuning
+(LoRA) to enhance detection efficiency. III. PROBLEM DEFINITION AND SOLUTION OVERVIEW
+ 3) Trace-Based Anomaly Detection: Trace anomaly detection captures patterns in invocation chains or key performance This section formally defines the problem of multimodal
+indicators (KPIs) of system traces. TraceAnomaly [37] repre- anomaly detection in microservice instances, provides the sosents each trace’s response time and invocation path as feature lution formulation, and presents an overview of our proposed
+vectors. TraceStream [38] uses tree-based dynamic tracking vec- approach.
+tors to extract both structural and temporal features. CRISP [6]
+constructs key paths in a top-down and bottom-up manner to A. Problem Definition
+identify services impacted by end-to-end delays.
+ While effective in specific cases, single-modal anomaly de- The goal of multimodal instance anomaly detection is to
+tection methods are limited by their reliance on one type of data, identify abnormal behaviors at specific timestamps by analyzing
+making them unable to detect all anomaly types. multimodal status data collected from a microservice instance.
+ Unlike methods that focus on anomaly detection across multiple
+ service instances, our approach is specifically tailored to detect
+B. Multimodal Anomaly Detection
+ anomalies within a single instance at precise moments in time.
+ Multimodal anomaly detection leverages the complementary We assume that all collected status data for a given instance
+strengths of metrics, logs, and traces to improve detection are time-synchronized. Metrics are collected at regular intervals.
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1425
+
+Fig. 3. Multimodal Fusion Strategies: (a) Late Fusion, (b) Early Fusion, (c) Intermediate Fusion.
+
+Logs are generated as event-triggered messages. Traces are series at timestamp t is represented as:
+recorded when user requests invoke service interactions.
+ The multimodal data collected over N time intervals is de- Xt = [xt−w , xt−w+1 , . . . , xt−1 ] ∈ RK×w .
+noted as DataM , DataL , and DataT for metrics, logs, and
+traces, respectively. At each timestamp t, the anomaly ground The anomaly detection task converts to determine whether an
+truth is represented as yt , where yt = 1 indicates an anomaly anomaly occurs at timestamp t, given the historical data Xt .
+and yt = 0 indicates normal behavior. 2) Graph Construction: GNNs have proven effective for
+ Given historical data within a sliding window w, denoted multivariate time series anomaly detection. To leverage GNNs,
+as DataM [t − w, t], DataL [t − w, t], and DataT [t − w, t], the we construct a graph G = (V, E) for the converted multivariate
+anomaly detection task identifies whether an anomaly exists at time series with the following components:
+timestamp t, denoted as ŷt . This process is formalized as: - Nodes (V ): Each node represents a converted time series,
+ with the total number of nodes given by |V | = K.
+ŷt = F (DataM [t − w, t], DataL [t − w, t], DataT [t − w, t]) - Edges (E): Edges represent hidden relationships between
+ (1) the converted time series.
+where F represents the anomaly detection model. Since the relationships between time series are unknown,
+ we employ GSL to dynamically learn an adjacency matrix
+B. Solution Formulation A ∈ RK×K . Each element A(i,j) indicates the presence of a
+ To fully exploit the benefits of early fusion, we adopt a mul- connection between nodes i and j, where A(i,j) = 1 denotes
+timodal anomaly detection paradigm that combines time series an edge, and A(i,j) = 0 denotes no edge. The adjacency matrix
+conversion and graph structure learning. Before presenting the captures dependency relationships that are critical for accurate
+solution overview, we formulate the key components of the anomaly detection.
+process. 3) Anomaly Detection: Using the learned graph structure A,
+ 1) Serialization of Multimodal Data: As illustrated in Fig. 2, GNNs model inter-time series relationships to facilitate anomaly
+we convert all modalities into time series and combine them into detection. The detection process involves the following steps:
+a unified multivariate time series. The conversion process can GSL dynamically learns the adjacency matrix A. Given the
+be formalized as follows: historical sub-time series Xt and the learned graph structure
+ A, the model predicts the value of xt at timestamp t, denoted
+ XMetrics = TSM(DataM ) ∈ RKM ×N , as x̂t ∈ RK . An anomaly score st is calculated based on the
+ difference between the predicted value x̂t and the actual value
+ XLogs = TSL(DataL ) ∈ RKL ×N , xt . An anomaly is detected at timestamp t if the anomaly score
+ XTraces = TST(DataT ) ∈ RKT ×N , (2) st exceeds a predefined threshold.
+ The anomaly detection process can be formally defined as:
+where TSM(), TSL(), and TST() denote the time series conversion functions for metrics, logs, and traces, respectively. KM , A = GSL(X),
+KL , and KT represent the number of converted time series for
+ x̂t = f(Xt , A),
+metrics, logs, and traces, respectively, and N is the total number
+of time intervals. st = ϕ(xt , x̂t ),
+ The combined multivariate time series is represented as: 
+ ⎡ ⎤ 1, if st > T,
+ ŷt = (4)
+ XMetrics 0, if st ≤ T,
+ X = ⎣ XLogs ⎦ ∈ RK×N , (3)
+ XTraces where A is the learnable adjacency matrix, GSL() represents
+ the graph learning function, f() is the prediction function, ϕ() is
+where K = KM + KL + KT is the total number of converted the anomaly scoring function, x̂t ∈ RK is the predicted value,
+time series. At each timestamp t, xt ∈ RK represents the mul- and ŷt is the binary anomaly detection result. An anomaly is
+tivariate data. For a historical window of size w, the sub-time detected at timestamp t if st > T .
+1426 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+Fig. 4. The framework of MGFusion.
+
+C. Solution Overview r Fusion of Graph Structure Learning: MGFusion employs
+ three basic GSL methods to generate multiple basic graph
+ In microservice systems, multimodal data often exhibit comstructures: A1 , A2 , and A3 . These graphs capture differplex and multi-view relationships that are challenging to model
+effectively. To address this, we propose MGFusion, an effi- ent perspectives of the relationships among the converted
+ multivariate time series. To effectively combine these basic
+cient framework for multimodal anomaly detection. MGFusion
+ graphs and represent the complex, multi-view relationtransforms multimodal data into time series representations,
+incorporates structured prior knowledge to guide graph structure ships, MGFusion uses Grassmann manifolds-based graph
+ fusion. The resulting fused graph structure, denoted as A,
+learning, and employs Grassmann manifolds-based graph fusion
+ encodes the optimal relationships for anomaly detection.
+to combine multiple basic graph structures, enabling the learning r Prediction and Anomaly Detection: MGFusion uses
+of complex and multi-view relationships. The framework of
+ the Diffusion Convolutional Recurrent Neural Network
+MGFusion is illustrated in Fig. 4, which comprises four main
+components: (DCRNN) to predict future values x̂t of the multivariate
+ r Data Preprocessing: MGFusion employs a robust method time series. Anomaly scores are calculated based on the
+ difference between the predicted values x̂t and the actual
+ to convert all multimodal data into a unified time series
+ format to preserve critical information. This process pro- observed values xt . If the anomaly score exceeds a prededuces the converted multivariate time series X, derived fined threshold, the timestamp t is flagged as anomalous.
+ In the following sections, we provide a detailed explanation
+ from the raw metrics DataM , logs DataL , and traces
+ DataT . of each step in the framework.
+ r Structured Prior Knowledge Extraction: MGFusion leverages the Adamic-Adar Index to evaluate node similar-
+ IV. DATA PREPROCESSING
+ ity and extract structured prior knowledge θt . This prior
+ knowledge provides guidance for graph structure learning, The aim of data preprocessing is to robustly convert all
+ helping to reduce the impact of noise and enhance the multimodal data into a unified time series format. This step
+ accuracy of relationship modeling. ensures that metrics, logs, and traces—each with unique
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1427
+
+characteristics—are consistently represented, making them suit- TABLE II
+able for further analysis and anomaly detection. STATUS CODE CATEGORIES
+ When converting multimodal data into aligned time series,
+all raw data must be mapped to values within fixed intervals
+(e.g., one minute). This process presents a challenge because
+multiple records may occur within a single interval, and the data
+volume per interval often varies across modalities. For instance,
+as shown in Fig. 1, two log messages (L1, L2) and two spans
+(T1, T2) are generated at 2021-07-01 09:57. The core task of
+this conversion process is to aggregate multiple records within an
+interval into a single unified representation. Metrics are typically where KT = 9 (four RT statistics and five response caterepresented as continuous data, while logs are semi-structured gories).
+text and discrete in nature. Traces, on the other hand, include After obtaining the three types of time series, we synchroboth response time (a continuous variable) and status codes (a nize and merge them. Metrics, logs, and traces are normalized
+discrete variable). A general aggregation method is averaging; and combined into a new multivariate time series X ∈ RK×N ,
+however, applying naive averaging to discrete data, such as status where K = KM + KL + KT is the total number of time series.
+codes, can lead to meaningless or misleading results. This preprocessing method is designed with a certain level of
+ Therefore, careful consideration of the data type is essential generality and can be applied to different datasets. Meanwhile,
+when designing aggregation strategies for multimodal time se- we adapt a flexible strategy to handle different situations of data
+ries conversion. For robust time series conversion, continuous loss. In practice, for a small amount of missing data or when the
+data are aggregated using statistical methods, while discrete missing data is independent, we use data imputation methods to
+data are converted using frequency encoding, which counts the recover the missing values. However, in cases of continuous and
+occurrences of each event type per interval. This ensures that extensive data loss (e.g., when data for an entire day is missing),
+meaningful information is preserved.
+ r Metric Preprocessing: Metrics provide valuable insights we remove the corresponding records to ensure data quality.
+ Taking the data in Fig. 1 as an example, Fig. 5 illustrates
+ into the performance of services and machine states (e.g., serialization and graph construction.
+ CPU usage, memory usage, and throughput). In practice, - Logs: Two log messages at 2021-07-01 09:57 are parsed into
+ low-variance metrics are filtered out, as they are statisti- Template1 and Template2, resulting in the converted log time
+ cally less likely to contain meaningful anomaly informa- series for 09:57 as [1, 1, 0, . . . , 0]T . At 09:58, one log message
+ tion. This step reduces the dimensionality of the data while is parsed into Template2, resulting in [0, 1, 0, . . . , 0]T .
+ retaining critical metrics. After preprocessing, metrics are - Traces: For spans T1 and T2, the RT statistics are calculated
+ represented as: as mean = 12.5, median = 12.5, range = 5, and standard
+ XMetrics = TSM(DataM ) ∈ RKM ×N , deviation = 2.5. Status codes are categorized into 2XX and
+ 5XX. For span T3 and T4, the RT statistics are calculated as
+ where N is the number of timestamps, and KM is the mean = 10, median = 10, range = 0, and standard deviation =
+ number of selected metrics. 0, with the status code categorized into 2XX. The converted trace
+ r Log Preprocessing: Logs are semi-structured data that time series for 09:57 is [12.5, 12.5, 5, 2.5, 0, 1, 0, 0, 1]T , and for
+ record system status and significant events. To process logs, 09:58 is [20, 20, 0, 0, 0, 2, 0, 0, 0]T . As a result, both the 2XX
+ a log parsing tool, such as Drain [40], is used to convert and 5XX status codes are preserved, effectively addressing the
+ semi-structured log messages into structured log templates. issue outlined in the first challenge.
+ Each log is mapped to a log template. Frequency encoding Treating each time series as a node, the converted multivariate
+ is applied to count the occurrences of each template per time series can be represented as the graph G = (V, E) where
+ interval, resulting in a time series representation of logs: the relationships between the nodes (time series) are initially
+ unknown. To uncover these hidden relationships, graph structure
+ XLogs = TSL(DataL ) ∈ RKL ×N ,
+ learning is employed to dynamically learn the optimal adjacency
+ where K is the number of unique log templates.
+ L matrix.
+ r Trace Preprocessing: Traces capture the execution process
+ of user requests in microservices. They provide response V. STRUCTURAL PRIOR KNOWLEDGE EXTRACTION
+ time statistics and feedback on server status. The response
+ time of all traces within each interval is aggregated into To guide graph structure learning, we incorporate prior knowlfour statistical features: mean, median, range, and stan- edge, typically represented as a prior graph derived from raw
+ dard deviation. Status codes in the traces are categorized data. This prior graph is generally constructed based on node
+ into five response categories based on their first digit, as feature similarity. However, in real-world scenarios, data noise
+ detailed in Table II. Unlike AnoFusion [18], which retains can distort node feature representations, leading to spurious or
+ only the status code of the first span, our method applies noisy edges in the graph. These artifacts degrade the quality of
+ frequency encoding to count the occurrences of each re- the learned graph structure and negatively impact the perforsponse category (e.g., 2xx, 4xx, 5xx, etc.) per minute. This mance of downstream anomaly detection task.
+ process generates five additional time series, ensuring that To mitigate the impact of noisy edges, we propose a structural
+ all status codes within an interval are preserved. Traces are prior graph generation method based on the Adamic-Adar Index
+ represented as: (AAI). AAI accounts for the importance of neighbors, effectively
+ capturing true relationships between nodes while reducing the
+ XTraces = TST(DataT ) ∈ RKT ×N , influence of data noise. The process consists of two stages:
+1428 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+Fig. 5. Serialization of multimodal data and graph construction.
+
+constructing an initial graph and refining it using the AAI to for all pairs of nodes in the initial prior graph. Each node i selects
+create a structured prior graph. the k nodes with the highest AAI scores as its neighbors. The
+ refined structural prior graph is represented by the adjacency
+A. Initial Prior Graph Construction matrix θt .
+  
+ (i,j)
+ We start by constructing an initial prior graph using a θt = 1, if j ∈ top_k AAI (i,:) , (9)
+similarity-thresholding approach [41]. Node features are extracted using two one-dimensional convolutional layers (Conv) where top_k selects the indices of the k nodes with the highest
+followed by a fully connected layer (FC), as shown in (5). Cosine AAI scores.
+similarity is calculated between feature vectors of nodes, as By prioritizing low-degree neighbors, AAI suppresses the imshown in (6). Nodes with similarity scores above a predefined pact of noisy or spurious edges caused by data noise. The graph
+threshold τ are treated as neighbors, forming the initial prior structure learned using this prior knowledge is more robust and
+graph θt . adaptable to the requirements of downstream anomaly detection
+     task.
+ (i) (i)
+ Vt = FC Conv Conv xt , (5)
+   (i) (j) VI. FUSION OF GRAPH STRUCTURE LEARNING
+ (i) (j) Vt · Vt
+ cos Vt , Vt = (i) (j)
+ , (6) To represent the complex relationships between converted
+ Vt  · Vt  time series from multiple views, we first employ three basic
+ (i) graph structure learning methods to learn the relationships.
+where xt = [xit−w , xit−w+1 , . . . , xit−1 ] ∈ Rw is the historical These methods capture different perspectives of node interac-
+ (i)
+subsequence of node i at timestamp t, Vt is the extracted tions. Then, we use Grassmann manifolds-based graph fusion
+feature vector for node i, and  ·  represents the vector norm. to combine the learned graphs into a unified structure.
+ (i)
+The set of neighbors for each node i is denoted by Γt .
+   A. Basic Graph Structure Learning
+ (i) (i) (j)
+ Γt = j | cos Vt , Vt >τ . (7)
+ To enhance the quality of graph structure learning, we
+ use three representative GSL methods: K-Nearest Neighbors,
+B. Adamic-Adar Index-Based Refinement Causal Graph Learning, and Full Parameterization Method.
+ The AAI is a node-local similarity metric that emphasizes the Each method captures node interactions from a distinct percontribution of low-degree shared neighbors, as these are more spective, providing a comprehensive understanding of relationinformative in similarity measurement than high-degree ones. ships such as similarity and causality. Together, these meth-
+The AAI between nodes i and j is defined as: ods provide complementary insights into the structure of the
+ graph, enabling the construction of a high-quality adjacency
+ 1
+ AAI (i,j) = (u) |
+ , (8) matrix that reflects both direct and indirect interactions among
+ ln |Γ nodes.
+ u∈Γ(i) ∩Γ (j)
+ r K-Nearest Neighbors Method (K-Neighbor): This method
+where Γ(i) and Γ(j) are the neighbor sets of nodes i and j, and constructs edges based on cosine similarity between node
+|Γ(u) | is the degree of neighbor u. embeddings, constructing edges between nodes with the
+ AAI assigns higher importance to neighbors of low degrees, closest relationships. For each node i, a learnable embedreducing the influence of noisy, high-degree nodes. Using AAI, ding vector E (i) is generated. The k-nearest neighbors
+we refine the initial prior graph as follows. We calculate the AAI are selected based on cosine similarity to construct the
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1429
+
+ adjacency matrix A1 : 1) Grassmann Manifold: Grassmann manifold is a mathematical framework about the geometric property of linear sub-
+   (i)
+ E t · Et
+ (j)
+ spaces. It views all linear subspaces of the same dimension as a
+ (i,j) (i) (j)
+ S1 = cos Et , Et = (i) (j)
+ , (10) manifold, represented by Gr(n, p). It includes all n-dimensional
+ Et  · Et 
+   linear subspaces in a p-dimensional euclidean space, denoted by
+ (i,:) the set of orthogonal matrices Y .
+ (i,j) 1, if j ∈ top_k S1
+ A1 = , (11)  
+ 0, otherwise. Gr(n, p) = Y |Y ∈ Rn×p , Y T Y = I . (18)
+ Here, top_k selects the indices of the k nodes with the For an adjacency matrix Ai of i-th basic graph, its Laplahighest similarity. cian matrix Li has a complete set of orthonormal eigenvectors,
+ r Causal Graph Learning (CGL): This method captures denoted by eigenvector matrices Ui :
+ causal impacts between nodes by constructing an asymmetric adjacency matrix, capturing the influence of one node −1 −1
+ Li = Di 2 (Di − Ai ) Di 2 ,
+ on another. The Source and destination embeddings (E1
+ and E2 ) are learned for each node. The adjacency matrix Li = Ui Λi UiT , UiT Ui = I, (19)
+ A2 is derived as:
+ M1 = tanh(φE1 β1 ), (12) where Di ∈ RK×K is the degree matrix of Ai , Li ∈ RK×K
+ is the symmetrically normalized Laplacian matrix of Ai , Ui ∈
+ M2 = tanh(φE2 β2 ), (13) RK×p is the eigenvector matrix, and Λi ∈ Rp×p is the eigenvalue
+  diagonal matrix.
+ S2 = ReLU tanh φ M1 M2T − M2 M1 T
+ , (14) Ui lies on the Grassmann manifold Gr(K, p):
+  (i,:)
+ A2 = 1, if j ∈ top_k(S2 ) ,
+ (i,j) Ui ∈ Gr(K, p). (20)
+ (15)
+ 0, otherwise.
+ The three graphs are mapped to the Grassmann manifold through
+ where the asymmetric structure captures directionality. The their eigenvector matrices U1 , U2 , U3 .
+ (i,:)
+ top k largest values in A2 are retained as edges. 2) Subspace Fusion on Grassmann Manifolds: The goal of
+ r Full Parameterization Method (FPM): This method uses subspace fusion is to find a representative subspace U0 that:
+ Gumbel Softmax to directly learn the graph structure. A (1) Integrates information from U1 , U2 , U3 , (2) Preserves the
+ probability matrix π1 ∈ RK×K determines edge existence: geometric structure of each subspace. Therefore, two objectives
+ need to be minimized.
+ g (i,j) = − log(− log(u)), u ∼ Uniform(0, 1), (16) The first objective is to preserve the geometric features of
+    each subspace. It can be achieved by minimizing the Laplacian
+ (i,j)
+ exp log π1 + g (i,j) /τ quadratic form 3i=1 tr(U T Li U ).
+ (i,j)
+ A3 =     , (17) The second objective is to minimize the projection distance
+ (i,j)
+ v∈{0,1} exp log πv + g (i,j) /τ between the representative subspace and each subspace Ui :
+ where u is a random sample drawn from the Uniform(0, 1) 3 3 p
+
+ distribution, and g (i,j) follows the Gumbel distribution. min d2 (U, Ui ) = min sin2 θij
+ U ∈RK×p U ∈RK×p
+ The parameter τ is the temperature parameter, controlling i=1 i=1 j=1
+ the sharpness of the Gumbel-Softmax distribution. As τ ⎛ ⎞
+ (i,j) 3 p
+ approaches 0, A3 converges to either 0 or 1, making = min ⎝p − cos2 θij ⎠
+ the Gumbel-Softmax distribution behave like a categorical U ∈RK×p
+ (i,j) i=1 j=1
+ distribution. The adjacency matrix element A3 is 1 with
+ (i,j) 3
+ probability π1 , reflecting the likelihood of a connection 
+ between nodes i and j. = min p − tr U U T Ui UiT
+ U ∈RK×p
+ i=1
+ 3
+B. Grassmann Manifolds-Based Graph Fusion 
+ = min 3p − tr U U T Ui UiT . (21)
+ After generating the three graphs (A1 , A2 , A3 ), the critical U ∈RK×p
+ i=1
+challenge lies in effectively combining them. The combining
+methods include averaging and weighted averaging. While sim- Finally, the optimization problem is as follows:
+ple averaging offers a straightforward solution, it fails to account 3
+  3
+ 
+for the relative importance of each graph structure. Alternatively,
+similarity-weighted averaging risks distorting the original struc- min tr(U T Li U ) + α 3p − tr(U U T Ui UiT ) ,
+ U ∈RK×p
+ i=1 i=1
+tural properties of the constituent graphs. Grassmann manifoldsbased subspace fusion can merge multiple subspaces or graphs s.t. U T U = I, (22)
+into a representative subspace while preserving the geometric
+features of each subspace or graph [42]. Therefore, we combine where the first term preserves geometric properties and the
+them using Grassmann manifolds to preserve their geometric second term minimizes projection distances between U0 and Ui .
+properties. The parameter α controls the balance between these two terms.
+1430 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+ Applying the Rayleigh-Ritz theorem to solve the optimization Ct = tanh (WC ◦ [xt  (Rt ◦ Ht−1 )] + bC ) , (29)
+problem (22), the Laplacian matrix L0 for the fused graph is:
+ Ut = sigmoid (WU ◦ [xt  Ht−1 ] + bU ) , (30)
+ 3 3
+ L0 = Li − α Ui UiT . (23) Ht = Ut ◦ Ht−1 + (1 − Ut ) ◦ Ct , (31)
+ i=1 i=1
+ where  denotes concatenation, xt ∈ RK represents the input
+ Finally, the adjacency matrix A0 is derived as follows: values at timestamp t, and Ht represents the node features at
+ timestamp t.
+ A0 = D0 − L0 . (24)
+ The diffusion convolutional recurrent layer takes xt and the
+ 3) Graph Sparsification and Finalization: The adjacency previous node features Ht−1 as inputs and outputs the updated
+matrix of the combined graph may contain negative values, node features Ht .
+whereas real-world graphs typically have non-negative adja- DCRNN Prediction Process: DCRNN employs an encodercency matrices. Therefore, we apply a piecewise linear unit decoder architecture for time series prediction. The prediction
+function to eliminate negative values. process comprises the following steps. The encoder processes
+ To reduce computational complexity, we sparsify A0 by re- the input sequence xt from timestamp t − ω to t − 1. It sequentaining only the top k edges for each node: tially updates the node features for each timestamp, resulting
+  (i,j) (i,j)
+ in the aggregated node features Ht−1 . The decoder takes the
+ Â(i,j)
+ = A0 , if A0 ∈ top_k(A0 ), (25) encoded node features Ht−1 as input. Using a diffusion convo-
+ 0, otherwise. lutional recurrent layer, the decoder predicts the future values
+ x̂t at timestamp t.
+ The final symmetric adjacency matrix is:
+ By combining diffusion convolution for spatial dependencies
+ Â + ÂT and GRU for temporal dynamics, DCRNN provides a highly
+ A= . (26) effective framework for spatio-temporal modeling and accurate
+ 2
+ time series prediction.
+ This Grassmann manifolds-based graph fusion effectively integrates multiple graph structures while preserving their unique
+properties, enabling robust graph representation. B. Loss Function
+ The model’s objective is to minimize the prediction error
+ VII. DCRNN PREDICTOR AND ANOMALY DETECTION while ensuring the quality of the learned graph structure. The
+ total loss function consists of three components:
+ Based on the combined graph, MGFusion predicts future
+ Prediction Loss:The mean absolute error (MAE) is used as
+values using a spatio-temporal GNN and detects anomalies by
+ prediction loss:
+analyzing the differences between predictions and actual values.
+ K
+ 1  i 
+A. DCRNN Predictor lossp = x̂t − xit  , (32)
+ K i=1
+ The DCRNN is a powerful spatio-temporal GNN that effectively captures both spatial and temporal dependencies. Com- where x̂it and xit are the predicted and actual values for the i-th
+pared to conventional Graph Convolutional Networks, DCRNN time series, respectively.
+is more suitable for time series prediction due to its ability to Graph Structure Learning Loss: To improve graph quality,
+model complex interactions over both space and time. DCRNN the structured prior graph θt is used as prior knowledge. The
+integrates two key components: diffusion convolution for cap- GSL loss [43] is defined as the cross-entropy between θt and the
+turing spatial relationships and Gated Recurrent Unit (GRU) for learned graph A:
+modeling temporal dynamics.
+ Diffusion Convolution: The diffusion convolution mechanism (i,j) (i,j)
+ lossg = −θt log A(i,j) − (1 − θt ) log(1 − A(i,j) ).
+aggregates L-hop neighbor features and is defined as:
+ ij
+ L  i i  (33)
+ Q −1 Q
+ WQ ◦ Y = wi,1 DO A + wi,2 DI−1 AT Y, (27) L2 Regularization: To reduce overfitting, an L2 regularization
+ i=0 term is added:
+where ◦ represents the diffusion convolution operation, A is the λ2 w22 , (34)
+combined adjacency matrix, DO and DI are the out-degree and
+ Q Q
+in-degree matrices, respectively, wi,1 , wi,2 , and bQ are learnable where w represents the model parameters.
+parameters, and L is the diffusion degree (a hyperparameter). The total loss function is as follows:
+ This mechanism allows DCRNN to aggregate multi-hop spatial dependencies while preserving the directionality of the loss = lossp + λ1 lossg + λ2 w22 , (35)
+graph.
+ Diffusion Convolutional Recurrent Layer: The diffusion con- where λ1 and λ2 are regularization coefficients.
+volutional recurrent layer combines diffusion convolution with
+GRU to capture spatio-temporal dynamics. The equations gov- C. Anomaly Score
+erning the layer are as follows:
+ To detect anomalies, we calculate an anomaly score based on
+ Rt = sigmoid (WR ◦ [xt  Ht−1 ] + bR ) , (28) the deviation of predicted values from actual values.
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1431
+
+ Prediction Error: The prediction error for the i-th time series TABLE III
+at timestamp t is: DATASET STATISTICS
+  
+ Errt = xit − x̂it  .
+ (i)
+ (36)
+ Standardization: To ensure consistency in different time series, the prediction error is standardized.
+ (i)
+ (i) Errt − μ(i) TABLE IV
+ st = , (37)
+ σ (i) METHOD PARAMETERS
+
+where μ(i) and σ (i) are the mean and standard deviation of
+ (i)
+Errt , respectively.
+ Anomaly Score: The maximum standardized prediction error
+across all time series is the anomaly score for timestamp t:
+ (i)
+ (i) Errt − μ(i)
+ st = max st = max . (38)
+ i i σ (i)
+ Threshold Selection: The optimal threshold for anomaly detection is determined using grid search. The search range is
+defined by the minimum and maximum values of st . The thresh- we perform instance-level anomaly detection and evaluate two
+old that achieves the highest F1 score is selected. To improve configurations of the dataset:
+robustness, a point adjustment strategy is applied to smooth the r D1: Includes three services: ‘Mobservice’, ‘Loginservice’,
+anomaly detection results. and ‘Redisservice’.
+ With this procedure, MGFusion effectively detects anomalies r D2: Covers all services (D1 + ‘Dbservice’ + ‘Webservice’).
+based on accurate predictions. For the experiments, we analyze half a month of data. The
+ In the Artificial Intelligence for IT Operations (AIOps) field, detailed dataset statistics are presented in Table III.
+the MGFusion framework can serve as a core component 2) Baselines: We compare MGFusion with ten state-ofof intelligent operation and maintenance platforms for real- the-art methods, including single-modal and multimodal aptime monitoring and anomaly detection. By MGFusion, oper- proaches. The single-modal anomaly detection methods ination and maintenance teams can achieve automatic anomaly clude OmniAnomaly [44], AnomalyTrans [45], Deeplog [9],
+detection. LogRobust [34], and SwissLog [46]. The multimodal anomaly
+ detection methods with two modalities, include MADMM [13],
+ VIII. EXPERIMENTS SCWarn [21], and Hades [39]. The multimodal anomaly de-
+ In this section, we perform evaluation experiments to address tection methods with three modalities are MSTGAD [19] and
+the following research questions: AnoFusion [18].
+ r RQ1 (Detection Performance and Efficiency): Is our While there is a significant body of excellent work in the
+ method superior to baseline methods in terms of anomaly field of multimodal anomaly detection, such as Nezha, Eadro,
+ detection performance and efficiency? and MRCA [20], a direct comparison with these methods is
+ r RQ2 (Ablation Study): How does each component of MG- unfortunately not feasible due to differences in task objectives.
+ Fusion contribute to its overall performance? Nezha, Eadro, and MRCA aim to detect whether an anomaly
+ r RQ3 (Parameter Sensitivity): How sensitive is MGFusion has occurred in the entire system and, if so, locate the root
+ to variations in key parameters? microservice causing the issue. However, these methods do not
+ address the identification of which specific microservices exhibit
+A. Experimental Setup anomalous behavior.
+ 3) Experimental Environment and Setup: The experimental
+ 1) Dataset: We conduct experiments using the General parameter configurations are detailed in Table IV. MGFusion
+AIOps Atlas (GAIA) dataset1 provided by CloudWise. GAIA is is implemented using PyTorch. All experiments are conducted
+a comprehensive dataset designed for AIOps research, covering in Python 3.8 and PyTorch 1.10, with CUDA 11.3 for GPU
+tasks such as anomaly detection, log analysis, and anomaly lo- acceleration. The hardware environment includes an Intel(R)
+calization. The dataset simulates a system consisting of five hosts Core(TM) i7-13700KF CPU and an NVIDIA RTX 4060 GPU.
+serving both PC and mobile users simultaneously. It includes The multimodal dataset is divided into training and testing
+five microservices deployed across ten instances, with operators sets. The training set contains the first 70% of the data from
+injecting five types of anomalies: system stuck, process crash, each instance. The testing set contains the remaining 30%.
+log-in failure, file missing, and access denied. 4) Evaluation Metrics: We use standard metrics for anomaly
+ Each microservice maintains two separate instances (e.g., detection, including precision (P rec), recall (Rec), and F1 score
+‘Webservice1’ and ‘Webservice2’). Despite providing the same (F 1), defined as follows:
+service functionality, these instances exhibit significant operational variations, such as differences in log templates, data TP
+ P rec = , (39)
+volumes, and metric variations. To account for these differences, TP + FP
+ TP
+ 1 https://github.com/CloudWise-OpenSource/GAIA-DataSet Rec = , (40)
+ TP + FN
+1432 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+ TABLE V
+ PERFORMANCE COMPARISON AMONG DIFFERENT METHODS. THE HIGHEST AND SECOND-HIGHEST RESULTS ARE HIGHLIGHTED WITH BOLDFACE AND
+ UNDERLINE
+
+ P rec × Rec
+ F1 = 2 × , (41)
+ P rec + Rec
+
+where T P , F P and F N represent the number of true positives,
+false positives, and false negatives, respectively.
+ We also consider the training time and interfere time as
+metrics to evaluate the efficiency.
+
+B. Detection Performance and Efficiency (RQ1)
+ 1) Detection Performance: In this experiment, we compare Fig. 6. The ROC-AUC curve of the model.
+the performance of MGFusion against all baseline methods.
+Specifically, we evaluate precision, recall, and F1 score across TABLE VI
+different datasets. However, since MADMM is not an open- COMPARISON OF DETECTION EFFICIENCIES
+source method, it is not feasible to apply MADMM to the
+D2 dataset and obtain the necessary performance metrics for
+comparison. MSTGAD focuses on anomaly detection across all
+service instances in a system, requiring traces from all service instances. Consequently, it can only support the D2 dataset, which
+contains all instances from the GAIA dataset. This approach
+results in extremely large multimodal datasets and takes over 7
+hours to process the GAIA dataset, even when limited to the first
+20,000 data points (seconds) with a training-to-testing ratio of
+7:3. 2) Detection Efficiency: We further evaluate the efficiency of
+ As shown in Table V, MGFusion outperforms all baseline MGFusion by comparing its training and inference times with
+methods on both datasets, achieving the best F1 scores of 0.958 AnoFusion [18] on both datasets. As shown in Table VI, MGon D1 and 0.968 on D2. Single-modal anomaly detection meth- Fusion demonstrates significantly shorter training and inference
+ods, such as OmniAnomaly and AnomalyTrans, demonstrate time.
+limited performance due to their inability to leverage multimodal AnoFusion relies on complex multi-layer graph transformainformation. In contrast, dual-modal methods significantly im- tion networks and graph attention networks to model relationprove detection accuracy by incorporating relationships between ships between multimodal data, resulting in higher computametrics and logs. While supervised and semi-supervised meth- tional complexity. In contrast, MGFusion leverages DCRNN
+ods generally achieve higher performance, MGFusion, despite for prediction, which reduces training time while maintaining
+being fully unsupervised, matches or surpasses the F1 scores high performance. Additionally, MGFusion’s faster inference
+of top supervised methods by leveraging the benefits of trace time makes it more suitable for real-time systems.
+data. Trace data captures important contextual and temporal in- In summary, MGFusion achieves state-of-the-art detection
+formation that enhances the model’s ability to detect anomalies. performance while significantly improving computational ef-
+Furthermore, it outperforms all existing unsupervised methods, ficiency, making it a highly effective solution for anomaly dehighlighting its exceptional capability to detect anomalies in tection in real-world systems.
+unlabeled datasets.
+ As shown in Fig. 6, the ROC curves for the two datasets (D1
+ C. Ablation Experiment (RQ2)
+and D2) exhibit AUC of 0.976 for D1 and 0.977 for D2. These
+results further highlight the effectiveness and superiority of our To demonstrate the contribution and importance of each commethod in anomaly detection. ponent of MGFusion, we create four variants of MGFusion and
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1433
+
+Fig. 7. F1 scores of MGFusion under different parameter.
+
+ TABLE VII replicated by a single GSL method (e.g., FPM). Consequently,
+ PERFORMANCE COMPARISON AMONG DIFFERENT VARIANTS the performance of MGFusion significantly degrades when
+ Graph Fusion is removed (MGFusion w/o Graph Fusion).
+ The Grassmann manifolds-based graph fusion module is critical, as it preserves the distinct structural properties of basic
+ graphs while constructing a unified representation. Removing
+ this component leads to a notable performance drop, underscoring its necessity.
+ The prior graph serves as a structural guide for graph learning.
+ Removing prior knowledge (MGFusion w/o Prior Knowledge)
+ results in a decline in precision, highlighting the importance of
+ this inductive bias for robust anomaly detection.
+ The DCRNN plays a crucial role in MGFusion. In Table VII,
+ when the DCRNN is replaced by STGCN (MGFusion w/o
+ DCRNN), the model’s performance significantly decreases, esconduct a series of experiments to compare their performance. pecially in terms of precision.
+The variants are defined as follows:
+ r MGFusion w/o Graph Fusion: To evaluate the importance
+ D. Parameter Sensitivity (RQ3)
+ of the multiple graphs and graph fusion, this variant uses
+ only the FPM in place of the three graph structure learners. To evaluate the stability and robustness of MGFusion, we
+ r MGFusion w/o Grassmann: This variant removes the analyze the influence of key hyperparameters.
+ Grassmann manifolds-based graph fusion and instead com- 1) Window Size ω: We investigate the impact of the sliding
+ bines graphs based on their similarity to the prior graph. window size by varying it from 5 to 60. Fig. 7 shows the
+ This evaluates the impact of Grassmann manifolds-based experimental results, which highlight the following trends.
+ graph fusion. Excessively large windows (e.g., > 35) introduce too much
+ r MGFusion w/o Prior Knowledge: To examine the role of seasonal variation, making it challenging to reconstruct the curprior knowledge in guiding GSL, this variant eliminates rent state and degrading anomaly detection performance. Overly
+ the GSL loss, effectively removing the influence of prior small windows (e.g., < 15) fail to capture sufficient historical
+ knowledge. context, leading to suboptimal learning and reduced detection
+ r MGFusion w/o DCRNN: To evaluate whether DCRNN accuracy. Optimal performance is achieved with a window size
+ is the optimal choice, we replace DCRNN with Spatial- between 15 and 35, where a balance is struck between capturing
+ Temporal Graph Convolutional Networks (STGCN) [47]. historical patterns and avoiding excessive noise.
+ Table VII reports the average precision, recall, and F1 scores 2) Hyperparameter α: The Grassmann manifolds-based
+of the four variants. The results indicate the following. graph fusion framework uses two key components: the contri-
+ The three GSL methods provide complementary perspectives butions of basic graph structures and the constraints of common
+for capturing complex node relationships, which cannot be fully structures. The hyperparameter α balances these components
+1434 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+during the fusion process. When α = 0, the fusion process [4] R. Picoreti, A. P. do Carmo, F. M. de Queiroz, A. S. Garcia, R. F. Vassallo,
+considers only basic graph structures, ignoring subspace con- and D. Simeonidou, “Multilevel observability in cloud orchestration,” in
+sistency constraints. As α increases, the framework emphasizes Proc. IEEE 16th Int. Conf. Dependable, Autonom. Secure Comput., 16th
+ Int. Conf. Pervasive Intell. Computing, 4th Int. Conf. Big Data Intell.
+the global structural information encoded in common structures, Comput. Cyber Sci. Technol. Cong., 2018, pp. 776–784.
+progressively aligning subspaces. [5] Y. Fu et al., “Investigating and improving log parsing in practice,” in Proc.
+ We evaluate the impact of α by varying its value from 0 to 30th ACM Joint Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., 2022,
+1 in steps of 0.1. Fig. 7 shows the results. When α = 0.5, the pp. 1566–1577.
+ [6] S. Nedelkoski, J. Cardoso, and O. Kao, “Anomaly detection from system
+information complementarity between the basic graph structures tracing data using multimodal deep learning,” in Proc. IEEE 12th Int. Conf.
+and the common structures is insufficient, leading to suboptimal Cloud Comput., 2019, pp. 179–186.
+fusion performance. Increasing α to 0.7 strengthens subspace [7] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga, “USAD:
+consistency constraints, enhancing performance by aligning the Unsupervised anomaly detection on multivariate time series,” in Proc.
+ ACM Int. Conf. Knowl. Discov. Data Mining, 2020, pp. 3395–3404.
+global structures more effectively.
+ [8] M. Ma et al., “Jump-starting multivariate time series anomaly detection
+ These results highlight the importance of balancing local and for online service systems,” in Proc. USENIX Annu. Techn. Conf., 2021,
+global structural information for optimal graph fusion. pp. 413–426.
+ 3) k in K-Nearest Neighbors Graph Structure Learning: In [9] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection
+K-nearest neighbors graph structure learning, the value of K and diagnosis from system logs through deep learning,” in Proc. ACM
+ SIGSAC Conf. Comput. Commun. Secur., 2017, pp. 1285–1298.
+determines the number of nearest neighbors to consider when [10] S. Ying et al., “An improved KNN-based efficient log anomaly detection
+constructing the graph. Selecting an appropriate K value is method with automatically labeled samples,” ACM Trans. Knowl. Discov.
+therefore critical for achieving optimal performance. To verify Data, vol. 15, no. 3, pp. 34:1–34:22, 2021.
+this, we conducted experiments by varying K within a range [11] Q. Zhang et al., “Provable dynamic fusion for low-quality multimodal
+ data,” in Proc. Int. Conf. Mach. Learn., 2023, pp. 41753–41769.
+from 10 to 80. The results showed that the model achieved the
+ [12] C. Hou, T. Jia, Y. Wu, Y. Li, and J. Han, “Diagnosing performance issues
+best performance when K = 40. This highlights the importance in microservices with heterogeneous data source,” in Proc. IEEE Int.
+of tuning K to ensure the graph accurately captures the relation- Conf. Parallel Distrib. Process. Appl., Big Data Cloud Comput., Sustain.
+ships among data points. Comput. Commun., Social Comput. Netw., 2021, pp. 493–500.
+ 4) Diffusion Degree L: In our analysis of the diffusion degree [13] P. Wang, X. Zhang, Z. Cao, and Z. Chen, “MADMM: Microservice system
+ anomaly detection via multi-modal data and multi-feature extraction,”
+L parameter in DCRNN, we systematically varied L from 1 to 8 Neural Comput. Appl., vol. 36, no. 25, pp. 15739–15757, 2024.
+to evaluate its impact on model performance. The results demon- [14] F. Liu et al., “MicroCBR: Case-based reasoning on spatio-temporal fault
+strated that the model performed optimally when L = 4, striking knowledge graph for microservices troubleshooting,” in Proc. 30th Int.
+a balance between capturing complex temporal dependencies Conf. Case-Based Reasoning Res. Develop., 2022, pp. 224–239.
+ [15] C. Zhang et al., “DeepTraLog: Trace-log combined microservice anomaly
+and mitigating the risk of overfitting. This finding underscores detection through graph-based deep learning,” in Proc. Int. Conf. Softw.
+the importance of carefully selecting the diffusion degree L to Eng., 2022, pp. 623–634.
+fully leverage DCRNN’s strengths in anomaly detection tasks. [16] S. Zhang et al., “Robust failure diagnosis of microservice system through
+ multimodal data,” IEEE Trans. Serv. Comput., vol. 16, no. 6, pp.
+ 3851–3864, Nov./Dec. 2023.
+ IX. CONCLUSION [17] G. Yu, P. Chen, Y. Li, H. Chen, X. Li, and Z. Zheng, “Nezha: Interpretable
+ fine-grained root causes analysis for microservices on multi-modal ob-
+ To fully exploit the potential of multimodal data in microser- servability data,” in Proc. 31st ACM Joint Eur. Softw. Eng. Conf. Symp.
+vice systems, we propose MGFusion, an innovative, unsuper- Found. Softw. Eng., 2023, pp. 553–565.
+ [18] C. Zhao et al., “Robust multimodal failure detection for microservice
+vised, end-to-end multimodal anomaly detection method. MG- systems,” in Proc. ACM Int. Conf. Knowl. Discov. Data Mining, 2023,
+Fusion effectively transforms metrics, logs, and traces into time pp. 5639–5649.
+series using a robust time series conversion approach, enabling [19] J. Huang, Y. Yang, H. Yu, J. Li, and X. Zheng, “Twin graph-based anomaly
+consistent processing across all modalities. It leverages GSL detection via attentive multi-modal learning for microservice system,” in
+methods to capture the intricate relationships between the con- Proc. 38th IEEE/ACM Int. Conf. Automat. Softw. Eng., 2023, pp. 66–78.
+ [20] Y. Wang, Z. Zhu, Q. Fu, Y. Ma, and P. He, “MRCA: Metric-level root cause
+verted multivariate time series. Additionally, MGFusion incor- analysis for microservices via multi-modal data,” in Proc. IEEE/ACM Int.
+porates prior knowledge through AAI and employs Grassmann Conf. Automat. Softw. Eng., 2024, pp. 1057–1068.
+manifolds-based graph fusion to enhance the accuracy and reli- [21] N. Zhao et al., “Identifying bad software changes via multimodal anomaly
+ability of the learned graph structures. By integrating DCRNN detection for online service systems,” in Proc. ACM Joint Eur. Softw. Eng.
+ Conf. Symp. Found. Softw. Eng., 2021, pp. 527–539.
+predictors and an anomaly score calculation mechanism, MG- [22] H. Liu et al., “UAC-AD: Unsupervised adversarial contrastive learning for
+Fusion achieves efficient and accurate anomaly detection, anomaly detection on multi-modal data in microservice systems,” IEEE
+thereby ensuring service reliability in complex microservice Trans. Serv. Comput., vol. 17, no. 6, pp. 3887–3900, Nov./Dec. 2024.
+systems. In future, we aim to explore dynamic fusion techniques [23] X. Jiang, H. Luo, Y. Sun, and M. Guizani, “Fast anomaly detection for IoT
+to better handle the evolving relationships between different services based on multisource log fusion,” IEEE Internet Things J., vol.
+ 11, no. 6, pp. 9405–9419, Mar. 2024.
+modalities. [24] C. Lee, T. Yang, Z. Chen, Y. Su, and M. R. Lyu, “Eadro: An end-to-end
+ troubleshooting framework for microservices on multi-source data,” in
+ Proc. Int. Conf. Softw. Eng., 2023, pp. 1750–1762.
+ REFERENCES [25] C. Wu et al., “Using adamic-Adar index algorithm to predict volunteer
+ collaboration: Less is more,” 2023, arXiv:2308.13176.
+ [1] S. Li, L. D. Xu, and S. Zhao, “5G Internet of Things: A survey,” J. Ind. [26] P. Ni, R. Okhrati, S. Guan, and V. Chang, “Knowledge graph and deep
+ Inf. Integr., vol. 10, pp. 1–9, 2018. learning-based text-to-graphQL model for intelligent medical consultation
+ [2] Q. Lin, H. Zhang, J. Lou, Y. Zhang, and X. Chen, “Log clustering based chatbot,” Inf. Syst. Front., vol. 26, no. 1, pp. 137–156, 2024.
+ problem identification for online service systems,” in Proc. Int. Conf. Softw. [27] P. Lai et al., “CogNLG: Cognitive graph for KG-to-text generation,” Expert
+ Eng., 2016, pp. 102–111. Syst. J. Knowl. Eng., vol. 41, no. 1, 2024, Art. no. e13461.
+ [3] X. Zhou et al., “Fault analysis and debugging of microservice systems: [28] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+ Industrial survey, benchmark system, and empirical study,” IEEE Trans. in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021, pp.
+ Softw. Eng., vol. 47, no. 2, pp. 243–260, Feb. 2021. 4027–4035.
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION 1435
+
+[29] S. Han and S. S. Woo, “Learning sparse latent graph representations for Keyao Feng received the BS degree from East China
+ anomaly detection in multivariate time series,” in Proc. ACM Int. Conf. Jiaotong University, in 2023. She is currently working
+ Knowl. Discov. Data Mining, 2022, pp. 2977–2986. toward the MS degree in software engineering with
+[30] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning graph the Changsha University of Science and Technology.
+ structures with transformer for multivariate time-series anomaly detection Her research interests include deep learning, graph
+ in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189, Jun. 2022. structure learning, and anomaly detection.
+[31] S. He, G. Li, K. Xie, and P. K. Sharma, “Fusion graph structure learningbased multivariate time series anomaly detection with structured prior
+ knowledge,” IEEE Trans. Inf. Forensics Secur., vol. 19, pp. 8760–8772,
+ 2024.
+[32] W. Meng et al., “LogAnomaly: Unsupervised detection of sequential and
+ quantitative anomalies in unstructured logs,” in Proc. Int. Joint Conf. Artif.
+ Intell., 2019, pp. 4739–4745.
+[33] S. Nedelkoski, J. Bogatinovski, A. Acker, J. Cardoso, and O. Kao, “Selfattentive classification-based anomaly detection in unstructured logs,” in
+ Proc. IEEE Int. Conf. Data Mining, 2020, pp. 1196–1201. Kaixuan Meng received the BS degree from the
+[34] S. Xue, H. Chen, and X. Zheng, “Detection and quantification of anomalies East China University of Technology, in 2023. He is
+ in communication networks based on LSTM-ARIMA combined model,” currently working toward the MS degree in computer
+ Int. J. Mach. Learn. Cybern., vol. 13, no. 10, pp. 3159–3172, 2022. science and technology with the Changsha University
+[35] V. Le and H. Zhang, “Log-based anomaly detection without log parsing,” in of Science and Technology. His research interests
+ Proc. 36th IEEE/ACM Int. Conf. Automat.Softw. Eng., 2021, pp. 492–504. include deep learning, data analysis, graph structure
+[36] S. He, Y. Lei, Y. Zhang, K. Xie, and P. K. Sharma, “Parameter-efficient learning, and anomaly detection.
+ log anomaly detection based on pre-training model and LORA,” in Proc.
+ IEEE 34th Int. Symp. Softw. Rel. Eng., 2023, pp. 207–217.
+[37] P. Liu et al., “Unsupervised detection of microservice trace anomalies
+ through service-level deep Bayesian networks,” in Proc. IEEE Int. Symp.
+ Softw. Rel. Eng., 2020, pp. 48–58.
+[38] T. Zhou et al., “TraceStream: Anomalous service localization based on
+ trace stream clustering with online feedback,” in Proc. IEEE Int. Symp.
+ Softw. Rel. Eng., 2023, pp. 601–611. Kun Xie (Member, IEEE) received the PhD degree
+[39] C. Lee, T. Yang, Z. Chen, Y. Su, Y. Yang, and M. R. Lyu, “Heterogeneous in computer applications from Hunan University, in
+ anomaly detection for software systems via semi-supervised cross-modal 2007 and subsequently conducted postdoctoral reattention,” in Proc. Int. Conf. Softw. Eng., 2023, pp. 1724–1736. search with The Hong Kong Polytechnic University.
+[40] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing She is currently a second-level professor and doctoral
+ approach with fixed depth tree,” in Proc. IEEE Int. Conf. Web Serv., 2017, supervisor with Hunan University. She serves as the
+ pp. 33–40. director with the Ministry of Education Key Labora-
+[41] I. Elsharkawi, H. Sharara, and A. Rafea, “SViG: A similarity-thresholded tory for Supercomputing and Artificial Intelligence
+ approach for vision graph neural networks,” IEEE Access, vol. 13, pp. Converged Computing, and as a chair of both the
+ 19379–19387, 2025. Academic Committee and the Degree Committee of
+[42] R. Ghiasi, H. Amirkhani, and A. Bosaghzadeh, “Multi-view graph struc- the School of Information Science and Engineering,
+ ture learning using subspace merging on Grassmann manifold,” Multime- Hunan University. She has published more than 130 papers in top-tier conferdia Tools Appl., vol. 82, no. 11, pp. 17135–17157, 2023. ences and journals, including SIGMOD, CCS, INFOCOM, ICDE, SIGMET-
+[43] C. Shang, J. Chen, and J. Bi, “Discrete graph structure learning for fore- RICS, IEEE/ACM Transactions on Networking, IEEE Transactions on Mobile
+ casting multiple time series,” in Proc. Int. Conf. Learn. Representations, Computing, IEEE Transactions on Parallel and Distributed Systems, IEEE
+ 2021, pp.1–14. Transactions on Services Computing, IEEE Transactions on Information Foren-
+[44] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly sics and Security, IEEE Transactions on Knowledge and Data Engineering, and
+ detection for multivariate time series through stochastic recurrent neural IEEE Transactions on Dependable and Secure Computing. Her research has long
+ network,” in Proc. ACM Int. Conf. Knowl. Discov. Data Mining, 2019, pp. focused on computer networks, network security, and artificial intelligence.
+ 2828–2837.
+[45] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time series
+ anomaly detection with association discrepancy,” in Proc. Int. Conf. Learn.
+ Representations, 2022, pp.1–20.
+[46] X. Li, P. Chen, L. Jing, Z. He, and G. Yu, “SwissLog: Robust anomaly
+ detection and localization for interleaved unstructured logs,” IEEE Trans.
+ Dependable Secur. Comput., vol. 20, no. 4, pp. 2762–2780, Jul./Aug. 2023.
+[47] S. Yan, Y. Xiong, and D. Lin, “Spatial temporal graph convolutional Xibin Zhao (Senior Member, IEEE) received the
+ networks for skeleton-based action recognition,” in Proc. AAAI Conf. Artif. PhD degree from Jiangsu University, in 2004. He
+ Intell., 2018, pp. 7444–7452. has published more than 200 papers in international
+ conferences and journals such as S&P, Usenix Secu-
+ Shiming He received the BS degree in information rity, IEEE Transactions on Information Forensics and
+ security and the PhD degree in computer science and Security, NeurIPS, IEEE Transactions on Networktechnology from Hunan University, China, in 2006 ing, IEEE Transactions on Computer-Aided Design
+ and 2013, respectively. She is currently a professor of Integrated Circuits and Systems, IEEE Transacwith the School of Computer Science and Technol- tions on Pattern Analysis and Machine Intelligence,
+ ogy, Changsha University of Science and Technology, AAAI, IEEE Transactions on Industrial Electronics,
+ Changsha, China. Her research interests include ma- and IEEE Transactions on Industrial Informatics.
+ chine learning, data analysis, AIOps, and anomaly His research interests include software security, network security, artificial
+ detection. intelligence, enterprise information systems, industrial networks, and intelligent
+ manufacturing.

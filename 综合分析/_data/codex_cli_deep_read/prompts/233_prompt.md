@@ -1,0 +1,1433 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [233] GETRF: A General Framework for Encrypted Traffic Identification With Robust Representation Based on Datagram Structure
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：233
+题名：GETRF: A General Framework for Encrypted Traffic Identification With Robust Representation Based on Datagram Structure
+年份：2024
+DOI：10.1109/tccn.2024.3400825
+来源：IEEE Transactions on Cognitive Communications and Networking
+PDF：paper/10.1109_TCCN.2024.3400825.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：无
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\233.txt
+- 原始字符数：68153
+- 本次发送字符数：68153
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+2045
+
+GETRF: A General Framework for Encrypted
+Traffic Identification With Robust Representation
+Based on Datagram Structure
+Xiaojuan Wang , Zikui Lu , Xinlei Wang , Mingshu He , Member, IEEE, and Xiaojun Wang
+
+Abstract—Identifying encrypted traffic is essential for network
+management, but it becomes increasingly challenging as more
+and more users adopt encryption protocols and traffic defense
+mechanisms for data privacy. Most existing methods heavily rely
+on deep features and labeled samples, overlooking the opportunity to capture pattern information of datagram structure.
+As a consequence, these methods are unable to extract rulebased knowledge from unlabeled data, limiting their ability to
+identify unseen or feature-perturbed traffic. In this paper, we
+propose a new framework for encrypted traffic identification
+named Generic Encrypted Traffic Representation Framework
+(GETRF), which includes three pre-training tasks designed based
+on the datagram structure. By leveraging the advantages of
+these tasks, GETRF can utilize unlabeled traffic to form generic
+and robust representations, capturing the characteristics of
+datagrams at the byte, packet, and flow levels. After fine-tuning,
+these representations can be applied to identification tasks across
+multiple scenarios. The results demonstrate that GETRF achieves
+state-of-the-art performance in multi-scenario and fine-grained
+identifications, and effectively handles feature-perturbed traffic.
+Index Terms—Encrypted traffic identification, pre-training,
+generic traffic representation, cyberspace management, datagram
+structure, privacy-enhancing technology.
+
+I. I NTRODUCTION
+DENTIFYING and categorizing traffic behaviors into
+their respective applications and services is crucial for
+cyberspace management [1], [2], [3], [4], [5]. They allow
+Internet service providers to improve the quality of service
+as well as detect potential security threats [6]. However, with
+the growth of privacy-enhancing technologies [7], [8], traditional methods and machine learning models are encountering
+two significant challenges. Firstly, the availability of plaintext is decreasing, making methods based on port numbers
+and protocol information unreliable. Secondly, the increasing
+
+I
+
+Manuscript received 16 November 2023; revised 27 March 2024; accepted
+7 May 2024. Date of publication 14 May 2024; date of current version
+6 December 2024. This work was supported by the National Natural Science
+Foundation of China under Grant 62227805 and Grant 62071056. The
+associate editor coordinating the review of this article and approving it for
+publication was Y. Sagduyu. (Corresponding authors: Zikui Lu; Mingshu He.)
+Xiaojuan Wang, Zikui Lu, Xinlei Wang, and Mingshu He are with
+the School of Electronic Engineering, Beijing University of Posts and
+Telecommunications, Beijing 100876, China (e-mail: Luzikui@bupt.edu.cn;
+hemingshu@bupt.edu.cn).
+Xiaojun Wang is with the School of Electronic Engineering, Dublin City
+University, Dublin 9, Ireland.
+Digital Object Identifier 10.1109/TCCN.2024.3400825
+
+randomness of payload data and statistic values makes fingerprinting and feature-counting methods inadequate for the
+current environment.
+Deep learning, through hierarchical mapping and
+weighted computations, enables automatic feature extraction,
+thereby addressing the challenges posed by random
+algorithms [9], [10]. As such, researchers employ end-to-end
+models to classify encrypted traffic. However, these end-toend methods heavily depend on the feature distribution of
+samples and label quality, which can limit the generalization
+ability of the models. To mitigate the impact of label
+quality on models, researchers begin to adopt pre-training
+approaches for identification. Works [11], [12] apply pretraining techniques to encrypted traffic classification and
+achieve significant results in application classification and
+attack detection tasks. Although reducing the amount of
+labeled data during the training, these works overlook the
+effect of latent information of datagram structure on traffic
+representation, resulting in poor performance in multi-scenario
+and fine-grained classification.
+To better tackle the challenge of encrypted traffic identification, some practical issues that need to be discussed:
+1) The method for encrypted traffic identification should
+minimize the use of specific field values and hand-craft
+features.
+Encryption algorithms gradually cover plaintext, rendering the traffic behavior analysis based on specific values
+ineffective. Manual feature extraction, which often relies on
+expert knowledge, faces challenges due to the rapid growth of
+applications and services on the network, making the manual
+update of effective features increasingly complex.
+2) The method for encrypted traffic identification should
+be robust and not rely on label quality or specific feature
+distributions.
+Data labeling is a time-consuming task, and such a data collection process not only results in long bootstrap times but also
+poses additional challenges for identification. Furthermore,
+traffic defense mechanisms aim to disrupt the feature distribution, negatively impacting models that rely on the specific
+feature distribution of sample data for traffic classification.
+3) The method for encrypted traffic identification should be
+generalized and able to be quickly applied to multi-scenario
+tasks as well as fine-grained classification.
+Encrypted traffic identification includes application classification, attack detection, anonymous detection, encapsulation
+
+c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+2332-7731 
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+2046
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+detection, malware detection, and other tasks. An ideal method
+should perform well across all of these tasks. Furthermore,
+in real network scenarios, there exists a significant amount of
+background traffic. A method with strong generalization capabilities should be able to mitigate the impact of background
+traffic and complete fine-grained identification of target flows.
+To sum up, considering the application scenarios and
+challenges faced in encrypted traffic identification, an ideal
+method needs to satisfy both generality and robustness. For
+generality, employing pre-training models to generate traffic
+representations is a natural idea. These models can leverage
+large-scale unlabeled data and minimize the impact of specific
+feature distributions on generic representations by separating representation objectives from specific task objectives.
+Compared to generality, robustness is a more challenging
+issue. We consider that addressing this issue should focus
+on the datagram structure itself. Due to the limitations of
+current random algorithms and the cold-start policy followed
+by the traffic protection measures, privacy-enhanced technologies cannot produce perfectly random encrypted traffic.
+Therefore, similar patterns exist in datagrams of the same
+type. These similarities, observable in the traffic structure and
+padding characters, are influenced by the protocol, content, and
+encryption algorithm. By thoroughly leveraging this metadata,
+we can uncover latent patterns behind the traffic.
+Based on the above considerations, in this paper, we propose
+a new framework with a pre-training model, named Generic
+Encrypted Traffic Representation Framework (GETRF), for
+building generic and robust traffic representations. The framework includes three pre-training tasks based on datagram
+structure: Mask Token Prediction (MTP), Same Packet
+Prediction (SPP), and Hidden State Feature Prediction (HSP).
+Benefiting from these tasks, GETRF can utilize unlabeled
+traffic to form generic and robust representations by capturing
+datagram characteristics at the byte, packet, and flow levels.
+Additionally, knowledge extraction from different aspects of
+datagram structures can also help mitigate the impact of traffic
+defense mechanisms. The main contributions of this paper are
+summarized as follows:
+• We propose a novel pre-training learning framework
+for encrypted traffic identification, which leverages
+large-scale unlabeled data to achieve high-performance
+and multi-scenario traffic classification without model
+modification or extensive data training. Moreover, the
+framework can effectively mitigate interference of
+privacy-enhancing technologies and background traffic.
+• We design three pre-training tasks based on datagram
+characteristics, capturing byte, packet, and flow-level
+traffic information to generate generic and robust representations. Benefiting from the knowledge extraction
+from different aspects of datagram structures, representations that are fine-tuned with a small amount of sample
+data can be applied to various tasks. Additionally, multiperspective learning enhances the framework’s ability to
+resist feature perturbations.
+• We conduct comprehensive experiments to evaluate the
+framework using five public datasets and an experimental dataset. The results show that GETRF achieves
+
+state-of-the-art performance across five tasks with an
+average F1 score of 99.12%. Additionally, we further validate the ability of GETRF for fine-grained identification
+and its capability to resist traffic defense mechanisms, and
+our method shows effectiveness under these conditions.
+The remainder of the paper is organized as follows:
+Section II discusses the related work. Section III proposes
+the framework architecture and pre-training tasks. Section IV
+presents the results and analysis of comparison experiments.
+Finally, the paper is concluded in Section V.
+II. R ELATED W ORK
+A. Encrypted Traffic Identification
+The research on traffic identification has been widely
+applied across a variety of applications. For discussion purposes, we categorize the methods into three classes [6], with
+the related works summarized in Table I.
+1) Statistic Method: The earliest methods used for traffic
+classification were port-based methods and DPI [13]. However,
+these methods heavily relied on unencrypted information, and
+random changes in it could lead to misleading results. In
+contrast, our method learns the traffic representations from
+multiple perspectives, which helps to enhance its robustness.
+2) Machine Learning Method: To reduce the impact of
+random content on classification, researchers utilize sidechannel information and machine learning to classify traffic.
+Panchenko et al. [14] identified unknown traffic using features
+like packet size, packet direction, and the volume of bytes.
+AppScanner [15] trained classifiers using statistical features
+such as packet sizes, while BIND [16] exploited temporal
+features to classify traffic. However, these methods rely on
+expert knowledge and require appropriate feature design. The
+evolving nature of network traffic makes solutions, based on
+manually- and expert-originated features, unable to keep pace.
+3) Deep Learning Method: Deep learning methods include
+end-to-end approaches, multimodal-based approaches, and
+representation-based approaches.
+Wang et al. [17] first introduced the end-to-end method
+for flow classification, transforming packet data into grayscale
+images for CNN. Building on this, Sirinam et al. [18]
+employed CNN for deep fingerprinting, while Bhat et al. [19]
+designed Var-CNN for flow classification. However, these
+schemes did not fully consider the characteristics of datagram
+structure in their design, leading to unsatisfactory model
+performance. Lotfollahi et al. [20] developed DeepPacket to
+characterize raw payloads. Luo et al. [21] utilized transformer models to capture semantic relationships between
+characters for traffic classification. Shen et al. introduced
+GraphDApp [22], transforming application traffic into graphs
+for GNN-based identification. Huoh et al. [23] analyzed the
+relationships between traffic bytes, metadata, and packet interactions for application classification. Although these methods
+do not require feature engineering, they require substantial
+amounts of new, task-specific labeled data for retraining when
+addressing new tasks. In contrast, our model can be easily
+adapted to new scenarios with minimal fine-tuning on a small
+dataset.
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+2047
+
+TABLE I
+N OTABLE R ELATED W ORKS IN E NCRYPTED T RAFFIC I DENTIFICATION TASKS
+
+To overcome the limitation of single-model approaches,
+which fail to generalize high-dimensional features,
+researchers adopt multimodal approaches to classify traffic.
+MIMETIC [24], by assembling models that observe different
+features, addresses the problem of multi-view capitalization
+of traffic data. However, this method still requires a large
+number of labeled samples for training, resulting in a
+long bootstrap time. Considering bursts and communication
+protocols separately, Mimetic-All [25] leveraged context
+inputs as an additional modality for application classification,
+while APP-Net [26] combined BiLSTM and CNN models for
+identification. Both methods demonstrate high performance in
+application classification. Nevertheless, these approaches fail
+to take the influence of background traffic into account and
+cannot be easily applied to other classification scenarios.
+Representation-based approaches leverage pre-training to
+utilize unlabeled data, which has been proven effective in
+NLP [27]. Similar to the “paragraph-sentence-word” structure
+in natural language, there is a “flow-packet-byte” hierarchy in
+network traffic. Therefore, researchers employ representationbased methods for traffic identification. He et al. [11] applied
+ALBERT to encrypted traffic classification and achieved
+93.27% accuracy in ISCX-VPN [28]. However, the method did
+not design reasonable pre-training tasks, limiting the model’s
+performance. Observing the process of Web page rendering,
+Lin et al. [12] designed a new structure named BURST for
+the pre-training task and generated traffic representation for
+identification. Nonetheless, this method did not consider the
+basic structure of the traffic, leading to poor performance
+in fine-grained identification. Our method, however, improves
+performance by learning the context, structure, and hidden
+state features of the flow, and maintains good performance
+when faced with feature-perturbed traffic.
+B. Traffic Defense Mechanism
+The purpose of traffic identification is to classify traffic
+and manage cyberspace effectively. However, some studies
+
+have demonstrated that traffic patterns can be distorted through
+methods such as dummy packet padding or traffic regularization [29], [30]. These methods, which prevent accurate
+traffic identification, are referred to as traffic defense mechanisms [31].
+During the transmission of traffic, datagrams pass through
+multiple relay nodes. By deploying defense models at these
+relay nodes, traffic can be manipulated, resulting in distorted
+traffic observations at these nodes.
+The primary methods of traffic defense mechanisms include
+obfuscation, confusion, and regularization [29]. Among these,
+both obfuscation and confusion methods involve dummy
+packet padding. This approach can significantly disrupt the
+feature distribution of traffic, making it difficult to distinguish between dummy packets and real packets. Moreover, it
+exploits the advantages of low overhead, making it feasible
+for implementation in the real world. For instance, WTF-PAD
+has been deployed in Tor circuits [30]. Regularization methods
+restrict how nodes send and receive packets to strictly limit
+the feature space, for example, by enforcing a fixed packet
+rate [31].
+Given the potential for distortion in the traffic, we further
+evaluate the performance of GETRF on datasets processed
+by the traffic defense mechanism. It is worth noting that
+regularization methods are challenging to implement in the
+real world. Hence, we opt to manipulate the traffic by adding
+dummy packets for evaluation purposes.
+III. T HE P ROPOSED M ETHOD
+In this section, we present the design details of GETRF.
+We start with an overview of GETRF before exploring its
+individual components.
+As mentioned above, to achieve a generic and robust
+traffic representation, two key considerations are necessary:
+1) Designing pre-training tasks that separate representation
+goals from identification objectives, thereby preventing the
+overfitting of representations to specific feature distributions.
+
+2048
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+Fig. 1. Overview of the GETRF framework. The framework consists of three stages: preprocess, pre-training, and fine-tuning. In the preprocess stage, the
+raw traffic is processed to form tokens and construct the model’s input sequence. In the pre-training stage, three pre-training tasks are utilized to contribute
+to generating the traffic representations. In the fine-tuning stage, these representations are adjusted based on the task-specific data for fine-grained traffic
+identification.
+
+Fig. 2. The training process utilized during the pre-training and fine-tuning
+phases of GETRF. During the pre-training phase, the input sequences are
+processed by the embedding layer and the transformer encoder layer, resulting
+in the traffic representations. These representations are then fed into the three
+linear layers to acquire knowledge at different levels respectively. During
+the fine-tuning stage, the three networks associated with pre-training tasks
+are removed. Instead, an additional linear layer is added to perform specific
+identification tasks.
+
+2) Minimizing the impact of feature perturbations on pretraining objectives. In other words, the representations should
+be resilient to changes in encrypted traffic without significant
+adjustments to their initial learning objective.
+The design of pre-training tasks in GETRF is based on
+two key observations: Firstly, the raw bytes, metadata, and
+packet relationships contain more information that can be
+
+captured by the model [23], and specific-function metadata
+often clusters within traffic segments, forming distinct patterns [32]. Secondly, leveraging data from multiple dimensions
+can enhance model robustness [24]. Therefore, with a focus
+on traffic metadata, we design pre-training tasks based on
+datagram structure, namely MTP, SPP, and HSP. These tasks
+are designed to learn traffic representations at the byte, packet,
+and flow levels, respectively. The description of these three
+methods is provided in Section III-B.
+We plot the architecture of GETRF in Fig. 1. At a high
+level, GETRF needs to analyze the correlation among three
+pre-training methods to generate representations. In particular,
+the transformer model with a self-attention mechanism is a
+reasonable choice. The self-attention mechanism establishes
+unique correlations between representations and patterns.
+Additionally, the multi-head mechanism further enables the
+framework to analyze comprehensive traffic patterns at three
+different levels. Therefore, we design the model as shown in
+Fig. 2 to capture traffic representations for subsequent training
+phases. Specifically, GETRF consists of an embedding layer, a
+transformer encoder layer, and three linear layers (or one linear
+layer). The embedding layer includes three embedding functions, which embed token, position and segment information
+of the input sequence, respectively. The transformer encoder
+layer includes 12 transformer encoders, each of which includes
+one multi-head attention model, one feed-forward model, two
+dropout functions, and two normalization functions. The multihead attention model consists of four linear functions and one
+dropout function, while the feed-forward model consists of two
+linear functions. The selection of hyperparameters is provided
+in Table IV.
+GETRF is composed of three main components. First, preprocessing the raw data to form token sequences suitable for
+the pre-training model, as detailed in Section III-A. Second,
+based on three pre-training tasks outlined in Section III-B, the
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+TABLE II
+N OTATIONS U SED IN THE PAPER
+
+encoding models are pre-trained, allowing for the acquisition
+of traffic representation using unlabeled data. Finally, for
+specific downstream tasks, fine-tuning is conducted with a
+small set of labeled data, as described in Section III-C. Table II
+provides a list of all symbols used in this paper.
+A. Preprocess
+The preprocess step aims to generate an appropriate input
+sequence for the execution of the pre-training tasks.
+We first split the raw traffic T r with the same 5-tuple
+(source IP, destination IP, source port, destination port, and
+protocol), and then form the collection of session flow F. Each
+session flow fi represents a specific behavior and contains
+multiple packets, with packet pim denoting the m-th packet of
+the i-th flow and bjmi denoting the j-th byte of the packet pim .
+The relationship between flows, packets, and bytes is shown
+as the following formulas:
+F = {f1 , f2 , . . . , fi , . . . , fN , N ∈ N+ }
+
+fi = {pi1 , pi2 , . . . , pim , . . . , piM , M ∈ N+ }
+pim = {b1mi , b2mi , . . . , bImi , I ∈ N+ }
+
+(1)
+(2)
+(3)
+
+Even though both natural language and network traffic
+share a structure comprising ‘words, sentences, paragraphs,
+syntax’ (corresponding to bytes, packets, flows, and protocol
+specifications), their difference lies in the fact that each
+word has precise meanings, while a byte is formed by 8-bit
+binary digits and hold no inherent meaning. Consequently,
+we consider using bytes as basic tokens to form an input
+sequence may lead to ambiguous representations. In this paper,
+we adopt the bi-gram method to generate tokens, where each
+token is composed of two adjacent bytes, and the symbol ’##’
+is added to the front of the sequence pim along with the first
+
+2049
+
+byte to form the token. As shown in the preprocess part of
+Fig. 1, the raw hexadecimal sequence pim is transformed into a
+token sequence Sim using the bi-gram method. In addition, we
+introduce the special tokens [CLS], [MASK], [SEP], [SEG],
+[UNK], and [PAD] for pre-training. The maximum length L
+of the token sequence Sim is set to 256, with the token [PAD]
+used for padding shorter sequences.
+In this framework, we first preprocess the sequence Sim in
+two separate steps to produce two distinct sequences: the Bytemi and the Packet-Level sequence
+Flow-Level sequence Kbf
+mi
+Kp . This dual-step preprocessing is designed to capture
+different aspects of the datagram’s structure at both the byteflow and packet levels. Subsequently, these two sequences
+are concatenated along with the token [SEG] to create a
+unified input sequence U mi . The inclusion of the [SEG]
+token facilitates the distinction between the different types of
+sequences within the model. By integrating data from both
+sequences in this manner, we aim to mitigate the potential
+dominance of information from a single pre-training task on
+the learning process of others.
+On the one hand, we add token [CLS] to the beginning of
+the sequence Sim and replace some right tokens with [MASK]
+mi . On the other hand,
+or other tokens to form sequence Kbf
+for creating Kpmi , we first divide the hexadecimal sequence
+pim into a header sequence phmi and a payload sequence ppmi ,
+then generating token sequences Shmi and Spmi respectively.
+In general, the token sequences Shmi and Spmi are same-origin
+packet sequence. We then randomly shuffle the corresponding
+relationship between the token sequences Shmi and Spmi . Using
+Figure 1. as an example, we keep the relationship between
+the token sequences Shmi and Spmi of packet0 unchanged, and
+we concatenate the token sequence Shmi of packet1 with the
+token sequence Spmi of packet2, similarly, the token sequence
+Shmi of packet2 is concatenated with the token sequence Spmi
+of packet1. Finally, we insert the token [SEP] between the
+token sequences Shmi and Spmi to connect them and replace
+mi , forming the packet-level sequence K mi .
+tokens same to Kbf
+p
+The preprocess and pre-training stages of Figure 1 provide a
+detailed demonstration of this process.
+
+B. Pre-Training Tasks
+We propose three pre-training tasks to obtain traffic patterns
+from different perspectives. The first task is aimed at predicting
+the hidden state features of flows to uncover traffic patterns
+at the flow level. The second task focuses on acquiring
+knowledge of protocol paradigms and constraints by predicting
+the relationship of same-origin packets at the packet level. The
+third task captures the contextual relationships of traffic by
+predicting masked tokens at the byte level. The process of the
+pre-training tasks is shown in the pre-training stage of Fig. 1.
+1) Hidden State Feature Prediction: The goal of HSP is
+to explore pattern knowledge of datagram structure at the
+flow level. However, the concept of “traffic patterns” is inherently abstract, making it challenging to define with precise
+numerical values or boundaries. The study [33] highlights that
+by examining the relationships between state features–which
+
+2050
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+The acquisition of hidden state features can contribute to
+extracting features at the flow level. Specifically, we train the
+model to infer the relationship between the input sequence
+U mi and the hidden state feature hi of the flow. Setting θ
+denotes the model parameters, and the loss function of the
+task is as below:
+N
+
+Lhsp = −
+
+Fig. 3.
+
+Hidden state feature of the flows.
+
+encapsulate side-channel data from various flows–one can discern distinctive traffic fingerprinting. Inspired by this notion,
+we aim to acquire pattern knowledge at the flow level by
+analyzing the relationship between flows and their respective
+state features. Given that the side-channel information of flows
+at different times can constitute different state features, we
+assume that the average values of these time-varying data may
+reflect the overall state feature of the flow. Corresponding to
+the “state feature” proposed in the work [33], we consider the
+states reflected by the average values as “hidden state feature”.
+To obtain hidden state features, we utilize side-channel data
+such as packet size and inter-packet time. These are fundamental packet attributes that dynamically vary in response to
+alterations in the content being transmitted and changes in
+the network conditions. We calculate the average packet size
+and the logarithm of the average inter-packet time for each
+flow fi to form observation values. Subsequently, these values
+are clustered to form hidden state features. The formulas for
+computing the hidden state feature are as follows:
+ 
+j
+s
+pi
+j =1
+
+M
+Zi =
+
+⎞
+
+⎛M
+j
+j +1 
+M −1 
+)
+−
+t(p
+)
+
+t(p
+j =1
+i
+i
+⎠
+Ti = log2 ⎝
+M
+Si = cluster (Zi , Ti )
+
+(4)
+(5)
+(6)
+
+where Zi and Ti represent the average packet size and the
+logarithm of the average inter-packet interval time of flow fi
+respectively, s(·) represents packet size, t(·) is arriving time
+of a packet, M represents the total number of packets and
+cluster means the K-means method, Si represents the hidden
+state feature of fi .
+To validate the assumption of hidden state features, we
+cluster 2000 flows from the ISCX-VPN dataset using the
+method according to equation (6), and the result is shown in
+Fig. 3. The result illustrated that the traffic is divided into 8
+categories, which have clear boundaries between them, i.e.,
+the results can be regarded as the hidden state features of eight
+different flows.
+
+M
+
+
+
+log P hi |U mi , θ
+
+(7)
+
+i=1 m=1
+
+2) Same Packet Prediction: The purpose of SPP is to learn
+knowledge of datagrams by exploring the structure at the
+packet level. Here, we investigate the relationship between
+the headers and the payloads. Packets serve as the fundamental units of network transmission, which include sufficient
+metadata information. Regardless of how privacy-enhanced
+technologies randomize or standardize packet attribute values,
+packets can still independently route and be verified. Thus,
+we consider that this metadata information, which exists
+within both the header and payload, reflects the organizational
+paradigm of the packet. On one hand, different protocols are
+selected and marked in the header based on different transmission content. On the other hand, metadata in the header is
+directly related to the payload; for example, the length field
+in the header is calculated by considering the length of the
+encrypted payload. Conversely, the payload, in turn, affects
+the checksum for transmission verification. Thus, a reasonable packet should satisfy the mutual relationship/constraint
+between the header and payload.
+To visually demonstrate this constraint, we adopt the method
+proposed in [17], converting the hexadecimal bytes of headers
+and payloads into grayscale images to analyze their relationship. Specifically, for each packet, we convert the bytes of
+the header and payload into distinct matrices. Each byte is
+mapped to a grayscale value between 0 and 255, mirroring the
+pixel intensity range in a grayscale image. This process enables
+the transformation from packets to corresponding grayscale
+images, as depicted in Fig. 4. For each type of packet, the
+grayscale image of the header is displayed at the top, and
+the payload is displayed at the bottom. Upon comparing these
+images, we notice subtle differences in the grayscale patterns
+of payloads corresponding to the same header type, evident in
+Fig. 4(11) and (15), as well as Fig. 4(12) and (16). In contrast,
+even within the same packet type, significant variations are
+observed in the payload grayscale images of different header
+types, as demonstrated in Fig. 4(2) and (3), and Fig. 4(7)
+and (8).
+Therefore, we consider that there is a certain pattern
+between the header and payload that determines the validity
+of the packet. Given a packet header, the payload is allowed to
+change within a certain range rather than randomly. This pretraining task aims to discover this pattern, learn the constraint
+rules between packet header and payload. Specifically, when
+constructing Kpmi , we randomly shuffle the header and payload from different packets, where 50% of the relationships are
+correct, 30% of the payloads are replaced with payloads from
+other packets of the same flow, and the remaining 20% of the
+payloads are replaced with payloads from packets of different
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+EMAIL
+(3)
+
+(2)
+
+(1)
+
+2051
+
+TABLE III
+T HE D ETAILS OF DATASETS U SED IN M ULTI -TASK
+C OMPARATIVE E XPERIMENTS
+
+(4)
+
+CHAT
+(6)
+
+(5)
+
+(7)
+
+(8)
+
+AUDIO
+(11)
+
+(10)
+
+(9)
+
+(12)
+
+The final pre-training objective is defined as the sum of the
+aforementioned three losses:
+
+FILE
+(13)
+
+(14)
+
+(15)
+
+LALL = Lhsp + Lspp + Lmtp
+
+(16)
+
+Fig. 4. Grayscale images of packet headers and payloads for different types
+of packets.
+
+flows. We train the model to predict whether the relationship
+between the header and payload is of the same origin, where
+the relationship is denoted as yim ∈ [0, 1], with 0 indicating
+that the payload and header come from the same packet, and
+1 indicating the opposite. The loss function for this task is as
+below:
+N
+
+M
+
+Lspp = −
+i=1 m=1
+
+log P (yim |Kpmi , θ)
+
+(8)
+
+3) Masked Token Prediction: MTP aims to explore the
+knowledge of datagram structure at the byte level. As mentioned previously, flow can be regarded as a language between
+different applications in the network, and similar to natural
+language, flow exhibits structure and specification. Therefore,
+we adopt the Masked Language Model to construct the pretraining task for discovering contextual relationships of traffic.
+Specifically, in the pre-training process, each token in the input
+sequence is randomly masked with a 20% probability. For each
+selected token, we replace it with the special token [MASK]
+with a probability of 80%, or choose another token (excluding
+the special tokens) to replace it with a probability of 10%,
+or leave it unchanged with a probability of 10%. The pretraining model is trained to predict the masked tokens based
+on context. In the implementation, we first design a dictionary
+containing all tokens involved in the pre-training process and
+assign them numerical indices. Then, when replacing a token,
+we simultaneously create a tuple containing the position and
+the index of the replaced token. During pre-training, this tuple
+aids the model in predicting the token index. The loss function
+for this task is as follows:
+N
+
+M
+
+Lmtp = −
+i=1 m=1
+
+mi
+log P (maskjmi = tokenjmi |Kbf
+, θ) (9)
+
+(10)
+
+C. Finetune
+After pre-training, the model can generate generic and
+robust representations for general encrypted traffic. However,
+in specific traffic identification tasks, the representations cannot fully capture the particular task details, and fine-tuning
+is necessary for more accurate results. The fine-tuning stage
+involves a different model structure compared to the pretraining stage. In the pre-training stage, the model adds three
+additional networks after the transformer encoder layer to
+complete the pre-training tasks and adjust the parameters of
+the transformer to generate representations. However, these
+three networks are removed in the fine-tuning stage, and a
+linear layer is added to execute specific identification. The
+first token [CLS] of the representation can be directly used for
+classification, as shown in the fine-tuning stage of Fig. 1.
+IV. E XPERIMENT AND A NALYSIS
+In this section, we primarily focus on evaluating the
+performance of the proposed framework across different tasks
+as well as assessing its robustness in unbalanced scenarios
+and traffic defense mechanism scenarios. To achieve this, we
+design experiments, including multi-task comparative experiments, imbalanced encrypted traffic identification experiments,
+and traffic defense mechanism resistance experiments. To illustrate the necessity of the three pre-training tasks, we conduct
+ablation experiments. Finally, we present the evaluation of
+complexity.
+A. Experimental Setup
+1) Dataset and Tasks: We conduct experiments on different
+datasets, including ISCX-VPN, ISCX-Tor [34], ToN-IoT [35],
+USTC-TFC [36], and CSTNENT-TLS1.3 [12], with each
+dataset is associated with a specific task, and the detailed
+information of the datasets is shown in Table III.
+ISCX-VPN: The dataset includes popular VPN protocols
+such as OpenVPN and OpenConnect. Considering encapsulation and service types of the traffic [17], we categorize this
+dataset into 12 labels: Email, Chat, Streaming, Transfer, VoIP,
+
+2052
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+P2P, VPN-Email, VPN-Chat, VPN-Streaming, VPN-Transfer,
+VPN-VoIP, and VPN-P2P. We use this dataset to assess the
+approach’s performance in encapsulation detection tasks.
+ISCX-Tor: The dataset includes a large volume of traffic
+captured from the Tor network, including Web browsers, Email
+clients, and P2P file-sharing applications. Following the setting
+in [12], we categorize this dataset into 14 labels: Browsing,
+Chat, Email, Transfer, P2P, Streaming, VoIP, Tor-Browsing,
+Tor-Chat, Tor-Email, Tor-Transfer, Tor-P2P, Tor-Streaming,
+and Tor-VoIP. We utilize this dataset to validate the method’s
+ability to perform anonymity detection tasks.
+USTC-TFC: The dataset includes encrypted traffic from
+malware such as Tinba, Miuref, and Cridex, as well as benign
+traffic from applications like Facetime and Gmail. We use this
+dataset to test the method’s effectiveness in malware detection
+tasks.
+ToN-IoT: The dataset was collected from a realistic and
+large-scale network designed at the Cyber Range and IoT Labs
+of SEIT and UNSW [37]. Here, we utilize the network dataset
+for experiments, which includes nine types of attacks: backdoor, DDoS, DoS, Injection, MITM, Password, runsomware,
+XSS, and scanning.
+CSTNET-TLS1.3: The dataset consists of traffic from
+120 applications, encrypted with TLS 1.3, collected by the
+University of Science and Technology of China.
+2) Evaluation Metrics: We evaluate and compare the
+performance of the methods using four typical metrics, including accuracy (ACC), precision (PRE), recall (REC), and
+F1 score, and the calculation methods of these metrics are as
+follows:
+TP + TN
+TP + TN + FP + FN
+TP
+PRE =
+TP + FP
+TP
+REC =
+TP + FN
+PRE ∗ REC
+F1 = 2 ∗
+PRE + REC
+
+ACC =
+
+(11)
+(12)
+(13)
+(14)
+
+3) Implementation: We remove the IP and port information
+because they are irrelevant to the specific traffic of the
+transmitted content and do not contribute to generating the
+representation. All experiments were conducted on the Ubuntu
+system using PyTorch 1.8.0 and NVIDIA RTX 2080ti. In the
+pre-training phase, we set the embedding size = 512, hidden
+size = 512, learning rate = 5 × 10−4 , batch size = 50, and
+train the model for 8 × 105 steps. The hyperparameter search
+ranges and the selected values are shown in Table IV. We
+utilize 25GB of public dataset data (20GB from ToN-IoT,
+5GB from ISCX-VPN) to generate a total of 50GB of raw
+corpus for pre-training. For each pcap file processed after the
+5-tuple method, we use all packets in the pcap file to construct
+Kpmi according to the method mentioned in Section III-B2.
+mi involve different processes for the same
+Since Kpmi and Kbf
+metadata, we also utilize all hexadecimal bytes of the same
+packet to make the token sequence (retaining only the 256
+tokens). In the fine-tuning phase, for each flow, we only extract
+one packet to generate the token sequence for identification.
+
+TABLE IV
+H YPERPARAMETERS S ELECTION FOR GETRF
+
+We set the proportions of the training, validation, and testing
+sets to 1:1:2, and evaluate the framework using the ten-fold
+cross-validation method.
+B. Multi-Task Comparative Experiment
+In these experiments, we separately evaluate the
+performance of the proposed framework on five different tasks:
+malware detection, application classification, anonymous
+detection, attack detection, and encapsulation detection.
+Moreover, we compare GETRF with various methods,
+including DF [18], DeepPacket [20], LeNet [38], VarCNN [19], AppScanner [15], App-Net [26], BIND [16],
+CUMUL [14], FlowPrint [40], GraphDApp [22], FS-Net [39],
+GCN_Transformer [21], and ET-BERT [12]. For details on
+the implementation of the baseline models, please refer to
+Appendix C.
+Table V presents the performance of different methods in
+encapsulation detection, anonymous detection, and application
+classification. GETRF performs best across all four metrics
+in these three tasks. Compared to the current state-of-the-art
+method, GETRF achieves an average improvement of 0.512%
+in accuracy, 0.448% in precision, 0.488% in recall, and
+0.464% in F1 score across the three tasks. In the application
+classification task, which has the most categories, GETRF
+outperforms ET-BERT by 0.78% in accuracy and 0.76% in
+F1 score. One possible reason for this improvement is that the
+CSTNETE-TLS.13 dataset contains 120 different categories,
+with many similar traffic patterns. GETRF mitigates the impact
+of single patterns on the results by learning datagram structure
+knowledge across multiple levels and achieves fine-grained
+application identification.
+Table VI presents the performance of different methods in
+malware detection and attack detection. Our model achieves
+the best performance on F1 score at 99.85% and 98.80%
+respectively. We notice that some traffic in USTC-TFC
+includes unencrypted data at the Application Layer. This
+aspect simplifies the task for other models, as they can readily
+utilize this plaintext for easier classification.
+Overall, GETRF achieves the best performance in all five
+tasks. Additionally, we find that representation-based methods
+outperform other methods, indicating that pre-training can help
+models learn faster and is suitable for identifying large-scale
+flow data with a small number of sample data.
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+2053
+
+TABLE V
+C OMPARISON R ESULT ON E NCAPSULATION D ETECTION , A NONYMOUS D ETECTION , AND A PPLICATION C LASSIFICATION TASKS
+
+TABLE VI
+C OMPARISON R ESULT ON M ALWARE D ETECTION AND ATTACK D ETECTION TASKS
+
+C. Imbalanced Encrypted Traffic Identification Experiment
+Generally, datasets for specific tasks typically include
+only relevant protocols and applications, without other
+traffic interference. However, in real-world environments,
+a large amount of background traffic exists, and its
+volume can be 100 times or more than that of the
+task-relevant traffic [41]. Therefore, we design experiments
+to verify the fine-grained identification performance of
+GETRF.
+In these experiments, we select traffic from Facebook,
+Netflix, ICQ, and Vimeo in the ISCX-VPN dataset as background traffic, and traffic from Virut, NSIS, Geodo, Cridex,
+Miuref, Password, Backdoor, XSS, and DDoS in USTC-TFC
+and ToN-IoT as the target malicious flows. We also set δ as
+the threshold to control the volume of target malicious flows.
+For example, δ = 0.005 means that the maximum number
+for each type of target malicious flow is 0.005 times that of
+any background traffic. The specific details of the dataset are
+shown in Table VII.
+
+TABLE VII
+T HE D ETAILS OF DATASETS U SED IN I MBALANCED E NCRYPTED
+T RAFFIC I DENTIFICATION E XPERIMENTS
+
+As shown in Fig. 5, most methods show improved
+performance as δ increases, especially in terms of precision
+and recall. This improvement indicates that the methods
+
+2054
+
+Fig. 5.
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+Comparison of the results of different methods under various δ scenarios.
+
+learn more about the target flow from the labeled data
+during training, thus enhancing their performance. However, a
+model with good generalization capabilities needs to maintain
+high performance even under conditions of limited samples.
+Fig. 5 (c) and (d) demonstrate that pre-training designs like
+GETRF and ET-BERT outperform other models. Particularly
+under the extreme condition of δ = 0.005, our method
+surpasses ET-BERT, with precision and recall improvements of
+4.96% and 4.85%, reaching 97.62% and 98.59% respectively.
+As δ increases, the gap narrows, indicating that imbalanced
+data affects model performance and highlighting our method’s
+effectiveness in generalizing representations of encrypted traffic.
+Fig. 6 presents the precision and recall confusion matrices
+for GETRF and ET-BERT with δ=0.005. In this scenario,
+the proportion of malicious flows is very small compared
+to the background traffic, limiting the prior knowledge that
+the methods can acquire. The results show that GETRF
+outperforms ET-BERT in both precision and recall. GETRF
+improves the recall score of XSS and Geodo from 75% to
+93% and from 83% to 100%, respectively, and the precision
+score of Miuref from 71% to 89%. These findings indicate that
+our framework effectively learns the characteristics of traffic
+for identification, mitigating the impact of background traffic
+to achieve fine-grained classification with a small number of
+target samples.
+
+D. Traffic Defense Mechanism Resistance Experiment
+In this experiment, we adopt Front [29] to disturb the traffic
+pattern. To directly demonstrate the impact of Front on traffic
+patterns, we apply WeFDE [42] to measure the amount of
+information leakage of traffic features before and after the
+application of Front.
+Firstly, we sample data from ToN-IoT and label it as D1 ,
+then we make the dataset as described in IV-C under the
+setting with δ equal to 0.005, and label it as D2 . Fig. 7
+shows the information leakage of the features in both datasets
+before and after being processed by Front. Clearly, Front
+successfully reduces the information leakage of the features,
+with an average reduction of 0.3956 bit and 0.5842 bit for 60
+features in D1 and D2 respectively. On D1 and D2 , the total
+amount of information provided by 60 features after Front
+interference accounts for 27.57% and 25.58% of the original,
+respectively. For details about the calculation of information
+leakage and the features selected for these experiments, please
+refer to Appendix A.
+Fig. 8 presents the performance of GETRF in D1 and D2 .
+It can be observed that the accuracy, precision, recall, and
+F1 score of the proposed framework have decreased by 4.80%,
+4.89%, 4.40%, and 4.65% on D1 , and by 0.83%, 2.13%,
+4.8%, and 3.48% on D2 , respectively. In comparison, the total
+amount of effective information decreased by 72.43% in D1
+and by 74.42% in D2 . Additionally, GETRF still performs
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+Fig. 6.
+
+2055
+
+Confusion matrices of traffic identification for GETRF and ET-BERT (δ = 0.005).
+
+for identification, rather than using all metadata in the flow,
+which may mitigate some impacts of Front. Secondly, although
+Front can potentially affect feature distribution and lead to the
+misclassification of the model, GETRF includes pre-trained
+knowledge at both the flow and packet levels. This allows it
+to analyze the correlation among protocols, payload, and burst
+features of dummy packets, thereby reducing the impact.
+Fig. 7. Information leakage for individual feature on D1(left) and D2(right).
+
+E. Ablation Study
+better than most methods in accuracy according to IV-B
+and IV-C under these conditions.
+We consider that the performance of GETRF may be
+attributed to two factors. For a given traffic, GETRF only
+utilizes the first few bytes to generate a 256-token sequence
+
+We present ablation results to validate each component’s
+contribution to our method’s performance on the ToN-IoT
+dataset. We first evaluate the method’s performance when the
+specific pre-training task is omitted. As shown in Table IX,
+compared to the complete framework, the F1 scores decrease
+by 7.56%, 14.45%, and 26.52%, respectively. This indicates
+
+2056
+
+Fig. 8.
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+Performance of GETRF under traffic defense mechanism.
+TABLE VIII
+C OMPARISON R ESULT OF C OMPLEXITY
+
+that the three pre-training tasks are complementary and
+provide different levels of information for accurate traffic
+representation. Notably, the framework without MTP performs
+the worst, indicating that learning the traffic patterns at
+the byte-level is crucial for traffic representation. This also
+supports the view presented in [43].
+Additionally, to further analyze the impact of different
+pre-training tasks on the final traffic representations, in
+Appendix B, we generate the traffic representations using the
+MTP, SPP, and HSP tasks respectively, and then visualize the
+results.
+We also observe that the model without pre-training has
+a significant drop in precision, recall, and F1 score by
+37.72%, 37.76%, and 37.74%, respectively. This demonstrates
+that although transformer models have some advantages in
+capturing flow features, pre-training can further improve the
+model’s accuracy.
+F. Evaluation of Complexity
+In this section, we analyze the complexity of GETRF,
+including trainable parameters and overall time costs. We
+
+choose ET-BERT, GCN_Transformer, APP-Net, DF, and VarCNN as comparative objects because their performance
+in Section IV-B closely matches GETRF’s. Additionally,
+these methods involve architectures such as CNN, LSTM,
+Transformer, and GCNs, which can provide a more comprehensive analysis.
+As shown in Table VIII, we present the parameters, training
+time, inference time, and performance of the methods. The
+preparation stage refers to knowledge extraction before the
+model is applied to specific tasks, while the deployment stage
+means training and inference based on labeled data. Note that
+the training time cost for GETRF is set to 1, serving as the
+time cost baseline for other methods.
+From Table VIII, it can be observed that in the deployment
+stage, the parameters and time costs for Var-CNN, DF, and
+APP-Net are less than those of other methods. However, these
+three methods only exhibit high performance on a specific task,
+which may be attributed to an insufficient number of training
+samples and feature extractors. GCN_Transformer, ET-BERT,
+and GETRF all contain multiple transformer encoders, resulting in a larger number of parameters and more comprehensive
+feature extraction capabilities. Compared to ET-BERT, GETRF
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+2057
+
+TABLE IX
+A BLATION S TUDY OF GETRF
+
+TABLE X
+F EATURE D ESCRIPTION
+
+has fewer parameters and consumes less time. This is primarily
+because the embedding sizes and the number of hidden units
+of ET-BERT are both 768, leading to a larger space occupation
+for each traffic mapping vector and increased computational
+operations. However, in terms of performance, GETRF outperforms ET-BERT, further demonstrating the effectiveness of
+the three proposed pre-training tasks.
+V. C ONCLUSION
+In this paper, we proposed and implemented GETRF, a
+novel framework for classifying encrypted network traffic.
+This approach learns implicit patterns of the datagram structure at three distinct levels from large-scale unlabeled traffic
+data, thereby generating generic and robust traffic representations. GETRF demonstrated superiority in multi-class
+identification of encrypted network traffic. Additionally, in two
+independent studies, we evaluated the performance of GETRF
+in handling imbalanced data and traffic with disturbed features.
+In terms of overall accuracy and F1 score metrics, the results
+show that GETRF outperforms other reference methods. In
+future work, we plan to collect a larger dataset encompassing a
+wider range of protocols, features, and service types to further
+validate our model. We aim to explore useful and meaningful
+insights into the datagram structure and investigate metrics for
+a comprehensive assessment of our approach in fine-grained
+identification scenarios.
+
+The authors are very grateful to Professor Mei Song for
+her guidance and help with this article. They also thank
+Professor Yinglei Teng for her invaluable guidance and
+insights throughout the development of this paper. Finally,
+they thank the anonymous reviewers for their constructive
+comments, corrections, and inspiration to improve this paper.
+A PPENDIX A
+I NFORMATION L EAKAGE M EASUREMENT
+In this section, we discuss the theoretical framework for
+calculating information leakage from traffic features, and the
+selection of features for our experiments.
+The information leakage of a feature can be calculated using
+mutual information, and the specific calculation method is as
+follows.
+
+p(x )H (C |x )dx
+
+H (C |v ) =
+φ
+
+φ ci ∈C
+
+H (C ) = −
+ci ∈C
+
+ACKNOWLEDGMENT
+
+I (C ; v ) = H (C ) − H (C |v )
+
+=−
+
+(15)
+
+p(x )pr (ci |x )log2 pr (ci |x )dx (16)
+
+pr (ci )log2 pr (ci )
+
+(17)
+
+where, I (·)represents mutual information, H (·) represents
+entropy, C represents the category that traffic f belonging to,
+pr (ci ) represents the probability of ci belonging to C, φ is
+the domain of feature v, x refers to specific value of v, and
+p(·) represents the probability density function.
+As for features selection, we considered side-channel
+information related to the traffic, including packet count
+features, time statistics, packet ordering features, and burst
+features. With specific descriptions as shown in Table X
+A PPENDIX B
+V ISUALIZATION OF T RAFFIC R EPRESENTATIONS
+Here, we separately pre-train models based on the MTP,
+SPP, and HSP tasks. During the evaluation phase, we remove
+the last softmax layer of the framework and obtain the final
+representation vectors. We utilize the t-distributed stochastic
+neighbor embedding approach to reduce the dimensionality of
+these vectors and plot them as two-dimensional images.
+In Fig. 9 (b), (c), and (d) represent the traffic representations
+generated based on the MTP, SPP, and HSP tasks respectively.
+
+2058
+
+Fig. 9.
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+Visualization of traffic representations with different pre-training tasks on the ToN-IoT dataset.
+
+It can be observed that their performance is less than satisfactory. Among them, (b) performs the best. However, (b) shows
+disappointing results in classifying password, scanning, and
+injection traffic. One possible reason is that these flows exhibit
+behaviors such as multiple login attempts and a large number
+of connection attempts, showing consistency at the byte
+level, making them challenging to distinguish. So, additional
+information is needed to assist in the task.
+The traffic representations in (d) are distributed into several
+different clusters, which may related to the previously mentioned hidden state features. Specifically, the model learns flow
+behavior from side-channel data. However, different types of
+flows may exhibit similar burst patterns during transmission,
+which can lead to similarities in the observed side-channel
+data. Consequently, the model groups different classes into one
+cluster.
+In summary, the traffic representations generated based on
+individual pre-training tasks are not satisfactory, and only
+the representations produced by the complete framework can
+achieve optimal classification performance, as depicted in
+Fig. 9 (a).
+A PPENDIX C
+I MPLEMENTATION OF THE BASELINE M ODELS
+In this section, we discuss the implementation details of the
+baseline models and the data preparation.
+appscanner: This method uses a random forest as the
+classifier with the threshold set to 0.9, and each decision tree
+
+considers a maximum of 6 features during splitting. We utilize
+statistical features to train the model, including 26 features
+that score over 2% according to the work [15].
+deeppacket: We extract the first 1500 bytes of the packet
+and replace the IP address with 0, then divide all bytes by 255.
+We adopt a CNN as the classifier, which is available in [44].
+CUMUL: This method uses an SVM as the classifier with
+an RBF kernel. For input features, we extract the number of
+incoming and outgoing packets, the total size of incoming
+packets, and the total size of outgoing packets from pcap
+files. Then we use 3 as the interval point to obtain equidistant
+values for 10 packets separately, resulting in 44 feature
+representations for training.
+BIND: This approach uses an SVM as the classifier with an
+RBF kernel. For input data, we extract packet size, uni-burst
+size, uni-burst time, uni-burst count, bi-burst size, and bi-burst
+time for training.
+Lenet: We take the first 784 bytes of the first packet from
+pcap files and convert them into a 28x28 grayscale image to
+input into the Lenet model for training.
+DF: We extract packet direction sequences from each pcap
+file and store them as pickle files according to the format
+requirements in [18], then we use the publicly available
+model [45] for training.
+Var-CNN: We extract packet timestamp sequences and
+packet directions from pcap files and store them according to
+the requirements in work [46]. Then we train with the available
+model [47].
+
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION
+
+FS-Net: We extract packet length sequences from pcap files
+and train with the available model [39].
+APP-Net: We extract sequences of packet lengths and payload bytes from pcap files. Since no source code is available,
+we implement the model according to the description in the
+paper [26]. The model consists of two embedding layers, two
+BiLSTM layers, and two 1D-CNN layers. We set the hidden
+size of the embedding to 10000, convolutional kernels to 256,
+the filter size to 7, and the hidden size of BiLSTM to 128.
+GraphDapp: We extract the first 10 packets from each pcap
+file to build a TIG representation and corresponding adjacency
+matrix. For the model, we construct 3 MLP layers, each
+containing linear, batch norm, and dropout functions, with
+64 hidden units in the linear function and a 25% dropout in
+the dropout function.
+Flowprint: We extract features from pcap files excluding
+TLS certificates as mentioned in the work [40], and train using
+the publicly available model [48].
+GCN_Transformer: We extract the first 500 bytes from
+pcap files and construct an adjacency matrix for the text
+semantic graph based on word co-occurrence frequency and
+document-word frequency. Point mutual information is used to
+represent the association between words. The model includes
+8 transformer encoders with hidden units set to 512.
+ET-BERT: We extract individual packets from flow and
+adopt the bi-gram method to generate tokens. Then, we build
+a dictionary to map the tokens into sequences and train using
+the publicly available model [12].
+R EFERENCES
+[1] M. He, X. Wang, P. Wei, L. Yang, Y. Teng, and R. Lyu, “Reinforcement
+learning meets network intrusion detection: A transferable and adaptable framework for anomaly behavior identification,” IEEE Trans.
+Netw. Service Manag., vol. 21, no. 2, pp. 2477–2492, Apr. 2024,
+doi: 10.1109/TNSM.2024.3352586.
+[2] M. He, Y. Huang, X. Wang, P. Wei, and X. Wang, “A lightweight
+and efficient IoT intrusion detection method based on feature grouping,” IEEE Internet Things J., vol. 11, no. 2, pp. 2935–2949, Jan. 2024,
+doi: 10.1109/JIOT.2023.3294259.
+[3] B. Wang, J. Zhang, Z. Zhang, L. Pan, Y. Xiang, and D. Xia, “Noiseresistant statistical traffic classification,” IEEE Trans. Big Data, vol. 5,
+no. 4, pp. 454–466, Dec. 2019.
+[4] M. D. Moizuddin and M. V. Jose, “A bio-inspired hybrid deep learning
+model for network intrusion detection,” Knowl. Based Syst., vol. 238,
+Feb. 2022. Art. no. 107894.
+[5] H. Yan, L. Fu, Y. Qi, L. Cheng, Q. Ye, and D. J. Yu, “Learning a
+robust classifier for short-term traffic state prediction,” Knowl. Based
+Syst., vol. 242, Apr. 2022, Art. no. 108368.
+[6] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification: An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81,
+May 2019.
+[7] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+traffic analysis applications, techniques, and countermeasures,” ACM
+Comput. Surv., vol. 54, no. 6, pp. 1–35, Jul. 2022.
+[8] M. Macas, C. Wu, and W. Fuertes, “A survey on deep learning for
+cybersecurity: Progress, challenges, and opportunities,” Comput. Netw.,
+vol. 212, Jul. 2022, Art. no. 109032.
+[9] A. Aldweesh, A. Derhab, and A. Z. Emam, “Deep learning approaches
+for anomaly-based intrusion detection systems: A survey, taxonomy, and
+open issues,” Knowl. Based Syst., vol. 189, Feb. 2020, Art. no. 105124.
+[10] C. Wang et al., “Addressing the train-test gap on traffic classification
+combined subflow model with ensemble learning,” Knowl. Based Syst.,
+vol. 204, Sep. 2020, Art. no. 106192.
+[11] H. Y. He, Z. G. Yang, and X. N. Chen, “PERT: Payload encoding representation from transformer for encrypted traffic classification,” in Proc.
+ITU Kaleidosc., Ind.-Driv. Digit. Transf. (ITU K), 2020, pp. 1–8.
+
+2059
+
+[12] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+contextualized datagram representation with pre-training transformers
+for encrypted traffic classification,” in Proc. ACM Web Conf., 2022,
+pp. 633–642.
+[13] R. Antonello et al., “Deep packet inspection tools and techniques in
+commodity platforms: Challenges and trends,” J. Netw. Comput. Appl.,
+vol. 35, pp. 1863–1878, Nov. 2012.
+[14] A. Panchenko et al., “Website fingerprinting at Internet scale,” in Proc.
+NDSS, 2016, pp. 1–15.
+[15] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartphone app identification via encrypted network traffic analysis,” IEEE
+Trans. Inf. Forensics Security, vol. 13, pp. 63–78, 2018.
+[16] K. Al-Naami et al., “Adaptive encrypted traffic fingerprinting with bidirectional dependence,” in Proc. 32nd Annu. Conf. Comput. Secur.
+Appl., 2016, pp. 177–188, doi: 10.1145/2991079.2991123.
+[17] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+encrypted traffic classification with one-dimensional convolution neural
+networks,” in Proc. IEEE Int. Conf. Intell. Security Informat. (ISI), 2017,
+pp. 43–48.
+[18] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep Fingerprinting:
+Undermining website fingerprinting defenses with deep learning,” in Proc. ACM SIGSAC Conf. Comput. Commun. Security (CCS),
+Toronto, Canada, 2018, pp. 1928–1943.
+[19] S. Bhat, D. Lu, A. Kwon, and S. Devadas, “Var-CNN: A dataefficient Website fingerprinting attack based on deep learning,” in Proc.
+Priv. Enhanc. Technol., vol. 2019, no. 4, pp. 292–310, Jul. 2019.
+doi: 10.2478/popets-2019-0070.
+[20] M. Lotfollahi, M. Jafari Siavoshani, R. S. H. Zade, and M. Saberian,
+“Deep packet: A novel approach for encrypted traffic classification using
+deep learning,” 2017, arXiv:1709.02656.
+[21] Y. Luo, M. He, X. Wang, and L. Jin, “Network flow detection of
+semantic relationship between flow and byte,” in Proc. IEEE 8th
+Int. Conf. Big Data Comput. Service Appl. (BigDataService), 2022,
+pp. 179–180.
+[22] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021, doi: 10.1109/TIFS.2021.3050608.
+[23] T.-L. Huoh, Y. Luo, P. Li, and T. Zhang, “Flow-based encrypted
+network traffic classification with graph neural networks,” IEEE Trans.
+Netw. Service Manag., vol. 20, no. 2, pp. 1224–1237, Jun. 2023,
+doi: 10.1109/TNSM.2022.3227500.
+[24] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “MIMETIC:
+Mobile encrypted traffic classification using multimodal deep learning,” Comput. Netw., vol. 165, Dec. 2019, Art. no. 106944,
+doi: 10.1016/j.comnet.2019.106944.
+[25] I. Guarino, G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and
+A. Pescapè, “Contextual counters and multimodal deep learning
+for activity-level traffic classification of mobile communication apps
+during COVID-19 pandemic,” Comput Netw, vol. 219, Dec. 2022,
+Art. no. 109452, doi: 10.1016/j.comnet.2022.109452.
+[26] X. Wang, S. Chen, and J. Su, “App-Net: A hybrid neural network for
+encrypted mobile traffic classification,” in Proc. IEEE Conf. Comput.
+Commu. Workshops (INFOCOM WKSHPS), 2020, pp. 424–429,
+doi: 10.1109/INFOCOMWKSHPS50562.2020.9162891.
+[27] X. Wang, H. Wang, and D. Yang, “Measure and improve robustness
+in NLP models: A survey,” in Proc. Conf. North Amer. Chapter Assoc.
+Comput. Linguist., Human Lang. Technol., 2022, pp. 4569–4586.
+[28] A. Habibi Lashkari, G. Draper Gil, M. Mamun, and A. Ghorbani,
+“Characterization of encrypted and VPN traffic using time-related
+features,” in Proc. Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2016,
+pp. 407–414.
+[29] J. Gong and T. Wang, “Zero-delay lightweight defenses against Website
+fingerprinting,” in Proc. 29th USENIX Conf. Security Symp., 2020,
+pp. 1–18.
+[30] M. Juarez, M. Imani, M. Perry, C. Diaz, and M. Wright, “Toward an
+efficient Website fingerprinting defense,” 2016, arXiv:1512.00524.
+[31] N. Mathews, J. K. Holland, S. E. Oh, M. S. Rahman, N. Hopper,
+and M. Wright, “SoK: A critical evaluation of efficient Website fingerprinting defenses,” in Proc. IEEE Symp. Security Privacy (SP), 2023,
+pp. 969–986, doi: 10.1109/SP46215.2023.10179289.
+[32] X. Deng et al., “Robust multi-tab Website fingerprinting attacks in the
+wild,” in Proc. IEEE Symp. Security Privacy (SP), 2023, pp. 1005–1022,
+doi: 10.1109/SP46215.2023.10179464.
+[33] Z. Yao, J. Ge, Y. Wu, X. Lin, R. He, and Y. Ma, “Encrypted traffic
+classification based on Gaussian mixture models and hidden Markov
+models,” J. Netw. Comput. Appl., vol. 166, Sep. 2020, Art. no. 102711.
+
+2060
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+[34] A. H. Lashkari, G. Draper-Gil, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of Tor traffic using time based features,” in Proc. Int.
+Conf. Inf. Syst. Security Privacy, 2017, pp. 253–262.
+[35] N. Moustafa, M. Ahmed, and S. Ahmed, “Data analytics-enabled intrusion detection: Evaluations of ToN_IoT Linux datasets,” in Proc. IEEE
+19th Int. Conf. Trust, Security Privacy Comput. Commun. (TrustCom),
+2020, pp. 727–735.
+[36] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), 2017, pp. 712–717.
+[37] “The TON_IoT datasets,” Datasets, UNSW Sydney. Accessed: Mar. 15,
+2023. [Online]. Available: https://research.unsw.edu.au/projects/toniotdatasets
+[38] Y. Zeng, Z. Qi, W. Chen, and Y. Huang, “TEST: An end-to-end
+network traffic classification system with spatio-temporal features
+extraction,” in Proc. IEEE Int. Conf. Smart Cloud (SmartCloud), 2019,
+pp. 131–136.
+[39] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow
+sequence network for encrypted traffic classification,” in Proc. IEEE
+Conf. Comput. Commun., 2019, pp. 1171–1179.
+[40] T. van Ede et al., “FlowPrint: Semi-supervised mobile-App fingerprinting on encrypted network traffic,” in Proc. ISOC Netw. Distrib. Syst.
+Secur. Symp. (NDSS), 2020, pp. 1–18.
+[41] Z. Wu, W. Li, L. Liu, and M. Yue, “Low-rate DoS attacks,
+detection, defense, and challenges: A survey,” IEEE Access, vol. 8,
+pp. 43920–43943, 2020.
+[42] S. Li, H. Guo, and N. Hopper, “Measuring information leakage in
+Website fingerprinting attacks and defenses,” in Proc. ACM SIGSAC
+Conf. Comput. Commun. Secur., 2018, pp. 1977–1992.
+[43] X. Xiao, W. Xiao, R. Li, X. Luo, H. Zheng, and S. Xia, “EBSNN:
+Extended byte segment neural network for network traffic classification,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 5,
+pp. 3521–3538, Sep./Oct. 2022.
+[44] “Deeppacket.” GitHub.com. Accessed: Apr. 15, 2023. [Online].
+Available: https://github.com/KimythAnly/deeppacket
+[45] P. Sirinam et al. “df.” GitHub.com. Accessed: Apr. 26, 2023. [Online].
+Available: https://github.com/deep-fingerprinting/df
+[46] T. Wang et al. “Wangknn-dataset.” Accessed: May 7, 2023. [Online].
+Available: https://github.com/kdsec/wangknn-dataset
+[47] S. Bhat et al. “Var-CNN.” Accessed: May 8, 2023. [Online]. Available:
+https://github.com/sanjit-bhat/Var-CNN
+[48] T. van Ede et al. “FlowPrint.” Accessed: Apr. 15, 2023. [Online].
+Available: https://github.com/Thijsvanede/FlowPrint
+
+Xiaojuan Wang received the Ph.D. degree
+in electronic science and technology from the
+University of Beijing University of Posts and
+Telecommunications, where she is currently an
+Associate Professor with the School of Electronic
+Engineering. Her research interests include deep
+learning, complex networks, and human gesture
+recognition.
+
+Zikui Lu is currently pursuing the Ph.D. degree in
+electronic science and technology with the Beijing
+University of Posts and Telecommunications. His
+research interests include deep learning and traffic
+analysis.
+
+Xinlei Wang is currently pursuing the Ph.D. degree
+in electronic science and technology with the Beijing
+University of Posts and Telecommunications. Her
+research interests include deep learning and computer network security.
+
+Mingshu He (Member, IEEE) received the Ph.D.
+degree from the Beijing University of Posts and
+Telecommunications, Beijing, China, in 2022, where
+he is currently doing research with the School of
+Cyberspace Security. His research interests include
+network security, anomaly detection, and machine
+learning.
+
+Xiaojun Wang received the B.Eng. degree in computer and communications and the M.Eng. degree in
+computer applications from the Beijing University
+of Posts and Telecommunications (BUPT) in 1984
+and 1987, respectively, and the Ph.D. degree
+from Staffordshire University, England. He was
+an Assistant Lecturer/Lecturer with BUPT from
+1987 to 1989. He joined the School of Electronic
+Engineering, Dublin City University in 1992, where
+he is currently an Associate Professor. His research
+interests include network security, energy-efficient
+networking, and hardware acceleration of artificial intelligence and cryptography algorithms. He received a Sino-British Technical Co-operation Training
+Award in 1989.
+PAPER_TEXT

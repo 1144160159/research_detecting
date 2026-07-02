@@ -1,0 +1,762 @@
+Computers & Security 138 (2024) 103665
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+Unveiling shadows: A comprehensive framework for insider threat
+detection based on statistical and sequential analysis
+Haitao Xiao a,b , Yan Zhu a,b , Bin Zhang c , Zhigang Lu a,b , Dan Du a,b,∗ , Yuling Liu a,b
+a Institute of Information Engineering, Chinese Academy of Sciences, Beijing, China
+b School of Cyber Security, University of Chinese Academy of Sciences, Beijing, China
+c China Cybersecurity Review Technology and Certiﬁcation Center, Beijing, China
+
+A R T I C L E I N F O A B S T R A C T
+
+Keywords: With the increasing importance of internal information security, detecting insider threats has become a critical
+Insider threat detection issue to safeguard organizations’ information systems. However, most of the previous studies either overlook
+Statistical analysis temporal relationships or have diﬃculty attaining accurate performance. One of the primary factors contributing
+Sequential analysis
+ to this challenge is their approach, which lacks a holistic perspective. To our knowledge, none of these studies
+Deep learning
+ has considered the integration of statistical and sequential information in addressing this issue. Therefore, we
+ propose a comprehensive framework for insider threat detection based on statistical and sequential analysis to
+ address this challenge. Leveraging the strengths of both statistical analysis and sequential analysis, we deploy
+ an eﬃcient implementation for analyzing and modeling user data based on convolutional attention and a
+ transformer encoder, referred to as CATE. First, user behavior logs are consolidated from diverse sources and
+ preprocessed into a suitable format for subsequent analysis. Then, two parallel analysis modules analyze user
+ data in two diﬀerent dimensions. The analysis modules are entirely constructed using a neural network for its
+ high adaptability and eﬃcient integration of information from distinct dimensions. Speciﬁcally, a subnetwork
+ structure based on convolutional attention is designed to eﬀectively learn statistical information, while a separate
+ subnetwork structure based on transformers is tailored for learning sequential information. Finally, we perform a
+ series of solid experiments utilizing the publicly available CERT dataset to evaluate our framework’s eﬀectiveness
+ and robustness in detecting insider threats and identifying malicious scenarios.
+
+1. Introduction two years. Moreover, the associated costs per incident have risen by
+ over a third, now averaging $15.38 million. The 2023 Insider Threat
+ One of the most signiﬁcant digital threats to an organization’s infor- Report, released by Gurucul (2023), underscores that 74% of organimation system infrastructure is insider threats, which refer to harmful zations aﬃrm the increasing frequency of insider attacks. Over half of
+threats from people inside an organization or enterprise. Detecting in- organizations have encountered an insider threat within the past year,
+sider threats is particularly challenging compared to external threats with 8% facing such threats on more than 20 occasions. Since insider
+due to the insiders’ access privileges within the organization’s infor- threats are becoming more serious and frequent, it is essential to idenmation systems, coupled with their familiarity with the organizational tify them accurately and promptly.
+structure. Additionally, the elusive and constantly evolving characteris- To tackle the intricate and steadily growing challenge of detecttics of insider threats contribute to the complexity of detection eﬀorts ing insider threats, current research mainly employs machine learn-
+(Yuan and Wu, 2021). ing or deep learning techniques due to their innate learning capac-
+ In the contemporary landscape, the cyber threat posed by malicious ity. Previous studies, distinguished by their diverse feature extraction
+insiders is on the rise. Based on ﬁndings from the Global Report on In- techniques, can be generally categorized into two primary domains:
+sider Threats’ Cost for the year 2022, as indicated by Ponemon (2022), statistical-based studies and sequential-based studies. Statistical-based
+incidents related to insider threats have surged by 44% within the past studies commonly utilize mathematical and statistical techniques to
+
+ * Corresponding author at: Institute of Information Engineering, Chinese Academy of Sciences, Beijing, China.
+ E-mail addresses: xiaohaitao@iie.ac.cn (H. Xiao), zhuyan0117@iie.ac.cn (Y. Zhu), zhangbin@isccc.gov.cn (B. Zhang), luzhigang@iie.ac.cn (Z. Lu),
+dudan@iie.ac.cn (D. Du), liuyuling@iie.ac.cn (Y. Liu).
+
+https://doi.org/10.1016/j.cose.2023.103665
+Received 28 September 2023; Received in revised form 29 November 2023; Accepted 14 December 2023
+Available online 19 December 2023
+0167-4048/© 2023 Elsevier Ltd. All rights reserved.
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+extract features from user behavior logs. Subsequently, these features isting methods. CATE exhibits strong competitiveness in precisely
+are employed to train machine learning or deep learning models with detecting insider threats and identifying malicious scenarios. Adthe purpose of detection. Sequential-based studies, on the other hand, ditionally, we conduct an in-depth analysis of the limitations of
+leverage the temporal ordering of log events to model patterns in user the CATE method in identifying malicious scenarios, providing subbehavior. These patterns are then applied for the detection of anoma- stantial insights for future research.
+lous user behavior.
+ While these preceding investigations have demonstrated the ability The remaining sections of this paper are structured as follows: Secto attain relatively robust performance, they are beset by various limi- tion 2 conducts a review of prior research regarding insider threat
+tations: (1) Statistical-based studies provide simplicity and eﬃciency in detection. Section 3 introduces our framework and provides details of
+analyzing static data with distinct features, but they frequently overlook its implementation. Following that, in Section 4, we outline the expertemporal relationships and encounter challenges in adapting to dynamic imental conﬁguration and show the experimental results in the next
+threats. (2) Sequential-based studies eﬀectively capture temporal de- section. Finally, we conclude this paper by summarizing our proposed
+pendencies and are capable of handling dynamic threats. Nonetheless, framework’s details and discussing potential directions for future rethey require high-quality user sequence data, and their performance search.
+is compromised by the heterogeneous nature of user data. (3) Existing
+studies do not integrate statistical and sequential information for insider 2. Related work
+threat detection. Consequently, researchers in either paradigm forfeit a
+portion of valuable information, which leads to ineﬃcient utilization of Insider threats have become a pressing issue for governments and
+the raw user behavior logs. organizations, garnering signiﬁcant attention from researchers world-
+ To overcome the constraints inherent in prior research on the iden- wide. Numerous organizations are confronted with the peril of insider
+tiﬁcation of insider threats, we propose a comprehensive insider threat threats capable of inﬂicting substantial harm to both their assets and
+detection framework based on statistical and sequential analysis and reputation. Diﬀerentiating between legitimate users and malicious indeploy an eﬃcient implementation using Convolutional Attention and siders can be a challenging task because insiders often possess famil-
+Transformer Encoder (CATE). Our framework aims to eﬀectively im- iarity with the organization’s internal structure and have access to its
+prove the detection rate and reduce the false-positive rate in insider internal information systems. To address this challenge, researchers
+threat detection by seamlessly integrating statistical and sequential in- have developed multiple approaches to mitigate insider threats. Deformation from user behaviors. Initially, to make eﬃcient utilization of pending on distinct feature extraction techniques, existing approaches
+the raw user behavior logs, we consolidate log ﬁles from diverse sources can be categorized into two primary groups: statistical-based insider
+and harmonize them into the required format for subsequent phases of threat detection approaches and sequential-based insider threat detecbehavior analysis. Second, for enhanced learning from both statistical tion approaches.
+and sequential information, we devise two analysis modules based on
+improved convolutional neural networks and transformers. These mod- 2.1. Statistical-based insider threat detection approaches
+ules comprehensively extract patterns from two distinct dimensions of
+information. Last, the classiﬁcation module’s objective is the eﬀective Researchers extract statistical features from logs of user behavior in
+categorization of patterns extracted from the aforementioned analysis statistical-based insider threat detection approaches. These features enmodules. This process facilitates the identiﬁcation of potential insider compass activities such as user logins, usage of removable devices, ﬁle
+threat behaviors. The principal contributions of this paper are as fol- access, email communication, web browsing history, and other related
+lows: behavioral data. Subsequently, machine learning and deep learning algorithms are commonly employed to train models aimed at detecting
+ • We propose a comprehensive insider threat detection framework insider threats.
+ that utilizes both statistical and sequential analysis and deploys In the early stages of statistical-based approaches to insider threat
+ an eﬃcient implementation for analyzing and modeling user data detection, a strategy emerged that involved the analysis of user behavbased on convolutional attention and a transformer encoder called ior, followed by the formulation of corresponding rules. For example,
+ CATE. It integrates both statistical and sequential information, pro- Nguyen et al. (2003) formulated a set of regulations to identify uncomviding a comprehensive representation of user behavior from two mon ﬁle system-related system calls, leading to the eﬃcient detection
+ distinct perspectives. The integration of statistical and sequential of established abnormal behaviors. The model presented in the study
+ information has not been employed in previous studies. by Li and Liu (2020) placed emphasis on the development of rules and
+ • We develop straightforward statistical feature sets and a stream- regulations designed to address and identify breaches eﬀectively. Nevlined behavior sequence encoding strategy. They eﬀectively cap- ertheless, this rule-based approach heavily relied on domain expertise
+ ture user behavior patterns from two distinct perspectives within and lacked the capacity to address insider threats that had not been
+ user behavior logs, demonstrating their advantage in enhancing encountered before.
+ the performance of our presented framework for detecting insider The rising popularity of artiﬁcial intelligence has prompted a signifthreats. icant number of researchers to delve into machine learning and deep
+ • Two subnetwork modules in the same neural network are presented learning methods for identifying insider threats. Le et al. (2020) inin this framework. In the design of the statistical analysis module, troduced a system for detecting insider threats, employing machine
+ we incorporate a convolutional neural network and self-attention learning techniques. They extracted a collection of information-rich feamechanism. This combination empowers the model to focus on es- tures encompassing various details, including computer usage, timing
+ sential features and enhance their representation, thus providing of actions, and other speciﬁc action-related characteristics. Then, they
+ a better expression of users’ statistical behavior patterns. In the employed algorithms such as logistic regression, random forest, neural
+ design of the sequential analysis module, we introduce the trans- network, and XGBoost to model extracted features, enabling the predicformer model to learn from the encoded user behavior sequences, tion of insider threats. Bartoszewski et al. (2021) proposed an objective
+ eﬀectively capturing the temporal relationships among user behav- evaluation and comparative analysis of diﬀerent machine learning modiors. els for detecting insider threats, encompassing local outlier factor (LOF)
+ • Solid experiments are conducted using the public CERT dataset to and ensemble methods.
+ assess the performance of our framework. Comprehensive experi- An approach employing an autoencoder for detecting insider threats
+ ments show the eﬀectiveness of CATE in comparison to other ex- was introduced by Liu et al. (2018). They employed a deep autoencoder
+
+ 2
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Fig. 1. Overview of the proposed framework.
+
+to learn a low-dimensional representation of normal behavior from a an LSTM network to learn user behavior sequences and integrated an atspeciﬁc category of audit data on user activities. Subsequently, they tention mechanism to capture individual user behavior patterns. Huang
+utilized the autoencoder-generated reconstruction error as a metric for et al. (2021) introduced a framework for insider threat detection that
+detecting deviations in user behavior. Zhang et al. (2020) employed a leveraged temporal-semantic representations of user behavior. They indenoising autoencoder for the detection of anomalous data. The model fused temporal information into behavior and utilized a language model
+employed integrated techniques such as the Gaussian mixture model that had been pretrained to capture the fused semantic representation.
+and OCSVM to detect anomalous data. Gayathri et al. (2020) derived From the audit log ﬁles, Zhu et al. (2022) extracted sequences depicting
+features from the usage patterns of insiders and then transformed them patterns of user resource access and then proceeded to implement data
+into image representations. Subsequently, they leveraged pretrained augmentation speciﬁcally on minority class sequences. This approach
+deep convolutional neural networks for the purpose of anomaly detec- was undertaken to address the issue of data imbalance.
+tion, aiming to detect malicious insiders. Li et al. (2021a) also utilized Although the sequential-based approach has the advantage of capuser behavior logs to extract behavioral patterns, which were achieved turing the correlation and temporal relationship among user behaviors,
+by converting these logs into image-based representations. Addition- it is limited by the amount of information that can be conveyed in
+ally, they applied geometric transformations to these images, resulting the sequence. Consequently, the approach may not capture the full
+in the creation of a more extensive training dataset. complexity of the user’s behavior in detail, necessitating further inves-
+ Despite the eﬃcacy of statistical-based approaches in identifying be- tigation and reﬁnement of the methodology.
+havioral features, they frequently overlook the temporal relationships By summarizing the deﬁciencies in existing studies, we introduce a
+among user behaviors. Consequently, the statistical-based approach is novel and comprehensive insider threat detection framework that utivulnerable to failing in the detection of insider threat attacks that pos- lizes both statistical and sequential analysis. Our proposed framework
+sess the ability to evade legitimate features and struggle to adapt to achieves complementary strengths by combining information from two
+dynamic threats. distinct perspectives. We design two separate analysis modules for
+ learning statistical and sequential information. The combination of the
+2.2. Sequential-based insider threat detection approaches two analysis modules enables comprehensive analysis of user behavior
+ logs and makes insider threat detection more eﬀective. The following
+ Sequential-based approaches analyze log data as a sequence of section delves into the comprehensive design and implementation of
+events to identify behavioral patterns indicative of insider threats. the proposed framework.
+ Researchers typically convert behavioral logs into sequential data,
+subsequently employing sequence models for the analysis of user be- 3. Design and implementation
+havior. Du et al. (2017) presented an anomaly detection method known
+as DeepLog, which was built upon the foundation of long short-term In this section, we initially outline the workﬂow of our proposed
+memory. DeepLog was crafted to autonomously acquire log patterns framework and then provide an overview of the implementation to ilduring standard executions and recognize deviations as anomalies when lustrate the functionality of each module. Then, we elaborate on the
+observed log patterns diverge from the model established through log implementation details of each module, demonstrating how these moddata from regular operations. An insider threat detection approach em- ules analyze internal user behavior from both statistical and sequential
+ploying a deep neural network was introduced by Yuan et al. (2018). perspectives.
+They employed LSTM to capture temporal relationships within the sequence and used a CNN for classiﬁcation. Wang et al. (2019a) proposed 3.1. Framework and module overview
+an embedding learning approach using heterogeneous event sequences
+for insider threat detection. They modeled user activities and their rela- The architecture of our proposed framework, comprising three distionships using a heterogeneous event sequence derived from log data. tinct steps and four core modules, is depicted in Fig. 1. The ﬁrst step
+Subsequently, they applied an embedding learning technique to acquire involves merging and preprocessing log ﬁles from various sources in
+a low-dimensional vector representation for each user, utilizing the chronological order to obtain the required format for subsequent behavevent sequence as the basis for learning. He et al. (2021) proposed an ior analysis phases. The second step encompasses two parallel processapproach for insider threat detection. This approach relied on historical ing modules dedicated to analyzing user behaviors from two perspecuser behavior data and incorporated attention mechanisms. They used tives. The two processing modules eﬀectively characterize user behavior
+
+ 3
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Table 1
+ Statistical feature structure.
+
+ Data Source Type Activity PC Time
+
+ User Audit Data Logon Logon/Logoﬀ times Own PC, WorkTime,
+ Device Connect/Disconnect times, Shared PC, OﬀworkTime,
+ File Tree length Supervisor’s PC, Weekday,
+ File Open/Write times, Other PC Weekend
+ File depth, type,
+ Content length, words
+ Email Send/Receive times
+ HTTP Web View times,
+ URL length, depth,
+ HTTP type
+ User Proﬁle Data Role, Project, Unit, Dept, Team, Supervisor, OCEAN
+
+from the perspectives of statistical and sequential information. The third behavior patterns exhibited by internal users, along with the structure
+and ﬁnal stage involves the classiﬁcation module, which is tasked with and psychometric information of individuals within the organization.
+eﬃciently categorizing the patterns extracted from the preceding two Through the analysis of statistical information, this module enhances
+analysis modules. This classiﬁcation process is aimed at identifying po- the overall comprehension of internal user behavior, facilitating the eftential insider threat behaviors. Our framework can provide valuable fective detection and analysis of potential insider threats.
+insights for insider threat detection and prevention. Previous studies have developed numerous features for statistical
+ analysis. Nevertheless, the construction process for these features has
+3.2. Preprocessing module been frequently burdensome and intricate. To address this issue, our
+ proposed statistical analysis module simpliﬁes the extracted features
+ The preprocessing module undertakes multisource log integration and introduces a convolutional neural network and attention-based
+and time granularity division. Due to variations in the values and mean- models to eﬃciently model our extracted features. Our objective is to
+ings of data from diﬀerent sources, direct utilization of the original log reﬁne and improve the eﬀectiveness of extracting features, streamlining
+data by subsequent analysis modules becomes challenging. Hence, the the feature extraction process. The extracted features are normalized
+preprocessing module plays a crucial role in the merging of original and subsequently converted into a two-dimensional matrix format. Fimultisource logs into the speciﬁed format required by the subsequent nally, we employ an adapted convolutional neural network model to anmodules within the framework. Speciﬁcally, the module comprises two alyze the statistical features encapsulated within this two-dimensional
+successive procedures as follows: matrix format, generating an ultimate statistical analysis vector as the
+ resultant output. Through our statistical analysis module, a comprehen-
+ 1. Multisource log integration: User behavior logs from various sive statistical analysis of user behavior patterns is facilitated.
+ sources are ﬁrst integrated into a uniﬁed primary data table (User In the following paragraphs, we provide detailed implementation
+ Audit Data), organized by user ID, with each action chronologi- speciﬁcs for the statistical analysis module within this framework. These
+ cally ordered. A distinct primary data table corresponds to each details are presented across three distinct steps: feature extraction, feauser. Second, organizational structure information and psychome- ture conversion, and statistical analysis model construction.
+ tric data (User Proﬁle Data) for each user are consolidated into a
+ table capturing the user’s roles within the organization, departmen-
+ 3.3.1. Feature extraction
+ tal aﬃliations, and psychometric assessments encompass a range
+ Within the statistical analysis module, the process of feature extracof scores, including measures of openness, conscientiousness, extion plays a pivotal role, as the performance of this module relies on
+ traversion, agreeableness, and neuroticism (Cullen et al., 2011).
+ the quality of the extracted features. We design a simpliﬁed and rea-
+ These consolidated data are then directly fed into the statistical
+ analysis module to construct statistical features. sonable feature set derived from two distinct data sources, namely user
+ 2. Time granularity division: For integrated user primary data tables, audit data and user proﬁle data, with a focus on identifying potential
+ the time granularity division will divide the user primary data ta- malicious scenarios. These carefully designed features aim to empower
+ bles into daily segments. Each ﬁle represents all the user actions statistical analysis models to eﬀectively analyze daily user behavior
+ conducted by a user throughout that speciﬁc day. The user actions patterns. By incorporating these characteristic features, our module enwithin the divided ﬁle remain arranged chronologically. If there hances the capability of statistical analysis models to detect and analyze
+ are malicious activities in the user behavior actions for a day, that anomalous behavior, contributing to the overall eﬀectiveness of our inuser day will be labeled malicious (1). Conversely, if no such ac- sider threat detection framework.
+ tivities are present, the user day is categorized as benign (0). The User audit data serve as a valuable information source for the statisabove preprocessing of user behavior logs will be directly supplied tical analysis module, encompassing records of user logins, ﬁle access,
+ to the subsequent modules for statistical analysis and sequential device connections, email communications, and web browsing. These
+ analysis. data sources form a robust foundation for conducting statistical analyses of user behavior. Furthermore, user proﬁle data complement the
+ By performing these essential tasks, the preprocessing module en- statistical analysis module by providing essential background informasures seamless compatibility between the heterogeneous log formats tion about the users. This data encompasses personal attributes, orgaand the requirements of subsequent modules, thereby facilitating ef- nizational roles, and interpersonal relationships, among other relevant
+fective data analysis and processing. attributes. Through the integration of user proﬁle data, the statistical
+ analysis module acquires supplementary information that facilitates a
+3.3. Statistical analysis module more comprehensive analysis of users’ statistical behavior. The integration of user audit data and user proﬁle data enables the statistical
+ As a core element of the analysis framework, the statistical analysis analysis module to generate insightful patterns and meaningful statismodule performs thorough statistical analyses of both user audit data tics, contributing to a comprehensive understanding of internal user
+and user proﬁle data. Its primary objective is to characterize the daily behavior and enhancing the detection rate of insider threat detection.
+
+ 4
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ The feature structure extracted by the proposed statistical analysis
+module is shown in Table 1. Leveraging the two categories of user data
+supplied by the preprocessing module, the feature extraction process
+focuses on extracting features from the user audit data. It is noteworthy that malicious behavior among internal users frequently emerges
+within the context of their routine work activities. Therefore, statistical
+features are extracted at distinct levels: activity, PC, and time.
+ For instance, focusing on the activity level, we incorporate a range
+of indicators tailored to diﬀerent types of audit logs, eﬀectively capturing and characterizing the behavioral patterns demonstrated by users.
+These indicators encompass factors such as the frequency of logon and
+logoﬀ times in the login type, ﬁle open and write occurrences, and Fig. 2. Statistical analysis model.
+diverse ﬁle type usage. The indicators utilized in our analysis can be
+categorized into two distinct types. The ﬁrst consists of frequency-based ing weights to augment or suppress features across various locations.
+indicators, which tally the occurrences of speciﬁc behaviors within a By precisely capturing signiﬁcant features in diﬀerent matrix regions
+predeﬁned timeframe. The second comprises statistics-based indicators, and their interdependencies, the model demonstrates improved perforwhich capture statistical values associated with the observed behaviors. mance in analyzing the statistical behavior patterns exhibited by users.
+These statistical metrics encompass measures such as the mean, standard deviation, and others, enabling a comprehensive characterization Algorithm 1 Self attention.
+of user behavior patterns. On the level of PC, the process of feature Require: Input data 𝑋 (input feature matrix)
+extraction involves categorizing PCs into four distinct types: the user’s Ensure: Output data 𝑌 (feature matrix after self-attention)
+own PC, shared PC, supervisor’s PC, and other PC. This categorization 1: Initialize 𝑊query (weight matrix), 𝑊key (weight matrix), 𝑊value (weight matrix)
+aids in characterizing the user’s behavioral patterns across various PC 2: Compute Query, Key, and Value
+ 3: 𝑄 = 𝑋 ⋅ 𝑊query
+types. Additionally, the time component is considered across four cases: 4: 𝐾 = 𝑋 ⋅ 𝑊key
+working hours, nonworking hours, weekdays, and weekends. The time 5: 𝑉 = 𝑋 ⋅ 𝑊value
+dimension provides valuable insights into user behavior during speciﬁc 6: Compute attention weights( )
+ 𝑄⋅𝐾 𝑇
+time periods. 7: attention_weights = softmax √
+ 𝑑𝑘
+ In summary, the feature vector derived from the audit data encom- 8: Compute weighted sum
+passes the three aforementioned dimensions, namely activity, PC, and 9: weighted_sum = attention_weights ⋅ 𝑉
+ 10: Output 𝑌 = weighted_sum
+time. It serves as a comprehensive enumeration of the diverse components detailed in Table 1. Moreover, the user proﬁle data are seamlessly
+integrated into the feature vector, providing vital background informa- The implementation details for the statistical analysis model are detion. This integration ensures a comprehensive representation of user scribed in the following paragraphs.
+statistical behavior within the proposed module. First, the transformed feature matrix undergoes processing through
+ a convolutional neural network, which consists of a convolutional layer
+3.3.2. Feature conversion followed by a pooling layer. The input is a single-channel image, which
+ The feature vectors extracted above cannot be directly utilized undergoes sequential convolutional and pooling operations to extract
+within the statistical analysis model. Thus, a transformation step is nec- behavioral patterns from the feature matrix. After each convolutional
+essary. First, we will subject the extracted feature vectors to min-max layer, there is a subsequent application of batch normalization and a
+normalization, constraining their value range to the interval [0, 1]. This ReLU activation function. The convolution operation utilizes distinct
+normalization procedure serves to mitigate disparities in feature magni- kernels to extract a variety of matrix features, concurrent with the pooltudes, averting any adverse eﬀects on the analysis model. Subsequently, ing operation, which diminishes the feature map’s dimensions.
+the normalized feature vectors are converted into 18 × 18 feature matri- Next, the feature map from the convolutional neural network is fed
+ces. These matrices serve as the input for the statistical analysis model, into the self-attention layer, aimed at capturing signiﬁcant information
+enabling a structured and comprehensive analysis of the transformed within the feature map. This attention layer encompasses three linear
+features. transformations: query 𝑄, key 𝐾 , and value 𝑉 . The corresponding 𝑄,
+ 𝐾 , and 𝑉 are generated by applying three distinct matrix multiplica-
+3.3.3. Statistical analysis model construction tions to the input feature map. Following this, attention weights are
+ In our statistical analysis model, we incorporate a convolutional computed using 𝑄 and 𝐾 through dot-product attention, and then these
+neural network (Gu et al., 2018) with an attention-based architecture, weights are used to linearly combine 𝑉 , resulting in a weighted sum of
+as depicted in Fig. 2. The convolutional neural network, known for its the feature maps. Finally, the attention layer output is acquired by scaleﬀectiveness in tasks such as image recognition (Liu et al., 2017), ob- ing it with a learnable factor and adding it to the input feature map.
+ject detection (Xie et al., 2021), document classiﬁcation (Afzal et al., Finally, the self-attention mechanism’s output is directed into a ﬂat-
+2015), and image classiﬁcation (Sun et al., 2020), exhibits remark- ten layer for further processing. This layer assists in propagating the
+able capabilities in eﬃciently recognizing local features. By employing feature map after convolution and the self-attention layer, ultimately
+convolution and pooling operations, the convolutional neural network mapping it to the ﬁnal output space. The ﬂatten layer takes the feaeﬀectively handles spatial relationships, enabling the model to compre- ture maps from the self-attention layer and reshapes them into a onehend spatial structures within matrices. Consequently, this facilitates dimensional vector. This ﬂattened feature vector retains both spatial
+the extraction of relevant and informative features. Furthermore, we information and high-level features from the original statistical feature
+have introduced the self-attention mechanism, as outlined in Algo- matrix.
+rithm 1. This mechanism empowers the model to autonomously identify
+pivotal regions or features within the matrix, thus allocating increased 3.4. Sequential analysis module
+attention to those key components. As a result, the model enhances
+its perception of important features, thereby improving its represen- As another core component of the analysis framework, the sequentational capacity concerning key attributes. The attention mechanism tial analysis module assumes a vital role in extracting user behavior
+contributes to enhanced feature representation by dynamically assign- sequences and formulating a model for analyzing these sequences. First,
+
+ 5
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Fig. 3. Behavior mapping strategy.
+
+the objective of the user behavior sequence extraction component is Fig. 4. Sequential analysis model.
+to convert heterogeneous user behavior logs into serialized data that
+encompass temporal information, enabling a comprehensive characothers. Furthermore, the PC-time oﬀset further divides speciﬁc user acterization of user sequential information. Next, to eﬀectively analyze
+ tions based on working time, nonworking time, and the speciﬁc type
+the extracted user behavior sequences, the sequential analysis model
+ of PC used. This division eﬀectively integrates the user’s contextual enemploys a neural network model based on the transformer encoder arvironment and time into the ensuing sequence. In conclusion, for each
+chitecture. The forthcoming paragraphs delve into the implementation
+ user on a given day, a user behavior sequence is formed, denoted as
+details of the sequential analysis module, focusing on two pivotal stages:
+ 𝑆𝑑 = [𝐴𝑖1 , 𝐴𝑖2 , ..., 𝐴𝑖𝑥 ].
+sequence extraction and sequential analysis model construction.
+ 3.4.2. Sequential analysis model construction
+3.4.1. Sequence extraction
+ A neural network architecture called the transformer, which is
+ During the sequence extraction phase, we retrieve user behavior sefounded on the attention mechanism introduced by Vaswani et al.
+quences from the preprocessed user audit data. First, we arrange the
+ (2017), has gained widespread recognition for its remarkable achievediscrete log events in chronological order and then structure them into
+ ments across a spectrum of natural language processing tasks. These
+ordered sequences based on their timestamps. The resulting user behavtasks encompass machine translation (Wang et al., 2019b), text genior sequences can eﬀectively capture the evolution and trends of user
+ eration (Hossain et al., 2020), and text classiﬁcation (Li et al., 2021b).
+behavior over time. Through the analysis of these sequences, we can
+ The core concept underlying the transformer is to capture dependencies
+identify regular behavioral patterns as well as potentially anomalous
+ among diﬀerent positions within a sequence through a self-attention
+user behaviors. Consequently, the extraction of user behavior sequences
+ mechanism, enabling the modeling of global contextual information.
+from log data represents a crucial step for conducting comprehensive
+ This capability empowers the model to construct a representation of
+and insightful studies of user sequential information.
+ comprehensive contextual insights. Comprising an encoder-decoder ar-
+ In the process of sequence extraction, as illustrated in Fig. 3, user
+ chitecture, the transformer leverages an encoder to encode the input
+action is classiﬁed based on its action type, time of occurrence, and
+ sequence into context-aware representations and a decoder to generate
+PC environment. The fundamental concept involves assigning a unique
+ the target sequence using these representations. In the construction of
+identiﬁer to actions that occur within speciﬁc time and environmenour sequential analysis model, our main focus lies in acquiring contextal contexts through a hierarchical framework. Here, the action factor
+ tual representations of sequences to eﬀectively capture their semantic
+signiﬁes the category of the action, while the PC-time oﬀset encapsuinformation. To this end, we design our sequential analysis model based
+lates the encoding associated with a particular time and context. By
+ on the transformer encoder.
+employing Formula (1), we can compute the action ID for a speciﬁc ac-
+ The designed sequential analysis model is illustrated in Fig. 4. In the
+tion occurring in a given time and environment. This mechanism allows
+ initial step, the user behavior sequences are input into the positional
+for the fusion of temporal and contextual information into the action,
+ encoding layer for encoding. The primary function of the positional enresulting in the establishment of an action ID.
+ coding layer is to explicitly encode the positional information within the
+ input sequence, enabling the model to eﬀectively focus on relevant po-
+Action ID = Action Factor × 8 + PC-Time Oﬀset (1)
+ sitions and capture dependencies among elements eﬃciently. Following
+ To comprehensively characterize user behavior, we establish 20 dis- this, the encoded output is transmitted to a series of blocks, encompasstinct types of action factors and 8 types of PC-time oﬀsets. Notably, the ing multi-head attention, add&norm, and feed-forward mechanisms.
+“Logon” and “Logoﬀ” categories in the “Logon” record capture login These operations are iterated 𝑁 times, denoting the number of layers
+and logout actions, while the “Connect” and “Disconnect” categories contained within the transformer encoder.
+in the “Device” record document device connection and disconnection actions. The “File” category meticulously logs diverse ﬁle access 3.4.2.1. Positional encoding Positional encoding is utilized to represent
+actions encompassing compressed ﬁles, image ﬁles, document ﬁles, ex- the relative positional information within a sequence. It is incorpoecutable ﬁles, text ﬁles, and others. The “Email” category records the rated by adding positional encoding to the input embedding vector,
+direction of email communication, including internal to internal (I-I), thereby supplying information regarding the sequence’s positional orinternal to external (I-O), external to internal (O-I), and external to der. This facilitates the model’s capture of the inherent order relationexternal (O-O). The “HTTP” category records attributes of visited web- ships present within the sequence. The positional encoding is computed
+sites, such as job searching, leaks, cloud storage, hacking, social, and using the formula as follows:
+
+ 6
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+ ( )
+ 𝑃 𝐸(𝑝𝑜𝑠,2𝑖) = sin 𝑝𝑜𝑠∕10000 2𝑖∕𝑑model
+ enabling the information ﬂow from the initial input to subsequent lay-
+ ( ) (2)
+ ers. The incorporation of residual concatenation helps address the issues
+𝑃 𝐸(𝑝𝑜𝑠,2𝑖+1) = cos 𝑝𝑜𝑠∕100002𝑖∕𝑑model
+ of gradient vanishing and information loss, thereby facilitating the ac-
+ The given position index 𝑝𝑜𝑠 and dimension index 𝑖 are used to com- quisition of meaningful features and representations during the learning
+pute the positional encoding value. The positional encoding values for process. After that, layer normalization is applied to normalize the
+each position are calculated using sine and cosine functions, where the combined outputs, reducing variation between dimensions and enhancposition index and the dimension index control the periodicity of these ing model stability and training eﬀectiveness. The incorporation of the
+functions. Speciﬁcally, both the sine and cosine functions have a period add&norm layer eﬀectively accelerates training convergence, improves
+determined by 100002𝑖∕𝑑model . This approach ensures that each position model generalization, and facilitates the acquisition of valuable features
+𝑝𝑜𝑠 is associated with a unique positional encoding vector. and representations.
+
+3.4.2.2. Multi-head attention 3.5. Classiﬁcation module
+ By allowing the model to concentrate on crucial segments of the input sequence, the attention mechanism elevates both the performance In the ultimate classiﬁcation module, the detection of malicious
+and expressiveness of the model. Equation (3) elucidates the compu- internal user behaviors is accomplished by leveraging the vectors obtation of scaled dot-product attention. This process entails the compu- tained from both the statistical analysis and sequential analysis modtation of the dot product score between the query vector 𝑄 and the ules. The vectors generated by the statistical analysis module 𝑣𝑒𝑐𝑡𝑜𝑟𝑠𝑡𝑎𝑡
+key-value pair (𝐾, 𝑉 ), followed by scaling it to control the gradient and the sequential analysis module 𝑣𝑒𝑐𝑡𝑜𝑟𝑠𝑒𝑞𝑢 are combined using a
+magnitude. weighted summation, as shown in Equation (7). The resulting combined
+ ( ) vector 𝑣𝑒𝑐𝑡𝑜𝑟𝑤𝑒𝑖𝑔ℎ𝑡𝑒𝑑 is then fed as input to a fully connected layer, pro-
+ 𝑄𝐾 𝑇 ducing a probability distribution over the classes. The class with the
+Attention(𝑄, 𝐾, 𝑉 ) = softmax √ 𝑉 (3)
+ 𝑑𝑘 highest probability is assigned as the predicted class for the given sample.
+ Scaled dot-product attention ﬁrst computes attention weight 𝐴 by
+taking the dot product of 𝑄 and 𝐾 , dividing it by a scaling factor, 𝑣𝑒𝑐𝑡𝑜𝑟𝑤𝑒𝑖𝑔ℎ𝑡𝑒𝑑 = 𝛼 ⋅ 𝑣𝑒𝑐𝑡𝑜𝑟𝑠𝑡𝑎𝑡 + (1 − 𝛼) ⋅ 𝑣𝑒𝑐𝑡𝑜𝑟𝑠𝑒𝑞𝑢 (7)
+and applying a softmax function. Subsequently, the resulting 𝐴 are employed to weight the summation of values 𝑉 , thereby culminating in the To train the network parameters, this study employs the CrossEnultimate output representation. By utilizing this attention mechanism, tropyLoss function as the chosen loss function. The Adam optimizer is
+ utilized for weight updates during the training process.
+the model gains the capability to concentrate on the most pertinent
+section of the input sequence concerning the query, facilitating the ex-
+ 4. Experimental setup
+traction of key information and enhancing the model’s expressiveness.
+ Multi-head attention enhances the model’s expressive power by in-
+ Within this section, we present a comprehensive overview of the excorporating multiple independent attention heads in parallel. Every
+ perimental conﬁguration, encompassing details about the experimental
+attention head operates on a distinct subspace of the input sequence,
+ environment, dataset, and evaluation framework. First, we present decapturing unique relevance information. By employing separate matritailed information about the experimental environment, outlining the
+ces for queries 𝑄, keys 𝐾 , and values 𝑉 , attention weights are computed
+ hardware and software conﬁgurations employed for conducting the exusing scaled dot-product attention, and the corresponding values are
+ periments. Second, we provide an in-depth description of the dataset
+then weighted and aggregated. The computational formula for multiused in our study, including its source and characteristics. Finally, we
+head attention is presented below:
+ elucidate the evaluation framework utilized to assess the performance
+ ( ) and eﬀectiveness of our proposed approach.
+MultiHead(𝑄, 𝐾, 𝑉 ) = Concat head1 , … , headh 𝑊 𝑂 (4)
+ ( )
+headi = Attention 𝑄𝑊𝑖𝑄 , 𝐾𝑊𝑖𝐾 , 𝑉 𝑊𝑖𝑉 (5) 4.1. Environment
+
+where 𝑊 𝑂 , 𝑊𝑖𝑄 , 𝑊𝑖𝐾 , and 𝑊𝑖𝑉 are parameter matrices. Multi-head The experiments are conducted with an AMD Ryzen 9 7950X CPU,
+attention allows models to compute and capture correlations indepen- 64 GB of RAM and an Nvidia GeForce RTX 2080Ti (11 GB) GPU.
+dently in diﬀerent subspaces, providing richer representational and We conduct our method in the Python 3.9.7 environment. Machine
+expressive capabilities that help improve model performance and gen- learning-based models are implemented with Scikit-learn (Pedregosa et
+eralization. al., 2011), and deep learning-based models are developed using Py-
+ Torch (Paszke et al., 2019).
+3.4.2.3. Feed forward
+ This layer constitutes a fully connected network designed for nonlin- 4.2. Dataset
+ear transformation and feature extraction of the hidden state at each position. It encompasses two layers of linear transformation, accompanied For the purpose of performing convincing experiments, a publicly
+by the ReLU activation function. The feed-forward layer’s computation accessible CERT insider threat dataset (CERT-IT dataset) r5.2 from
+formula is shown below: Carnegie Mellon University (Lindauer, 2020) is used in this work. The
+ CERT-IT dataset has been extensively utilized in numerous studies on
+ ( ) insider threat detection (Wang et al., 2019a; Le et al., 2020; Bar-
+FFN(𝑥) = 𝑅𝑒𝐿𝑈 𝑥𝑊1 + 𝑏1 𝑊2 + 𝑏2 (6)
+ toszewski et al., 2021; Ge et al., 2022). Among its various versions,
+where 𝑊1 , 𝑏1 is the weight and bias of the ﬁrst linear transform layer the r5.2 version oﬀers more comprehensive user behavior information
+and 𝑊2 , 𝑏2 is the weight and bias of the second linear transform layer. and has been widely employed in previous research. This dataset contains a collection of insider threat scenarios designed to help researchers
+3.4.2.4. Add & norm develop and evaluate insider threat detection algorithms and systems.
+ The add&norm layer plays a pivotal role within the model by per- CERT-IT r5.2 emulates an organization consisting of 2000 employees,
+forming residual connections (He et al., 2016) and applying layer nor- including 99 malicious insiders, across four threat scenarios over an
+malization operations (Ba et al., 2016). Incorporating a residual con- 18-month duration. This dataset organizes approximately 38 gigabytes
+nection involves summing the sublayer’s output with the input, thereby of user behavior logs from several diﬀerent sources in csv format ﬁles.
+
+ 7
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Table 2 Table 3
+ CERT-IT r5.2 dataset description. Summary of experimental data statistics.
+ Log File Description
+ Class Instances Activities
+ logon.csv User’s log on and oﬀ of the system
+ device.csv User’s device connection information Benign 20,000 2,288,080
+ ﬁle.csv User’s ﬁle transfer information Malicious 1,307 175,063
+ email.csv User’s email exchanges
+ http.csv User’s web browsing history
+ ldap.csv Organization structure and user proﬁle “Activities” represents the number of actions contained in the user bepsychometric.csv User’s psychometric scores havior samples. The training set is established with a 7:3 ratio relative
+ to the test set.
+
+These logs encompass a wide array of computer-based operations and 5. Experimental results
+user proﬁle information for all employees. The description of these log
+ﬁles is shown in Table 2. In this section, we perform a series of experiments aimed at as-
+ The CERT-IT r5.2 dataset encompasses four distinct scenarios of in- sessing the eﬀectiveness of our proposed framework. First, we perform
+sider threat behaviors. These insider threat scenarios can be categorized experiments for parameter selection, assessing various model parameas follows: data exﬁltration (Scenario 1), intellectual property theft ter settings to determine the optimal conﬁguration. Second, we conduct
+(Scenarios 2 and 4), and IT sabotage (Scenario 3) (Lindauer, 2020). ablation experiments to investigate the outcomes of removing essential
+ elements from CATE. Third, we perform comparative experiments to
+4.3. Evaluation framework assess how CATE performs in comparison to other existing approaches,
+ demonstrating the superiority of CATE. Finally, we validate the eﬀec-
+ In this paper, we employ four performance metrics to assess the tiveness of CATE in identifying malicious insider threat scenarios.
+eﬀectiveness of the proposed methods and make comparisons. These
+evaluation metrics encompass the detection rate (DR), precision (PR), 5.1. Parameter selection
+F-measure (F1), and false-positive rate (FPR) and are shown in the
+following formulas. These metrics are widely utilized in the ﬁeld of To ensure the optimal performance of our method in subsequent
+classiﬁcation and are equally applicable to the domain of insider threat experiments, four key parameters need to be determined: the number
+detection (Le et al., 2020; Li et al., 2021a). Notably, these metrics rely of convolution layers in the statistical analysis module, the maximum
+on counts of true positives (TP), true negatives (TN), false positives sequence length, the number of transformer layers in the sequential
+(FP), and false negatives (FN) derived from the classiﬁcation results. In analysis module, and the number of transformer heads in the sequential
+the context of this work, TP refers to malicious insider behaviors that analysis module.
+are identiﬁed as malicious, while TN refers to benign user behaviors During the parameter tuning process, we exclusively utilize the data
+that are classiﬁed as benign. FP gives the count of benign user behav- from the training set to ﬁne-tune the parameters. This approach guariors that are misclassiﬁed as malicious, while FN indicates the number antees the separation of the training data from the test data. To facilof malicious insider behaviors that are misclassiﬁed as benign. itate this, we partition the original training set into two subsets: the
+ Based on the previously derived values, we calculate the perfor- parameter-tuning training set and the parameter-tuning validation set.
+mance metrics as follows: The former is used for training purposes, while the latter is utilized for
+ optimal parameter selection. The split between the parameter-tuning
+ 𝑇𝑃
+𝐷𝑒𝑡𝑒𝑐𝑡𝑖𝑜𝑛𝑅𝑎𝑡𝑒 = training set and the parameter-tuning validation set follows a 6:1 ratio.
+ 𝑇𝑃 + 𝐹𝑁
+ The metric known as the detection rate, or recall, quantiﬁes the 5.1.1. Number of convolution layers
+proportion of accurate positive predictions in relation to all positive In the statistical analysis module, we adjust the parameters of the
+instances. convolutional layers within the convolutional network. During the pa-
+ 𝑇𝑃 rameter selection process for the number of convolution layers, we
+𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 = conduct experiments across a range of values, spanning from 1 to 4.
+ 𝑇𝑃 + 𝐹𝑃
+ Intuitively, the inclination might be that augmenting the layers’ count
+ Precision denotes the proportion of accurate positive predictions relwould result in enhanced model performance. However, we observe an
+ative to all positive predictions made.
+ interesting phenomenon: as the number of layers increases, the train-
+ 2 ∗ 𝑇𝑃 ing time needed for the model to converge also increases, as depicted
+𝐹 − 𝑚𝑒𝑎𝑠𝑢𝑟𝑒 =
+ 2 ∗ 𝑇𝑃 + 𝐹𝑃 + 𝐹𝑁 in Fig. 5a. More speciﬁcally, when the number of convolution layers ex-
+ F-measure represents the harmonic mean of precision and recall. ceeds 2, both the training and validating performance curves begin to
+ decline, indicating a longer convergence time and potential overﬁtting
+ 𝐹𝑃
+𝐹 𝑎𝑙𝑠𝑒𝑃 𝑜𝑠𝑖𝑡𝑖𝑣𝑒𝑅𝑎𝑡𝑒 = of the model.
+ 𝐹𝑃 + 𝑇𝑁 This unexpected behavior leads us to conclude that excessively deep
+ The false-positive rate pertains to the proportion of inaccurate posi- models are not advantageous for our speciﬁc task, as they lead to intive predictions among all negative instances. creased training time and compromised generalization. Hence, based
+ In the CERT-IT r5.2 dataset, benign user behavior accounts for over on this observation, we opt to conﬁgure the number of convolution lay-
+99%, whereas malicious insider behavior constitutes less than 0.5%. ers as 2 in subsequent experiments.
+The presence of such a data imbalance can impact the classiﬁcation
+results, as it gives rise to a class imbalance problem. This challenge 5.1.2. Maximum sequence length
+makes it arduous for models to eﬀectively capture features from classes During the parameter selection process for the maximum sequence
+characterized by limited samples during the training process. Given the length, we explore various values to determine the optimal length for
+substantial variation in the number of instances across diﬀerent classes, input sequences in the sequential analysis module. The length of inwe employ an undersampling technique to restrict the number of benign put sequences is a critical factor in the sequential analysis module, as
+class items to 20,000. Table 3 shows the experimental dataset statistics, longer sequences can encompass more contextual information while powhere “Instances” represents the count of user behavior samples and tentially introducing heightened computational complexity.
+
+ 8
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+Fig. 5. The ﬁgure presents a comparison of F-measure results across various parameter values for the number of convolution layers, maximum sequence length,
+number of transformer layers, and number of transformer heads. The horizontal axis of the ﬁgure indicates the diﬀerent values of each parameter, while the vertical
+axis represents the corresponding F-measure values for each parameter conﬁguration. The training F-measure ﬁtting curve is indicated by the solid blue line, the
+validating F-measure ﬁtting curve is shown by the solid orange line, and the dash-dotted red x line illustrates the ﬁtting curve for time cost. (For interpretation of
+the colors in the ﬁgure(s), the reader is referred to the web version of this article.)
+
+ As shown in Fig. 5b, the sequence length of 320 demonstrates supe- results reveal an intriguing pattern. When using one or two transformer
+rior performance compared to the other examined lengths. This partic- heads, the model’s performance shows limited improvement, suggesting
+ular length strikes a favorable balance, providing suﬃcient contextual that these conﬁgurations struggle to adequately capture the intricate
+information while maintaining relatively high computational eﬃciency. patterns and dependencies within the data. However, as the number
+Compared to shorter sequences, a sequence length of 320 more eﬀec- of transformer heads increases to four, a signiﬁcant performance boost
+tively captures intricate patterns and long-range dependencies inherent is observed. Enhanced is the model’s capacity to process input data,
+in the data, thereby enhancing model performance. On the other hand, attend to various aspects, and create more precise and meaningful data
+longer sequence lengths (such as 384, 448, and 512) oﬀer the advan- representations.
+tage of deeper contextual comprehension. However, they also introduce Further experiments with more than four transformer heads do not
+signiﬁcant computational burdens, resulting in longer training times. yield signiﬁcant performance improvements. This implies that augment-
+Conversely, shorter sequence lengths (e.g., 64, 128, 192, and 256) ing the number of heads does not always result in improved results and
+have some advantages in computational eﬃciency. They might limit introduce unnecessary computational overhead. On balance, we choose
+the model’s ability to comprehend the global context, thereby aﬀect- four as the number of transformer heads.
+ing overall performance. Hence, the maximum sequence length is set to
+320 in subsequent experiments. 5.2. Ablation study
+
+5.1.3. Number of transformer layers In the ablation study, we conduct a detailed investigation of the
+ As shown in Fig. 5c, we explore a range of values from 1 to 5 for statistical analysis module (referred to as CA, which includes the convothe number of transformer layers for parameter tuning. The objective is lutional layers and attention layers) and the sequential analysis module
+to pinpoint the most suitable number of transformer layers that would (referred to as TE, which represents the transformer encoder). Additionyield optimal performance for our speciﬁc task. ally, we compare the performance of our method when combining both
+ Upon analyzing the experimental results, we observe an interest- modules, referred to as CATE. To assess the contributions of CA and
+ing trend. While increasing the number of transformer layers beyond TE, we perform a series of ablation experiments by individually removtwo initially leads to improvements in performance, further increments ing these modules and comparing them to the complete CATE method.
+result in diminishing returns. Speciﬁcally, the model’s performance Speciﬁcally, we construct three ablation models: 1) a model containplateaus and even exhibits a decline when using more than two trans- ing only the statistical analysis module; 2) a model containing only the
+former layers. sequential analysis module; and 3) the complete CATE model.
+ This phenomenon suggests that a deeper model with more than two Fig. 6 illustrates the metrics used to compare the results. CATE
+transformer layers could suﬀer from overﬁtting or struggle to eﬀec- outperforms CA and TE across all metrics, providing evidence for the
+tively capture the relevant information pertinent to the task. Thus, we eﬀectiveness of the CATE framework design. Removing the CA module
+choose a compromise for the number of transformer layers by taking led to a signiﬁcant decrease in model performance. The CA module
+the value 2. enables the model to capture critical information and features from
+ the statistical data, thereby enhancing performance. Similarly, the TE
+5.1.4. Number of transformer heads module showed signiﬁcant importance. Responsible for sequence-level
+ As depicted in Fig. 5d, we conduct parameter tuning for the number modeling and understanding through attention mechanisms on input seof transformer heads, exploring ﬁve distinct values. The experimental quences, it helped capture sequential patterns of user behavior, leading
+
+ 9
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Fig. 6. This ﬁgure shows the results of our ablation study, which aimed to assess performance impacts by selectively removing diﬀerent modules.
+
+ Table 4
+ Comparative results (%).
+
+ Method Detection Rate Precision F-measure False Positive Rate
+
+ LR 68.62 85.66 76.20 0.74
+ KNN 88.26 86.28 87.26 0.91
+ DT 91.83 85.91 88.77 0.98
+ RF 92.34 93.29 92.82 0.43
+ GB 86.22 91.59 88.83 0.51
+ M-LR 69.38 80.95 74.72 1.06
+ M-MLP 79.84 86.46 83.02 0.81
+ M-RF 78.31 95.63 86.11 0.23
+ M-XGB 91.58 93.01 92.28 0.44
+
+ CNN 93.87 92.92 93.40 0.46
+ LSTM 85.96 81.99 83.93 1.23
+ Transformer 87.50 86.62 87.06 0.88
+ CNN+LSTM 94.64 93.92 94.28 0.39
+
+ CATE 96.42 95.93 96.18 0.26
+
+to performance improvements. The absence of the TE module aﬀects the machine learning models: logistic regression (M-LR), multilayer percepmodel’s performance. Further comparison of the three ablation models tron (M-MLP), random forest (M-RF), and XGBoost (M-XGB).
+reveals that the CATE method, which combines CA and TE, exhibits Across all metrics, CATE consistently exhibits signiﬁcantly superior
+the best performance. The CATE method eﬀectively leverages the ad- performance compared to traditional machine learning-based methods,
+vantages of both CA and TE modules, achieving comprehensive data as evidenced by the data presented in the initial nine rows of Table 4.
+analysis and modeling, resulting in optimal performance. Notably, the M-RF method has a lower false alarm rate, the detection
+ The ablation study elucidates the critical roles of the statistical rate of this method is very low at the same time, and the method proanalysis module (CA) and the sequential analysis module (TE) in our duces more missed alarms and is not of practical value. The neural
+approach. They are responsible for user statistical and sequential in- network utilized in our proposed CATE method is the key factor beformation learning, respectively, and both play important roles in our hind the superiority of deep learning methods over traditional machine
+tasks. The fusion of CA and TE in the CATE method demonstrates a syn- learning techniques. The neural network is capable of learning more
+ergistic eﬀect of the two modules, resulting in superior performance. abstract and advanced feature representations, enabling the capture of
+ intricate patterns and relationships within the user data.
+5.3. Comparison study Regarding deep learning-based techniques, we evaluate our approach alongside methods such as the convolutional neural network
+ We compare our proposed CATE method against state-of-the-art (CNN), long short-term memory (LSTM), and transformer models. The
+techniques, including traditional machine learning and deep learning CNN, LSTM, and transformer models are all commonly used in anomaly
+methods. Table 4 summarizes the results of these comparative exper- detection tasks Tekerek and Yapici (2022); Aydın et al. (2022); Huang
+iments. To ensure a fair and robust comparison, we reproduce these et al. (2021). Simultaneously, we also combine CNN and LSTM models
+methods and utilize the same dataset and random seeds as CATE during (CNN+LSTM) to learn both statistical and sequential information about
+the training and testing phases. We explore the parameter space within the user.
+each method, obtaining optimal results for all methods under the same In the CNN approach, we employ features extracted from the statistiexperimental condition. cal analysis module, applying equivalent feature transformations as our
+ First, we compare our CATE method with traditional machine learn- proposed method. Subsequently, these features are input into the CNN
+ing techniques, including logistic regression (LR), k-nearest neighbor model for learning. For the LSTM or transformer models, we utilize se-
+(KNN), decision tree (DT), random forest (RF), and gradient boosting quences from the sequential analysis module as inputs for the respective
+(GB). The above models are fed with features consistent with those ex- LSTM or transformer models. Moreover, we combine CNN and LSTM
+tracted in the statistical analysis module. models, enabling the CNN model to learn features from the statistical
+ We have also compared the four machine learning methods pro- analysis module and the LSTM model to comprehend sequences from
+posed by Le et al. (2020), and we have ﬁrst replicated the feature the sequential analysis module. This integration enables the simultaneextraction process of Le et al. (2020) and conducted experiments on the ous acquisition of the user’s statistical and sequential information.
+dataset of this paper using the models mentioned in the Le et al. (2020). The experimental results depicted in Rows 10 to 13 show that the
+They manually crafted a set of 824 features for insider threat scenarios CATE method still outperforms the compared deep learning methods.
+and modeled their manually constructed features using four diﬀerent Despite the CNN+LSTM method’s ability to simultaneously capture the
+
+ 10
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ Table 5
+ Comparative results of malicious scenario identiﬁcation (%).
+
+ Method Detection Rate Precision F-measure False Positive Rate DE-IPT-IS
+
+ LR 84.34 94.51 88.69 7.52 17-253-6
+ KNN 85.42 96.21 88.90 3.16 13-327-6
+ DT 92.77 92.88 92.82 3.19 21-317-6
+ RF 91.57 97.86 94.42 3.49 20-313-6
+ GB 92.25 94.30 93.25 3.72 21-309-6
+ M-LR 83.89 94.55 88.76 7.65 21-250-5
+ M-MLP 82.61 94.95 87.84 4.99 21-291-4
+ M-RF 86.02 98.36 91.59 5.67 21-278-5
+ M-XGB 92.55 96.47 94.33 3.45 21-314-6
+
+ CNN 93.35 96.15 94.66 2.64 21-325-6
+ LSTM 85.81 87.61 86.69 5.77 21-278-5
+ Transformer 92.58 95.10 93.64 3.43 21-316-6
+ CNN+LSTM 93.88 96.91 95.31 2.15 21-332-6
+
+ CATE 95.97 97.95 96.85 1.14 22-348-6
+
+user’s statistical and sequential information, which results in improved
+performance in contrast to individual CNN or LSTM models, it still
+falls short of matching the performance achieved by the CATE method.
+These results illustrate the eﬀectiveness and superiority of the CATE
+method we have proposed.
+ By leveraging the strengths of both the statistical analysis module
+and the sequential analysis module, the CATE method can understand
+and process user data more comprehensively, resulting in superior performance in insider threat detection tasks. Our CATE method achieves
+an F-measure of 96.18% while maintaining a false-positive rate of just
+0.26%. The outcomes from comparative experiments further validate
+the advantages of the CATE method in combining statistical and sequential information.
+
+5.4. Malicious scenario identiﬁcation
+ Fig. 7. This ﬁgure shows the confusion matrix result of our method for mali-
+ In this section, we investigate the capability of our method for cious scenario identiﬁcation.
+identifying speciﬁc insider threat scenarios. As previously outlined in
+Section 4.2, these scenarios can be classiﬁed into three categories: data
+exﬁltration (DE), intellectual property theft (IPT), and IT sabotage (IS). ing the limitations of CATE, speciﬁcally within the IPT scenario. Our
+We retrain our method, as well as the state-of-the-art methods described detailed examination of correctly and incorrectly predicted IPT scenario
+in Section 5.3, to adapt to the multi-class classiﬁcation task and conduct instances revealed that, in correctly predicted cases, the average proportesting on the same dataset. tion of malicious to total daily activities is 10.14%. In contrast, this ratio
+ Table 5 presents the comparative results of our proposed CATE signiﬁcantly drops to 3.19% in incorrectly predicted instances. These
+method against state-of-the-art methods in malicious scenario identiﬁ- ﬁndings indicate that the CATE method is more eﬀective at identifying
+cation. The ﬁrst column of Table 5 lists the detection methods, and the instances where malicious activities represent a higher proportion of
+second to ﬁfth columns detail the detection metrics. The ﬁnal column total daily activities. Nevertheless, its detection performance decreases
+shows the actual detection values for identifying malicious scenarios. when malicious activities represent a lower proportion of total daily ac-
+The comparative results highlight our CATE method’s superiority over tivities. Future research should focus on investigating the sparsity of
+existing methods. In the IPT scenario category, the actual detection val- malicious activities and aim to develop methodologies targeted at deues of various methods reveal the shortcomings of current detection tecting low-frequency malicious activities.
+techniques. The traditional machine learning method, KNN, success- We also conduct an analysis of the duration of three distinct mafully detects 327 instances in IPT scenarios. However, its eﬀectiveness licious scenarios, as depicted in Fig. 8. The median duration of the
+markedly declines in other malicious scenarios. Moreover, M-RF meth- DE scenario is 5.99 days, while the IS scenario has a notably shorter
+ods show higher precision, but they face challenges in accurately iden- median of 1.41 days. In contrast, the IPT scenario demonstrates a subtifying IPT scenarios. Existing deep learning methods reach a maximum stantially longer median duration of 58.31 days, with the longest case
+of 332 IPT detections, but they still fall short of CATE’s performance. lasting up to 160 days. Moreover, within the IPT scenario, malicious
+CATE’s eﬀectiveness further illustrates that incorporating both statisti- activities occur more sporadically than in the DE and IS scenarios, charcal and sequential information enhances the identiﬁcation of malicious acterized by their dispersed or intermittent execution. This indicates
+scenarios. that, in comparison to other scenarios, malicious activities in IPT are
+ Subsequently, we conduct an in-depth analysis of the limitations of more intricately intertwined with users’ regular activities, demonstratthe CATE method in identifying malicious scenarios, focusing on the ing heightened concealment and thereby posing greater challenges for
+root causes of these limitations. The confusion matrix depicted in Fig. 7 detection. The high level of concealment signiﬁcantly hampers the deshows the CATE method’s detection results in malicious scenario iden- tection performance of the IPT scenario. In contrast to the DE and IS
+tiﬁcation. The confusion matrix result illustrates CATE’s commendable scenarios, where malicious patterns appear more frequently and consisperformance in identifying DE and IS scenarios. However, it demon- tently, the infrequency of malicious activities in the IPT scenario results
+strates relatively suboptimal results in identifying the IPT scenario. in a lack of regularity, complicating detection and impeding eﬀective
+Hence, our investigation concentrates on comprehensively understand- detection of such behaviors.
+
+ 11
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+ ﬁnancial risk prediction, and more will contribute to enhancing the
+ overall performance of data analysis and modeling.
+
+ CRediT authorship contribution statement
+
+ Haitao Xiao: Conceptualization, Investigation, Methodology, Software, Writing – original draft, Writing – review & editing. Yan Zhu:
+ Software, Validation. Bin Zhang: Software, Validation. Zhigang Lu:
+ Resources, Supervision. Dan Du: Formal analysis, Writing – review &
+ editing. Yuling Liu: Project administration, Resources, Writing – review
+ & editing.
+
+ Declaration of competing interest
+
+ The authors declare that they have no known competing ﬁnancial
+Fig. 8. This ﬁgure shows the duration analysis of distinct malicious scenarios. interests or personal relationships that could have appeared to inﬂuence
+ the work reported in this paper.
+
+ Our proposed CATE method exhibits enhanced capabilities for iden- Data availability
+tifying malicious scenarios. Moreover, in the identiﬁcation of the IPT
+scenario, the CATE method also outperforms existing approaches. How- Data will be made available on request.
+ever, due to the low-frequency operational patterns, prolonged duration, and high level of concealment inherent in IPT scenarios, focusing Acknowledgements
+solely on daily granularity is insuﬃcient for eﬀective detection. Future
+research can explore integrating daily contextual information, such as The ﬁnancial support for this study is provided by the Strategic Prianalyzing pre-detection user log data alongside historical and current- ority Research Program of the Chinese Academy of Sciences [Grant
+day records to highlight access frequency deviations. Additionally, the Number XDC02040100], the Science and Technology Project of the
+multi-granularity fusion approach for detecting insider threats deserves State Grid Corporation of China [Grant Number 5700-202352606A-3-
+attention. By merging data across multiple granularities, the method 2-ZN], and the Youth Innovation Promotion Association of the Chinese
+consolidates user behaviors over various timeframes, enhancing the Academy of Sciences [Grant Number 2021156]. Additionally, this study
+identiﬁcation of low-frequency malicious activity. is also supported by the Program of the Key Laboratory of Network
+ Assessment Technology at the Chinese Academy of Sciences and the
+6. Conclusion Program of the Beijing Key Laboratory of Network Security and Protection Technology.
+ In this paper, we propose a comprehensive framework for insider
+threat detection based on statistical and sequential analysis and imple- References
+ment it utilizing the Convolutional Attention and Transformer Encoder
+ Afzal, M.Z., Capobianco, S., Malik, M.I., Marinai, S., Breuel, T.M., Dengel, A., Liwicki, M.,
+(CATE). Our framework leverages the strengths of both statistical anal-
+ 2015. Deepdocclassiﬁer: document classiﬁcation with deep convolutional neural netysis and sequential analysis modules to comprehensively analyze and work. In: 2015 13th International Conference on Document Analysis and Recognition
+model the input user data. The statistical analysis module eﬀectively (ICDAR). IEEE, pp. 1111–1115.
+extracts valuable features from the data, while the sequential analy- Aydın, H., Orman, Z., Aydın, M.A., 2022. A long short-term memory (lstm)-based distributed denial of service (ddos) detection and defense system design in public cloud
+sis module captures temporal dependencies and patterns. By combining
+ network environment. Comput. Secur. 118, 102725.
+these modules, our framework demonstrates robust performance and Ba, J.L., Kiros, J.R., Hinton, G.E., 2016. Layer normalization. arXiv preprint. arXiv:1607.
+achieves state-of-the-art results in detecting insider threats. 06450.
+ There are several aspects that we can continue to explore in future Bartoszewski, F.W., Just, M., Lones, M.A., Mandrychenko, O., 2021. Anomaly detection
+work. First, we can introduce more advanced transformer architectures for insider threats: an objective comparison of machine learning models and ensembles. In: ICT Systems Security and Privacy Protection: 36th IFIP TC 11 International
+into the model’s structure to enhance its capability in understanding Conference. SEC 2021, Oslo, Norway, June 22–24, 2021. In: Proceedings. Springer,
+user temporal behaviors. Second, the pursuit of techniques to reﬁne the pp. 367–381.
+identiﬁcation of intricate insider threat scenarios, such as intellectual Cullen, M., Russell, S., Bosshardt, M., Juraska, S., Stellmack, A., Duehr, E., Jeansonne,
+property theft, remains imperative. The identiﬁcation of these complex K., 2011. Five-factor model of personality and counterproductive cyber behaviors. In:
+ Poster Presented at the Annual Conference of the Society for Industrial and Organiscenarios is pivotal in fortifying the protection of sensitive information
+ zational Psychology. Chicago, IL.
+and mitigating insider threats. Based on the analysis of the malicious Du, M., Li, F., Zheng, G., Srikumar, V., 2017. Deeplog: anomaly detection and diagnosis
+scenario identiﬁcation section, future research can focus on the low- from system logs through deep learning. In: Proceedings of the 2017 ACM SIGSAC
+frequency operational patterns, the prolonged durations, and the high Conference on Computer and Communications Security, pp. 1285–1298.
+ Gayathri, R., Sajjanhar, A., Xiang, Y., 2020. Image-based feature representation for insider
+level of concealment that characterize intellectual property theft scethreat classiﬁcation. Appl. Sci. 10, 4945.
+narios. To achieve this advancement, incorporate day-level contextual Ge, D., Zhong, S., Chen, K., 2022. Multi-source data fusion for insider threat detection
+information or explore multi-granularity fusion approaches, therefore using residual networks. In: 2022 3rd International Conference on Electronics, Comincreasing the capability of methods for identifying complex insider munications and Information Technology (CECIT). IEEE, pp. 359–366.
+threats. Third, our work requires more interpretability. In practical ap- Gu, J., Wang, Z., Kuen, J., Ma, L., Shahroudy, A., Shuai, B., Liu, T., Wang, X., Wang,
+ G., Cai, J., et al., 2018. Recent advances in convolutional neural networks. Pattern
+plications, it is crucial to trace and identify which speciﬁc actions lead Recognit. 77, 354–377.
+to the occurrence of malicious behaviors. Thus, incorporating more Gurucul, 2023. 2023 Insider Threat Report. Technical Report. Gurucul.
+interpretability techniques into our method to provide clearer expla- He, K., Zhang, X., Ren, S., Sun, J., 2016. Deep residual learning for image recognition.
+nations of the model’s decision-making process is an important avenue In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition,
+ pp. 770–778.
+for improvement. Finally, the framework of combining statistical and He, W., Wu, X., Wu, J., Xie, X., Qiu, L., Sun, L., 2021. Insider threat detection based on
+sequential analysis can be extended to other domains beyond insider user historical behavior and attention mechanism. In: 2021 IEEE Sixth International
+threat detection. For instance, applying it to other security domains, Conference on Data Science in Cyberspace (DSC). IEEE, pp. 564–569.
+
+ 12
+H. Xiao, Y. Zhu, B. Zhang et al. Computers & Security 138 (2024) 103665
+
+Hossain, N., Ghazvininejad, M., Zettlemoyer, L., 2020. Simple and eﬀective retrieve-edit- Xie, X., Cheng, G., Wang, J., Yao, X., Han, J., 2021. Oriented r-cnn for object detecrerank text generation. In: Proceedings of the 58th Annual Meeting of the Association tion. In: Proceedings of the IEEE/CVF International Conference on Computer Vision,
+ for Computational Linguistics, pp. 2532–2538. pp. 3520–3529.
+Huang, W., Zhu, H., Li, C., Lv, Q., Wang, Y., Yang, H., 2021. Itdbert: temporal-semantic Yuan, F., Cao, Y., Shang, Y., Liu, Y., Tan, J., Fang, B., 2018. Insider threat detection
+ representation for insider threat detection. In: 2021 IEEE Symposium on Computers with deep neural network. In: Computational Science–ICCS 2018: 18th International
+ and Communications (ISCC). IEEE, pp. 1–7. Conference. Wuxi, China, June 11–13, 2018. In: Proceedings, Part I, vol. 18. Springer,
+Le, D.C., Zincir-Heywood, N., Heywood, M.I., 2020. Analyzing data granularity levels for pp. 43–54.
+ insider threat detection using machine learning. IEEE Trans. Netw. Serv. Manag. 17, Yuan, S., Wu, X., 2021. Deep learning for insider threat detection: review, challenges and
+ 30–44. opportunities. Comput. Secur. 104, 102221.
+Li, D., Yang, L., Zhang, H., Wang, X., Ma, L., Xiao, J., 2021a. Image-based insider threat Zhang, Z., Wang, S., Lu, G., 2020. An internal threat detection model based on denoising
+ detection via geometric transformation. Secur. Commun. Netw. 2021, 1–18. autoencoders. In: Advances in Intelligent Information Hiding and Multimedia Signal
+Li, P., Zhong, P., Mao, K., Wang, D., Yang, X., Liu, Y., Yin, J., See, S., 2021b. Act: an Processing: Proceedings of the 15th International Conference on IIH-MSP in Conjuncattentive convolutional transformer for eﬃcient text classiﬁcation. In: Proceedings of tion with the 12th International Conference on FITAT. July 18–20, Jilin, China, vol. 2.
+ the AAAI Conference on Artiﬁcial Intelligence, pp. 13261–13269. Springer, pp. 391–400.
+Li, Z., Liu, K., 2020. An event based detection of internal threat to information system. Zhu, D., Huang, X., Li, N., Sun, H., Liu, M., Liu, J., 2022. Rap-net: a resource access
+ In: Advances in Harmony Search, Soft Computing and Applications, vol. 15. Springer, pattern network for insider threat detection. In: 2022 International Joint Conference
+ pp. 44–53. on Neural Networks (IJCNN). IEEE, pp. 1–8.
+Lindauer, B., 2020. Insider threat test dataset. https://kilthub.cmu.edu/articles/dataset/
+ Insider_Threat_Test_Dataset/12841247. 10.1184/R1/12841247.v1.
+Liu, L., De Vel, O., Chen, C., Zhang, J., Xiang, Y., 2018. Anomaly-based insider threat Haitao Xiao received the B.S. degree from Hubei University in 2019. He is currently
+ detection using deep autoencoders. In: 2018 IEEE International Conference on Data pursuing the Ph.D. degree at the Institute of Information Engineering, Chinese Academy
+ Mining Workshops (ICDMW). IEEE, pp. 39–48. of Sciences. His current research interests include data mining and cybersecurity.
+Liu, Q., Zhang, N., Yang, W., Wang, S., Cui, Z., Chen, X., Chen, L., 2017. A review of
+ image recognition with deep convolutional neural network. In: Intelligent Computing Yan Zhu received the M.S. degree from Capital Normal University in 2019. She is cur-
+ Theories and Application: 13th International Conference. ICIC 2017, Liverpool, UK, rently working at the Institute of Information Engineering, Chinese Academy of Sciences.
+ August 7–10, 2017. In: Proceedings, Part I, vol. 13. Springer, pp. 69–80. Her research interests include network security situational awareness, security measure-
+Nguyen, N., Reiher, P., Kuenning, G.H., 2003. Detecting insider threats by monitoring ment, and visualization analysis.
+ system call activity. In: IEEE Systems, Man and Cybernetics Society Information Assurance Workshop, 2003. IEEE, pp. 45–52. Bin Zhang received the Ph.D. degree from Beijing University of Posts and Telecom-
+Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., Killeen, T., Lin, munications. He is currently a senior engineer at the China Cybersecurity Review Tech-
+ Z., Gimelshein, N., Antiga, L., et al., 2019. Pytorch: an imperative style, high- nology and Certiﬁcation Center. His research interests include network security measureperformance deep learning library. Adv. Neural Inf. Process. Syst. 32. ment.
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M.,
+ Prettenhofer, P., Weiss, R., Dubourg, V., et al., 2011. Scikit-learn: machine learning Zhigang Lu received the Ph.D. degree from the Chinese Academy of Sciences in
+ in python. J. Mach. Learn. Res. 12, 2825–2830. 2010. He is a professor at the Institute of Information Engineering, Chinese Academy of
+Ponemon, 2022. 2022 Cost of Insider Threats Global Report. Technical Report. Ponemon Sciences. His research focuses on network and system security, speciﬁcally cyber situation
+ Institute. awareness, intrusion detection and prevention, as well as mobile terminal security.
+Sun, Y., Xue, B., Zhang, M., Yen, G.G., Lv, J., 2020. Automatically designing cnn architectures using the genetic algorithm for image classiﬁcation. IEEE Trans. Cybern. 50,
+ Dan Du received the M.S. degree from the Institute of Information Engineering,
+ 3840–3854. Chinese Academy of Sciences in 2016. She is currently an engineer at the Institute of
+Tekerek, A., Yapici, M.M., 2022. A novel malware classiﬁcation and augmentation model Information Engineering, Chinese Academy of Sciences. Her research interests include
+ based on convolutional neural network. Comput. Secur. 112, 102515. network security situational awareness, security measurement, and mobile terminal secu-
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, Ł., rity.
+ Polosukhin, I., 2017. Attention is all you need. Adv. Neural Inf. Process. Syst. 30.
+Wang, J., Cai, L., Yu, A., Meng, D., 2019a. Embedding learning with heterogeneous event
+ Yuling Liu received his Ph.D. degree from the Institute of Software, Chinese Academy
+ sequence for insider threat detection. In: 2019 IEEE 31st International Conference on of Sciences in China. He is currently a senior engineer at the Institute of Information Engi-
+ Tools with Artiﬁcial Intelligence (ICTAI). IEEE, pp. 947–954. neering, Chinese Academy of Sciences. His research areas are network security situational
+Wang, Q., Li, B., Xiao, T., Zhu, J., Li, C., Wong, D.F., Chao, L.S., 2019b. Learning deep awareness, network security, big data analysis, and security measurement and certiﬁcatransformer models for machine translation. In: Proceedings of the 57th Annual Meet- tion.
+ ing of the Association for Computational Linguistics, pp. 1810–1822.
+
+ 13

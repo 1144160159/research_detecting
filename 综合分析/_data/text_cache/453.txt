@@ -1,0 +1,148 @@
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 2, APRIL 2025                                                                485
+
+
+
+
+                Graph Anomaly Detection via Multiscale
+                 Contrastive Self-Supervised Learning
+                        From Local to Global
+      Xiaofeng Wang , Shuaiming Lai , Shuailei Zhu , Yuntao Chen , Laishui Lv , and Yuanyuan Qi
+
+
+   Abstract—Graph anomaly detection is a challenging task in                  in graph anomaly detection. Recently, graphs have emerged as a
+graph data mining, aiming to recognize unconventional patterns                universal data structure for modeling diverse complex systems.
+within a network. Recently, there has been increasing attention               Consequently, anomaly detection on graphs has garnered grow-
+on graph anomaly detection based on contrastive learning due to
+its high adaptability to the sample imbalance problem. However,               ing attention [2]. Graph anomaly detection techniques have
+most existing work typically focuses on the contrast of local                 found application in diverse fields, including fraud detection
+views while neglecting global comparison information, leading                 [3], social network analysis [4], recommendation systems [5],
+to suboptimal performance. To address this issue, we introduce                and network security [6]. In these domains, graph anomaly
+a new multiscale contrastive self-supervised learning framework               detection plays a crucial role in informing decision-making
+for graph anomaly detection (GADMCLG). Our approach in-
+corporates local-level contrasts involving node–node and node–                processes and facilitating effective problem-solving endeavors.
+subgraph contrast, and global-level subgraph–subgraph contrast.                  Traditional anomaly detection approaches face challenges in
+The former mines localized abnormal information, while the lat-               effectively addressing this issue due to the intricate nature of
+ter is intended to capture global anomalous patterns. Specifically,           on-Euclidea graph-structured data [1]. Specifically, graphs em-
+our proposed subgraph–subgraph contrast adopts the h-order                    phasize the complex structural relationships between objects,
+neighbor subgraph sampling instead of augmented subgraphs
+through edge perturbation. This sampling strategy ensures a                   which provides valuable auxiliary information for anomaly de-
+comprehensive observation of the neighborhood surrounding the                 tection. In online social networks, malicious social bots usually
+target node, thereby mitigating the introduction of extraneous                build relationships with a large number of normal users to
+noise and providing interpretability for the detected results.                obtain user privacy information and can also disguise them-
+Furthermore, we incorporate a subgraph centralization tech-                   selves by imitating the behavior of normal users [7]. In such
+nique to reduce the bias caused by the absolute position of
+subgraphs in the attribute space, which enhances the model’s                  cases, traditional techniques may not be able to distinguish
+ability to identify anomalies at different scales. Extensive ex-              between fake users and normal users based solely on attribute
+perimental results on six real-world datasets demonstrate the                 information. Furthermore, the differences in topology and at-
+effectiveness of our method and its superiority compared with                 tributes give rise to two principal categories of graph anomalies:
+state-of-the-art approaches.                                                  structural anomalies and attribute anomalies [8] in Fig. 1. Nodes
+   Index Terms—Contrastive learning, graph anomaly detec-                     A and C are identified as attributed anomalies, while nodes A
+tion, multiscale framework, subgraph centralization, subgraph                 and B are identified as structural anomalies. The former refers
+sampling.
+                                                                              to nodes within the graph that exhibit dissimilar interaction
+                                                                              behaviors in comparison with other nodes, signifying disparities
+                          I. INTRODUCTION                                     in the structural connectivity of the network. The latter involves
+                                                                              interconnected nodes that exhibit unusual node attributes, high-
+G      RAPH anomaly detection is one of the most important
+       tasks in graph machine learning, which seeks to identify
+atypical graph patterns, including anomalous nodes, edges, and
+                                                                              lighting the inconsistency of node attributes.
+                                                                                 Over the past decade, numerous graph anomaly detection
+                                                                              methods have been proposed. Early work such as LOF [9],
+subgraphs in a given graph [1]. Node anomaly detection focuses
+                                                                              AMEN [10], and ANOMALOUS [11] primarily utilized spe-
+on exploring individual data instances within the graph that de-
+                                                                              cific domain knowledge on graphs to identify anomalies, re-
+viate from expected patterns, making it the most prevalent task
+                                                                              lying on manual feature engineering and statistical models.
+                                                                              These conventional approaches fail to capture the nonlinear
+                                                                              characteristics of nodes and scale to large-scale graphs. To
+  Received 12 January 2024; revised 10 July 2024; accepted 6 September        address these limitations, deep learning has been introduced
+2024. Date of publication 30 September 2024; date of current version
+3 April 2025. This work was supported by the “Leading Goose” R&D              to uncover anomalous graph patterns, leveraging its success
+Program of Zhejiang Province under Grant 2024C01107. (Corresponding           in representation learning and pattern recognition [12]. Deep
+author: Xiaofeng Wang.)                                                       neural networks with nonlinearity exhibit significant advan-
+  The authors are with the School of Information Engineering, China Jiliang
+University, Hangzhou 310018, China (e-mail: xfwang@cjlu.edu.cn).              tages in handling large-scale data and learning distributed rep-
+  Digital Object Identifier 10.1109/TCSS.2024.3457161                         resentations for uncovering anomalies [13]. To capture more
+
+
+                      2329-924X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+486                                                            IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 2, APRIL 2025
+
+
+
+                                                                          h-order neighbor subgraph sampling strategy. Different from
+                                                                          the existing method [27] that relies on edge modification to
+                                        (b)                               construct subgraph–subgraph contrast, our approach ensures a
+                                                                          comprehensive observation of the neighborhood of the target
+                                                                          node from local to global perspectives, thereby mitigating the
+                                                                          introduction of extraneous noise. Furthermore, we perform sub-
+                                                                          graph centralization on all subgraphs to reduce the deviation
+                                  (a)                                     caused by their absolute position in the attribute space. Finally,
+                                                         (c)              we design a multiscale contrastive learning framework by com-
+                                                                          bining both local and global-level contrasts to identify poten-
+Fig. 1.   Toy example of two basic types of graph anomalies.              tial abnormal nodes. The main contributions are summarized
+                                                                          as follows.
+                                                                             1) We propose a novel graph anomaly detection method
+discriminated information in graph data for anomaly detection,                   that leverages the synergy between local and global con-
+graph representation learning techniques have been widely ex-                    trastive patterns to effectively identify node anomalies in
+ploited [14], [15], [16]. For example, Hu et al. [17] proposed an                attributed graphs.
+effective embedding approach to identify structural anomalies                2) We investigate the effects of various subgraph sampling
+by analyzing the relationship between nodes and communities.                     methods on contrastive learning and conclude that the
+Moreover, many typical shallow models for graph embedding                        h-order neighborhood subgraph sampling strategy is the
+such as DeepWalk [18] and node2vec [19] have been used for                       most suitable for the graph anomaly detection task.
+generating node representations in graph anomaly detection.                  3) Extensive experiments on six real-world datasets demon-
+   Recently, graph neural networks (GNNs) have been in-                          strate the effectiveness of the proposed method and its
+troduced to graph anomaly detection, attracting increasing                       advantages compared to state-of-the-art baselines.
+attention due to their highly expressive capability in graph                 The rest of the sections of this article are organized as fol-
+representation learning [8]. As a pioneering work, DOMINANT               lows. In Section II, we provide a general review of related
+[20] utilizes a graph auto-encoder (GAE) based on a graph                 work. Section III introduces fundamental concepts employed
+convolutional network (GCN) to identify anomalies in an unsu-             in this work and outlines the task objective of anomaly detec-
+pervised setting, where anomaly scores for nodes are calculated           tion on attributed networks. We provide a detailed presentation
+by leveraging the reconstruction errors of node attributes and            of the proposed method in Section IV. Section V evaluates
+graph structure. Subsequently, some variants were proposed,               and analyzes the experimental results conducted across var-
+such as SpecAE [21], ALAMR [22], and ComGA [23]. GAE-                     ious datasets. Finally, Section VI presents the conclusion of
+based methods do not directly identify anomalous targets, mak-            our work.
+ing it difficult to fully utilize the rich information present in the
+attribute network [8]. Moreover, based on the self-supervised                                   II. RELATED WORK
+learning paradigm, CoLA [24] introduces a novel approach by
+                                                                             Our work addresses the issue of graph anomaly detection
+combining contrastive learning with GNNs, which identifies
+                                                                          using graph contrastive learning in attributed graphs. In this
+anomalies by measuring the consistency between a target node
+                                                                          section, we first review the primary methods of graph anomaly
+and its neighboring nodes. On this basis, ANEMONE [25]
+                                                                          detection and then introduce the pertinent work on graph con-
+captures more subtle abnormal information by building addi-
+                                                                          trastive learning.
+tional contrast between the target node and its masked nodes.
+Furthermore, GCAD [26] identifies anomalies by comparing
+                                                                          A. Graph Anomaly Detection
+the similarity between subgraphs. However, these methods typi-
+cally employ a local contrastive mode or a single-scale contrast,            Graph anomaly detection is a crucial topic in graph data
+while ignoring potential global anomaly information in com-               mining, primarily employed to identify patterns that deviate
+plex graph-structured data.                                               from the majority within a graph. Much early work has been
+   To address this issue, we propose a novel graph anomaly                proposed to identify node anomalies. Breuning et al. [9] in-
+detection method via multiscale contrastive self-supervised               troduced a density-based local method LOF, which identifies
+learning from local to global, denoted as GADMCLG. It in-                 anomalous nodes by comparing the attribute characteristics of
+tegrates the local- and global-level contrasts to comprehen-              their neighboring nodes. AMEN [10] focuses on identifying
+sively detect anomalies in attributed graphs. Specifically, the           anomalous entities based on their local connectivity within the
+local-level contrasts include node–node and node–subgraph                 graph. Additionally, ANOMALOUS [11] utilizes a joint frame-
+contrasts. We utilize the node–subgraph contrast to capture               work to leverage both structural properties and node attributes
+potential matching patterns between each normal node and                  to reveal inherent patterns and identify anomalies. These tra-
+its corresponding neighbor subgraph sampled through random                ditional approaches primarily utilized specific domain knowl-
+walk (RW). Moreover, the node–node contrast is used to mine               edge on graphs to identify anomalies but failed to capture the
+more subtle local abnormal information. For the global-level              nonlinear features of nodes, lacking deeper insight into graph
+contrast, we propose a subgraph–subgraph contrast based on the            data [1].
+WANG et al.: GRAPH ANOMALY DETECTION VIA MULTISCALE CONTRASTIVE SELF-SUPERVISED LEARNING                                              487
+
+
+
+   GNNs have emerged as an effective tool for graph represen-        and introduces a new graph convolutional network to induc-
+tation learning, with the ability to extract complex nonlinear in-   tively learn node embeddings. Different from these methods,
+formation. Consequently, numerous GNN-based methods have             recent work has shifted toward exploring more intricate seman-
+been proposed to uncover graph anomalies by learning expres-         tic information by employing graph augmentation techniques.
+sive and informative node representations. DOMINANT [20]             GRACE [34] leverages node feature masking and edge drop-
+first introduces an anomaly detection approach based on GAE,         pin

@@ -1,0 +1,1663 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+2675
+
+Self-Supervised Random Forest on Transformed
+Distribution for Anomaly Detection
+Jiabin Liu , Huadong Wang , Hanyuan Hang, Shumin Ma , Xin Shen , and Yong Shi , Senior Member, IEEE
+
+Abstract— Anomaly detection, the task of differentiating
+abnormal data points from normal ones, presents a significant
+challenge in the realm of machine learning. Numerous strategies
+have been proposed to tackle this task, with classification-based
+methods, specifically those utilizing a self-supervised approach via
+random affine transformations (RATs), demonstrating remarkable performance on both image and non-image data. However,
+these methods encounter a notable bottleneck, the overlap of
+constructed labeled datasets across categories, which hampers the
+subsequent classifiers’ ability to detect anomalies. Consequently,
+the creation of an effective data distribution becomes the pivotal
+factor for success. In this article, we introduce a model called
+“self-supervised forest (sForest),” which leverages the random
+Fourier transform (RFT) and random orthogonal rotations to
+craft a controlled data distribution. Our model utilizes the
+RFT to map input data into a new feature space. With this
+transformed data, we create a self-labeled training dataset using
+random orthogonal rotations. We theoretically prove that the
+data distribution formulated by our methodology is more stable
+compared to one derived from RATs. We then use the self-labeled
+dataset in a random forest (RF) classifier to distinguish between
+normal and anomalous data points. Comprehensive experiments
+conducted on both real and artificial datasets illustrate that
+sForest outperforms other anomaly detection methods, including
+distance-based, kernel-based, forest-based, and network-based
+benchmarks.
+Index Terms— Anomaly detection, data distribution, random
+forest (RF) classifier, random Fourier transform (RFT), random
+orthogonal rotations, self-supervised learning.
+Manuscript received 7 October 2022; revised 1 February 2023, 24 August
+2023, and 22 October 2023; accepted 22 December 2023. Date of publication 23 January 2024; date of current version 6 February 2025. This
+work was supported in part by the National Natural Science Foundation
+of China under Grant 62306036, Grant 62306159, Grant 72231010, and
+Grant 71932008. The work of Shumin Ma was supported in part by the
+Guangdong Provincial Key Laboratory of Interdisciplinary Research and
+Application for Data Science (IRADS) under Grant 2022B1212010006 and
+Grant R0400001-22, in part by the Guangdong Higher Education Upgrading
+Plan under Project UIC-R0400024-21, and in part by the Beijing Normal
+University-Hong Kong Baptist University United International College (UIC)
+under Grant UICR0700019-22. (Corresponding author: Huadong Wang.)
+Jiabin Liu is with the School of Information and Electronics, Beijing
+Institute of Technology, Beijing 100081, China, and also with the Laboratory
+of Electromagnetic Space Cognition and Intelligent Control, Beijing 100191,
+China.
+Huadong Wang is with ModelBest Inc., Beijing 100084, China (e-mail:
+huadw2012@163.com).
+Hanyuan Hang is with the Department of Applied Mathematics, University
+of Twente, 7522 NB Enschede, The Netherlands.
+Shumin Ma is with the Guangdong Provincial Key Laboratory IRADS and
+the Department of Mathematical Science, BNU-HKBU United International
+College, Zhuhai 519087, China.
+Xin Shen is with the Academy of Mathematics and Systems Science,
+Chinese Academy of Sciences, Beijing 100190, China.
+Yong Shi is with the School of Economics and Management, University of
+Chinese Academy of Sciences, Beijing 100190, China.
+Digital Object Identifier 10.1109/TNNLS.2023.3348833
+
+I. I NTRODUCTION
+
+D
+
+EEP learning, with its demonstrated efficacy in a plethora
+of domains, heavily depends on the availability of largescale, high-quality, and accurately labeled data to effectively
+train deep neural networks. However, due to privacy and
+security issues, it is usually difficult to obtain trustworthy
+ground-truth labels in practice [1], [2]. For instance, in the
+field of cybersecurity, identification of novel, unknown attacks
+is frequently hampered due to the absence of patterns or
+signatures of these attacks, which are essential for a supervised classifier. Similar problems arise in industrial detection,
+wherein we often find ourselves unable to anticipate all possible fault situations. This shortage of labeled data considerably
+impedes the process of supervised learning.
+Anomaly detection, also referred to as outlier detection,
+fault detection, or novelty detection, emerges as a solution to
+the challenges previously discussed. The key concept involves
+training exclusively with “normal” samples and identifying
+“abnormal” samples within the test dataset. This is accomplished by labeling all test samples as either normal or
+anomalous. Researchers have successfully designed effective
+anomaly detection techniques applicable across a myriad of
+fields. For instance, within the realm of computer vision, the
+techniques have been applied to identify abnormal trajectories
+and moving objects [3], [4], [5], [6]. Within the finance sector,
+anomaly detection plays a crucial role in fraud detection [7],
+[8], [9], [10], [11], [12]. Moreover, in healthcare and medicine,
+the technique proves useful for monitoring and addressing
+abnormalities within medical records [13]. For a more comprehensive understanding of this topic, readers are encouraged
+to refer to the surveys in [14] and [15].
+Self-supervised learning has recently emerged as a promising approach, demonstrating an impressive capability to
+generate better feature representations. Techniques widely
+employed in self-supervised learning for image data encompass geometric transformations [16], [17], [18], patching [19],
+[20], and color permutations [21], [22]. This learning paradigm
+has recently been adopted to address anomaly detection problems [17], [23] for image data. Here, image rotations are
+leveraged to generate distinct categories, and a neural network
+is trained based on these “supervised” data. Since these pretext
+tasks are largely inapplicable to the analysis of structured
+data, Bergman and Hoshen [24] broadened the application of
+classification-based pretext tasks to outlier detection with general data by defining multiple random affine transformations
+(RATs) as different categories. It is noteworthy, however, that
+
+2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+2676
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+Fig. 1. Effect of data distribution in a 2-D space. (a) Original data. (b) Rotated
+data based on the original data in (a), where the transformed abnormal data
+is specially marked by adding a black edge. (c) Transformed data based on
+a random Fourier transform (RFT) ψ : R2 → R2 . (d) Rotated data based
+3
+represent the four categories
+on the transformed data in (c). The {Ri }i=0
+of self-labeled data, and each category corresponds to a random rotation
+transformation.
+
+the distribution of data procured from affine transformation
+is of great importance, as it directly influences the performance
+of the final classifier. As an illustration, we display the effect
+of kernel feature transformation in a 2-D space in Fig. 1.
+In Fig. 1(b), the four categories of self-supervised data are
+intensely mixed, making it challenging for the subsequent
+classifier to distinguish features and thereby leading to failure
+in anomaly detection. Therefore, we propose that an optimal approach to implementing self-supervised-based anomaly
+detection on general data involves “creating” a superior data
+distribution for the ensuing classifier.
+In this article, we introduce a novel distribution for
+self-supervised-based anomaly detection, which incorporates
+RFT [25] and random orthogonal rotations. This new methodology supplants the RAT, previously used in research [24],
+thereby enabling more effective control over the distribution
+of the generated data. Our proposed method initially maps the
+input data into a feature space at the onset of the learning
+process, applying RFT [25] to the original data. Subsequently,
+these newly generated, less correlated, or redundant features
+are used to train a random forest (RF) classifier via supervised learning with self-labeled data. This self-labeled data is
+produced through random orthogonal rotations. In this article,
+we primarily employ our data distribution methodology with
+RF to underscore the advantages of our data distribution.
+However, it is essential to note that our data distribution can
+be applied to any classifiers, including neural networks, not
+just the RF classifier. In Fig. 1(d), there is a pronounced
+separation between the four categories of normal data following transformation. Conversely, the transformed abnormal data
+points intermingle. During the testing phase, the same series
+of rotations will be implemented on the testing data, which
+includes both normal and anomalous samples. The trained RF
+
+classifier will then be used on the self-labeled testing data.
+Ultimately, samples with low testing accuracy are categorized
+as anomalies.
+In summary, the main contributions of this article are
+mentioned as follows.
+1) We develop a self-supervised anomaly detection method
+for structured data, dubbed “self-supervised forest (sForest).” This method introduces a novel self-labeled data
+distribution, derived from the application of RFT and
+orthogonal rotation, for self-supervised anomaly detection methodologies.
+2) We provide a theoretical rationale for our method’s
+superiority. The data distribution obtained through the
+combination of RFT and orthogonal rotation is more
+stable (“kernel approximation with lower expected variance”) than that acquired through RAT.
+3) The superiority and robustness of our proposed
+method have been examined on various artificial
+and benchmark datasets. The performance of “sForest” is contrasted with several state-of-the-art anomaly
+detection algorithms, encompassing forest-based methods isolation forest (iForest) and partial identification forest (PIDforest), distance-based methods
+[i.e., k-nearest neighbor (k-NN) and local outlier factor
+(LOF)], kernel-based method one-class support vector machine (OCSVM), and the self-supervised-based
+method geometric-transformation anomaly detection
+(GOAD).
+II. R ELATED W ORKS
+The study of anomaly detection, alternatively termed as
+outlier detection, fault detection, or novelty detection, has
+gained substantial traction within the field of machine learning.
+Broadly, it encompasses three distinct methodologies: supervised, unsupervised, and semi-supervised learning, the choice
+of which hinges on the accessibility of labeled data. In this
+research paper, our primary focus rests on semi-supervised
+anomaly detection, a scenario wherein only a minimal number
+of samples are labeled, leaving the majority without groundtruth labels. Notably, based on the strategies applied to this
+learning paradigm, it can be segmented into distance-based
+methods [26], [27], [28], density estimation and probabilistic
+models [29], [30], as well as classification-based methods [17],
+[23], [24], [31].
+In recent years, the field of anomaly detection has witnessed
+an evolutionary leap, wherein the self-supervised mechanism
+within this learning paradigm has been leveraged to reframe
+anomaly detection as a classification problem. This novel
+approach has delivered substantial enhancements in performance across both image and non-image datasets. In fact,
+it transforms the structured data into different categories by
+defining a set of geometric transformations and makes the
+anomaly detection problem a conventional classification task.
+For the image data, Golan and El-Yaniv [17] initially
+introduced the concept of a “supervised task” by rotating each
+image by 90◦ , 180◦ , and 270◦ , where each angle is defined
+as an individual category. This approach was later expanded
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+upon by Hendryck and Gimpel [23], who combined additional
+self-supervision mechanisms to enhance performance. They
+deemed the low-confidence samples from the softmax activation statistics to be anomalies, following a specific selection
+rule. However, these geometric transformations are primarily
+designed for unstructured data like images and are therefore
+not directly transferable to tabular data.
+Addressing the challenge of non-image data, Bergman
+and Hoshen [24] broadened the scope of the geometric
+transformation method to include RATs. They put forth
+an anomaly detection technique that synergistically amalgamated a one-class model with the transformation classification
+method. This methodology boasts a dual advantage: it can
+process a wide array of data types and has an auto-tuning
+capability for transformation parameters, thanks to the utilization of RATs. Furthermore, the variance between disparate
+data types can be effectively minimized through the selection of random transformations, simultaneously reducing the
+detrimental impact of adversarial samples.
+However, the method proposed by [24] has overlooked the
+influence of data distribution on the overall performance of the
+self-supervised model. In terms of the geometric morphology
+of the original data distribution, the application of affine
+transformation functions preserves a similar morphology in
+the transformed data. Moreover, if the geometric morphology
+of the original data distribution is unsuitable, the self-labeled
+data after transformation will be challenging for classifiers to
+discern (as shown in Fig. 1, where the original data is normally
+distributed around the origin), or substantial intervals between
+different classes of data are generated. This allows classifiers
+to easily differentiate between data classes, which complicates
+the learning of complex patterns of normal data distribution
+for any classifier, leading to the failure of anomaly detection.
+In addition, this method does not consider the influence of
+data redundancy or feature correlation on the self-supervised
+model.
+III. A LGORITHM D ESIGN
+We train the sForest model only on the normal data
+D := {x1 , . . . , x N }, where each observation xi is drawn
+i.i.d. from one probability distribution P. The construction
+of sForest starts with mapping the input data into a feature
+space Z := {ψ(x1 ), . . . , ψ(x N )}, with a nonlinear kernel
+transformation ψ(·) (such as the Monte Carlo approximation
+of the Fourier transform [25]). Then, we augment the data by
+M
+applying random rotations {Rm }m=0
+to the features. In particular, R0 signifies the identity transformation, implying that
+no changes are made to the features when the rotation R0 is
+applied. For every rotated feature, Rm (ψ(xi )), is assigned the
+corresponding label Rm , resulting in a self-labeled dataset:
+{(Rm (ψ(xi )), Rm )}i∈{1,...,N },m∈{0,...,M} . Using these self-labeled
+data pairs, we proceed to train an RF classifier in a supervised
+way. During the testing phase, similar operations are carried
+out on the test data using the function ψ(·) and the set of
+M
+rotation matrices {Rm }m=0
+. The previously trained RF classifier
+is utilized to assess the samples. Anomalies are discerned
+based on low testing accuracy.
+
+2677
+
+A. Rotations and RFT in Self-Supervised Learning
+1) Rotations in Self-Supervised Learning: For the image
+data, classical self-supervised learning algorithms usually perform fixed-angle rotations with the angle θ taking values from
+the set {0◦ , 90◦ , 180◦ , and 270◦ }. However, such methods are
+tailored for image data, and cannot be directly applied to
+high-dimensional structured data. To address the challenge of
+rotation on structured data, we propose a self-labeling method
+through the random rotation [32]. The details are described as
+follows.
+Given a feature space Z ⊆ Rd , a matrix R ∈ Rd×d is called
+a proper rotation matrix when it is orthogonal and has unit
+determinant, namely
+R ⊤ = R −1
+
+and |R| = 1.
+
+The set of all proper rotation matrices form the special
+orthogonal group, which we denote as SO(d). It is a subgroup of the orthogonal group O(d) that contains additional
+improper rotations involving reflections (orthogonal matrices
+with determinant −1). To be more specific, matrices in SO(d)
+share the same determinant 1, whereas matrices in O(d) may
+have determinant 1 or −1.
+We perform the random rotation by uniformly sampling over
+all feasible rotations in SO(d). It is worth mentioning that
+uniformly sampling in SO(d) is not equivalent to rotating a
+random angle in the spherical coordinates. As it can be proved,
+randomly rotating one angle does not guarantee a uniform
+distribution over all rotations when the feature dimension d is
+larger than 2. Actually, some rotations are more likely to be
+generated than others. Inspired by [32], we adopt the “true”
+uniformly random rotations instead of naïve ones. Because
+sampling naïve random rotations that are not uniformly distributed can lead to some rotations being over-represented and
+others being under-represented in the resulting distribution,
+causing bias in the solution. Besides, for categorical variables,
+rotation is unnecessary and ill-defined. Hence, the random
+rotations will not be applied to categorical variables.
+2) Random Fourier Transform: A well-observed phenomenon is that, when the dimension of the input data
+d is small, the features generated by the random rotation
+transformation often overlap across categories. This makes the
+subsequent RF classifier fail to detect anomaly. To solve this
+problem, we adopt the random approximation method proposed in [25] to first transform the low-dimensional data into a
+high-dimensional feature space. Specifically, on the input data,
+we apply a random transformation ψ : Rd → R D , where D ≥
+d. According to [25], when D is large enough, the evaluation
+of the kernel K(x, y) between x ∈ Rd and y ∈ Rd can be
+approximated by the inner product ψ(x)⊤ ψ(y). It is shown that
+the transformed feature space saves the geometric distribution
+of the data in the original low-dimensional feature space.
+In this article, we define ψ(x) := [ψ1 (x), . . . , ψ D (x)]⊤ and
+each ψi (·) is a real-valued transformation function (see [25])
+r
+
+2
+cos wi⊤ x + φi , i = 1, 2, . . . , D.
+(1)
+ψi (x) =
+D
+Here, φi is uniformly sampled from the interval [0, 2π ],
+and wi is randomly sampled from the distribution
+
+2678
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+√
+2γ N (w; 0, 1). N (w; 0, 1) denotes a standard
+p(w) =
+Gaussian distribution, and γ is the parameter of the
+approximated RBF kernel. One can easily find that p(w)
+is the Fourier transform of the Gaussian kernel function.
+When the dimension of the input data is high enough, this
+transformation is unnecessary. The parameter γ defines how
+far the influence of a single training example reaches, with
+low values meaning “far” (i.e., more disperse the transformed
+data distribution) and high values meaning “close” (i.e., more
+compact the transformed data distribution).
+3) Theoretical Analysis: This part devotes to a theoretical analysis over why the proposed method can outperform
+GOAD [24]. More specifically, it proves that the distribution of
+the self-labeled data obtained by combining RFT together with
+random orthogonal rotation is more stable than that obtained
+by a RAT. This stability is measured by the variance of the
+kernel function within the transformed feature space.
+Let O S(D) be the orthogonal group on the transformed
+feature space of Z := {ψ(x1 ), . . . , ψ(x N )} ⊆ R D . For any
+rotation transformation A ∈ O S(D), we denote the feature
+after rotation as r A (x) = Aψ(x), where x ∈ Rd is the input
+data. We denote the inner product of x and y in the transformed
+space R D with the orthogonal transforms A and B as
+.
+KAB (x, y) = r A (x)⊤r B (y).
+
+(2)
+
+Denote the approximate kernel with ψ taking the RAT as
+KRAT (x, y) and the approximate kernel with ψ taking the RFT
+as KRFT (x, y).
+AB
+Theorem 1: For any A, B ∈ O S(D), KRFT
+(x, y) is an
+unbiased estimator of the Gaussian kernel, i.e.,
+
+Since φi ∼ Uniform[0, φ], wi is drawn from the Fourier
+transform p(w), then
+2
+
+D
+X
+
+
+
+
+u i j Ewi ,φi ,w j ,φ j cos wi⊤ x + φi cos w⊤j y + φ j
+
+j=1
+
+=
+
+D
+X
+
+
+
+u i j Ewi ,φi ,w j ,φ j cos wi⊤ x − w⊤j y + φi − φ j
+
+j=1
+
+
+
+Ewi ,φi ,w j ,φ j cos wi⊤ x + w⊤j y + φi + φ j
+
+
+= u ii Ewi cos wi⊤ (x − y) .
++
+
+(8)
+
+Then, let v = (x − y)/σ , we have
+D
+
+
+1 X
+u ii E cos(wi⊤ v) .
+D i=1
+
+AB
+E(KRFT
+(x, y)) =
+
+(9)
+
+Let w be a d-dimensional vector distributed N (0, Id ).
+By Bochner’s theorem,
+E[cos(w⊤ v)] = e−v /2
+2
+
+and (1/D)
+
+PD
+
+i=1 u ii = tr(A
+
+AB
+E(KRFT
+(x, y)) = D1
+
+⊤
+
+(10)
+
+B)/D, hence
+
+PD
+
+i=1 u ii e
+
+−v 2 /2
+
+⊤
+
+= tr(AD B) e−v /2 (11)
+2
+
+where v = ∥v∥. RFT yields an unbiased estimate.
+We now compute the variance of RFT approximation.
+Observe that
+cos2 (w⊤ v) =
+
+1 + cos(2w⊤ v)
+1 + cos(w⊤ (2v))
+=
+. (12)
+2
+2
+
+Hence by Bochner’s theorem
+2
+
+1 + e−2v
+E[cos (w v)] =
+.
+2
+2
+
+⊤
+
+ tr(A B) −∥x−y∥2 /(2σ 2 )
+AB
+e
+.
+E KRFT
+(x, y) =
+D
+
+(3)
+
+(4)
+
+Proof: From (2), we have
+AB
+KRFT
+(x, y)) = r A (x)⊤r B (y)
+
+= ψ(x)⊤ A⊤ Bψ(y) = r I (x)⊤rU (y)
+
+(5)
+
+where U = A⊤ B is also a member of the orthogonal group
+O S(D). Let ui = [u i1 , . . . , u i D ] be the ith row of U . Then
+r I (x)⊤rU (y) =
+
+
+
+2 X
+u i j cos wi⊤ x + φi cos w⊤j y + φ j . (6)
+D i, j
+
+The expectation of the approximate kernel is
+E[r I (x) rU (y)]
+
+
+
+2 X
+=
+u i j E cos wi⊤ x + φi cos w⊤j y + φ j .
+D i, j
+
+(13)
+
+Therefore,
+
+AB
+Let v = ∥x − y∥/σ . The variance of KRFT
+(x, y) is
+
+
+ tr(A⊤ B) 
+2 2
+AB
+Var KRFT
+(x, y) =
+1 − e−v .
+2− D
+
+⊤
+
+Var(cos(w⊤ v)) = E[cos2 (w⊤ v)] − (E[cos(w⊤ v)])2
+2
+2
+1 + e−2v
+(1 − e−v )2
+2
+=
+− e−v =
+. (14)
+2
+2
+If we take D such independent random variables
+w1 , w2 , . . . , w D , since variance of the sum is sum of
+variances
+!
+2
+D
+tr(A⊤ B)(1 − e−v )2
+1 X
+⊤
+u i j cos(wi v) =
+. (15)
+Var
+D i=1
+2− D
+N
+Theorem 2: Consider the sample data D = {xi }i=1
+, where
+d
+D×d
+D×d
+xi ∈ R . Suppose that W
+⊂R
+be the affine space of
+d-to-D-dimensional transformations from the standard normal
+distribution. For any A, B ∈ W D×d and any x, y ∈ D, let
+.
+A,B
+KRAT
+(x, y) = r A (x)⊤r B (y) = (Ax)⊤ By, then the variance of
+
+
+A,B
+Var KRAT
+(x, y) = D∥x∥2 ∥y∥2 .
+(16)
+
+Proof: Let C = A⊤ B. Then
+
+⊤
+
+(7)
+
+ci j =
+
+D
+X
+t=1
+
+ati bt j .
+
+(17)
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+2679
+
+Since ati and bt j are independent of each other, the expectation
+of the product ati bt j is equal to 0, so we have
+
+
+d
+X
+E[x⊤ A⊤ By] = E
+xi ci j y j  = 0.
+(18)
+i, j=1
+
+For the expectation of squared quantity, we break it into a
+summation of terms
+
+2 
+d
+ X
+
+E[(x⊤ A⊤ By)2 ] = E
+xi ci j y j  
+i, j=1
+
+=
+
+d
+X
+
+xi y j xk yl E[ci j ckl ].
+
+(19)
+
+i, j,k,l=1
+
+It suffices to evaluate E[ci j ckl ] in the following cases.
+Case 1: When i = k, j = l, we have
+
+!2 
+D
+X
+E[ci2j ] = E
+ati bt j 
+t=1
+
+=
+
+D
+X
+
+D
+
+ X
+E ati2 bt2j +
+E[ati asi bt j bs j ]
+t̸ =s
+
+t=1
+
+= D.
+Case 2: When i = k, j ̸ = l, we have
+D
+D
+X
+ 2
+ X
+E ati bt j btl +
+E[ati asi bt j bsl ] = 0. (20)
+E[ci j cil ] =
+t̸ =s
+
+t=1
+
+Case 3: When i ̸= k, j = l, similarly, E[ci j ckl ] = 0.
+Case 4: When i ̸= k, j ̸ = l, similarly, E[ci j ckl ] = 0.
+In summary, we have
+d
+
+
+X
+A,B
+Var KRAT
+xi 2 y j 2 = D∥x∥2 ∥y∥2 .
+(x, y) = D
+
+(21)
+
+i, j=1
+
+From (16) in the Theorem 2, the approximate kernel with
+RAT KRAT (x, y) is linearly positively related to the norm of
+the input samples x, y and the dimension D of the transformed
+space. Comparing (16) and (4), we can observe that when
+the transformed dimension D increases, the variance of the
+A,B
+approximate kernel of the RAT Var(KRAT
+(x, y)) increases,
+but the variance of the approximate kernel of the RFT
+A,B
+Var(KRFT
+(x, y)) becomes smaller, which indicates that the data
+distribution using the RFT is more stable than the RAT.
+Our anomaly detection algorithm is built on self-labeled
+classification data obtained through a set of random transformation mappings and then a classifier is trained to predict the
+class distribution and construct the sample anomaly scores.
+Therefore, controlling and generating appropriate data distribution will be beneficial to our self-labeled classification-based
+anomaly detection. Kernel method is often used to implement nonlinear learning; kernel approximation is a powerful
+technique to make kernel methods scalable by mapping input
+features into a new space where inner products approximate the kernel well. Random Fourier features is a typical
+data-independent technique to approximate the kernel function
+using an explicit feature mapping RFT [33]. We adopt RFT
+
+combined with a set of random orthogonal rotations as random
+transformation mappings to transform the original data into
+a new feature space. Theorem 1 shows that the sample
+inner product in the transformed space can approximate the
+Gaussian kernel function, and the inner product’s expectation
+AB
+variance Var(KRFT
+(x, y)) is fixed under a given transformation
+matrix and dimension, which meets the general properties
+of the Gaussian kernel function. In comparison, Theorem 2
+shows that using a set of RAT does not meet the requirements
+of the kernel function (the expectation of the transformed
+sample inner product is 0, and the variance of the transformed
+sample inner product is related to the sample size). In addition,
+adjusting the parameter γ of RFT is equivalent to adjusting the
+distribution of the approximate Gaussian kernel, which affects
+the fitting and generalization ability of the classifier.
+A stable data distribution offers two primary advantages for
+anomaly detection.
+1) Consistency and predictability: Stable data distributions
+ensure a lower expected variance in kernel approximations after applying random transformations. This
+translates to more predictable and less random data
+distributions, making it easier to discern patterns and
+detect anomalies. Furthermore, the smooth nature of the
+kernel approximation, such as the approximated RBF
+kernel, resists minor variations, enhancing the model’s
+robustness.
+2) Robust feature representation: Stability in transformations, as offered by RFT, means that features remain
+consistent, allowing models to focus on inherent data
+structures rather than noise. This robust representation
+aids in emphasizing crucial patterns pivotal for anomaly
+detection, as deviations from these patterns are typical
+indicators of anomalies.
+In essence, a more stable data distribution facilitates better
+model training, reduces the risk of overfitting, and strengthens
+the detection of genuine anomalies by prioritizing consistent,
+noise-resistant features.
+4) How to Guarantee the Appropriate Transformation of the
+Data Distribution: Our method transforms the data distribution by sequentially applying an RFT and then ROTs. The
+key to this transformation lies in the parameter γ used in the
+approximated RBF kernel exp(−γ ∥x − y∥2 ) during the RFT
+stage. The appropriate data distribution can be achieved by
+tuning the parameter γ (in our experiments, we tune γ among
+the values of {0.1, 0.01, 0.001}). Specifically, γ influences the
+transformation of the data distribution in the following two
+ways.
+1) Width of the kernel: By adjusting γ , we can control the
+width of the approximated RBF kernel, thereby finding
+the optimal balance between the model complexity and
+its generalization ability.
+2) Distribution of wi : For an RFT, each wi √
+in (1) is sampled
+from a Gaussian distribution p(w) = 2γ N (w; 0, 1).
+Thus, the spread of this Gaussian distribution is influenced by γ . Larger γ leads to wider distributions of wi ,
+while smaller γ results in more concentrated distributions of wi .
+
+2680
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+B. sForest Classifier
+In this section, we provide a detailed description on the
+proposed self-supervised classifier. On the normal training
+dataset D := {x1 , . . . , x N } ⊆ Rd , we first conduct feature
+transformation with the RFT ψ(·). Then, we generate M
+M
+rotation matrices {Rm }m=1
+by uniformly sampling among
+SO(d) and construct the self-labeled normal dataset as
+D A := {(Rm (ψ(xi )), Rm )}i∈{1,...,N },m∈{0,...,M} .
+
+(22)
+
+Here, R0 denotes the identical transformation and
+{R0 (ψ(xi ))}i∈{1,...,N } stand for the data only after the
+RFT ψ(·). It is worth noting that when the data dimension
+d is very small (e.g., d < 5), it is necessary to do the RFT
+to transform the data into a higher-dimensional feature space
+where the dimension of transformed data D ≫ d (e.g.,
+D = 100). However, when the data dimension d is large
+or the data contains lots of redundant features, we need
+to reduce the data dimension before applying the RFT.
+Reducing the dimensionality of the high-dimensional data can
+eliminate redundant information contained in the data, thus
+improving the final performance of the classifier. Moreover,
+it can efficiently reduce the computational complexity for
+the subsequent RF training. Here, various dimensionality
+reduction methods apply, including principle components
+analysis (PCA), singular-value decomposition (SVD), etc.
+Now we are ready to construct our sForest based on the
+RF classifier proposed by [34]. First, we generate B buckets
+of self-labeled normal samples randomly through a bootstrap
+method, with the bth sample bucket denoted as Db ⊂ D A .
+Then, we construct a decision tree on each bucket. It divides
+the predictor space into non-overlapping regions {A j } Jj=1 , with
+J denoting the total number of terminal nodes of the decision
+tree. Borrowing notations from [35], in a node j, representing
+a region A j with N j observations, for (R(ψ(xi )), Yi ) ∈ Db ,
+let
+X
+1
+1(Yi = Rm )
+p̂ j,m,b :=
+N j (R(ψ(x )),Y )∈A
+i
+
+i
+
+j
+
+be the proportion of class Rm observations in node A j , where
+the random parameter R stands for random rotation and 1(·)
+is the indicator function. Then, we take the vector
+J
+X
+M
+R̂ b (x; R, Db ) :=
+p̂ j,m,b · 1(x ∈ A j )
+m=0
+
+j=1
+
+as the output of the bth self-supervised tree.
+P M We mention that
+R̂ b (x; R, Db ) is a standard vector since m=0
+p̂ j,m,b = 1.
+Then by ensembling the outputs of all trees, the
+self-supervised forest classifier can be denoted as
+B
+
+R̂ sForest (x; R, D) :=
+
+1 X
+R̂ b (x; R, Db ).
+B b=1
+
+(23)
+
+Intuitively, we can take the mth element of vector
+R̂ sForest (x; R, D) as the probability of R(x) being classified
+to Rm . The detailed construction procedure of sForest is
+presented in Algorithm 1.
+Here, we provide an intuitive explanation on why our model
+can boost the performance of anomaly detection with two toy
+
+Algorithm 1 Construction of sForest
+1: Input: Training (normal) data D := {x1 , . . . , x N };
+M
+The random rotation matrices {Rm }m=0
+(Rm ∈ S O(D),
+R0 denotes the identical transformation).
+2: Apply the RFT ψ(·) to D and obtain the data
+{(ψ(x0 ), . . . , ψ(x N ))};
+3: for m = 0 → M do
+4:
+Generate random rotation matrix Rm ;
+5:
+Apply Rm to {(ψ(x0 ), . . . , ψ(x N ))} and achieve labeled
+N
+data {(Rm (ψ(xi )), Rm )}i=1
+;
+6: end for
+7: Obtain self-labeled normal dataset D A as in Eq. (22).
+8: Build random forest classifier based on D A .
+9: Output: R̂ sForest (x; R, D) defined as in Eq. (23).
+
+Fig. 2.
+t-SNE visualization of RFT-based rotated data. (a1) Toy data.
+(a2) Self-labeled data. (b1) Toy data. (b2) Self-labeled data.
+
+datasets “blob” and “moons.” Both of the two datasets contain
+200 data points, 80% of which are normal data and 20%
+abnormal points generated by uniform sampling in the region
+of [−7, 7] × [−7, 7]. The normal data points of “blob” are
+generated by isotropic Gaussian. The normal data of “moons”
+contains two interleaving half-circles. The two toy datasets are
+visualized in Fig. 2(a1) and (b1).
+On the two datasets, we first increase the data dimension
+from 2 to 10 with RFT, and then generate different random
+orthogonal matrices to transform the 10-D features into different categories. We visualize the generated self-labeled data
+in Fig. 2(a2) and (b2). Different colors in Fig. 2 represent
+different categories. Note that the abnormal data is specially
+marked by adding a black edge. Surprisingly, most of the
+abnormal data is clustered to the center of Fig. 2(a2) and (b2),
+while the normal data is more concentrated to different clusters
+according to their corresponding labels. Then the classifier
+trained by the normal data and their corresponding rotations
+makes it easier to classify the normal data, and harder for the
+abnormal ones. Note that the normal clusters also contain a
+small number of abnormal data, which mainly results from a
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+small blob of the generated abnormal samples overlaps with
+the normal data.
+C. Self-Supervised Forest (sForest) for Anomaly Detection
+After training the classifier, the main issue is how to
+separate the anomalous and normal instances in the testing
+data. Golan and El-Yaniv [17] and Hendrycks and Gimpel [23]
+claimed that anomalous points tend to obtain lower probability
+belonging to their predicted labels by a classifier, with the
+intuition being that class-exclusive features must be captured
+by training the classifier to distinguish between self-labeled
+data. Now we apply the well-trained sForest classifier defined
+in (23) to detect the anomalies.
+Let Dt = {xt1 , . . . , xtN } denote the testing dataset that
+contains both normal samples and anomalies. With RFT,
+we can obtain the transformed dataset {ψ(xt1 ), . . . , ψ(xtN )}.
+M
+After the transformation, we apply the rotations {Rm }m=0
+to
+the transformed dataset and generate the self-labeled testing
+dataset
+
+
+
+D A,t := Rm ψ(xit ) , Rm i∈{1,...,N },m∈{0,...,M} .
+(24)
+Then, we apply the well-trained sForest classifier to D A,t , and
+achieve the output vectors
+
+
+
+R̂ sForest ψ xit ; Rm , Dt m∈{0,...,M} , i = 1, . . . , N .
+Specifically, for each xit , we feed the M +1 rotational versions
+to the classifier, and can simply write the output vectors as an
+(M + 1) × (M + 1) matrix Â
+
+ M
+Â(xit ) := R̂ sForest ψ xit ; Rm , Dt m=0 .
+(25)
+Notice that the diagonal elements are the probabilities for
+every self-labeled R(ψ(xit )) being correctly classified. Therefore, by aiming to categorize the points with low accuracy as
+anomalies, we design the normality score for xit as the sum of
+these probabilities, i.e.,
+
+
+Score xit := tr Â ψ xit .
+(26)
+where tr(A) means the trace of the matrix A. Normality scores
+describe how normal a testing sample is, and we recognize
+those with the lowest normality scores as anomalies. The
+detailed process of our model for anomaly detection is shown
+in Algorithm 2.
+IV. N UMERICAL E XPERIMENTS
+In order to evaluate the generalization and effectiveness of
+the proposed sForest, we conduct extensive experiments on
+synthetic and real-world datasets. We compare the proposed
+method with the state-of-the-art methods. Besides, we also
+carry out extensive numerical simulations to analyze the
+behavior of the model parameters and data transformation.
+A. Baselines
+The following anomaly detection methods are taken as
+baselines for comparison.
+1) iForest [26] recognizes anomalies as those more likely
+to be “isolated” in the early stage of tree construction.
+
+2681
+
+Algorithm 2 sForest for Anomaly Detection
+1: Input: The sForest R̂ sForest (x; R, D) trained as in Eq.
+(23); Testing data Dt = {xt1 , . . . , xtN }; Number of random
+M
+rotations M; the random rotation matrices {Rm }m=0
+(Rm ∈
+S O(D), R0 denotes the identical transformation).
+2: Apply the same RFT ψ(·) employed in training data to
+Dt .
+3: for m = 0 → M do
+4:
+Apply Rm to Dt and achieve labeled data
+N
+{(Rm (ψ(xit )), Rm )}i=1
+;
+5: end for
+6: Obtain self-labeled testing dataset D A,t in Eq. (24);
+7: Apply the well-trained R̂ sForest (x; R, D) classifier to D A,t
+and achieve the output matrix Â(xit ) in Eq. (25).
+8: Output: Measure the normality and anomaly in the test
+data based on the score defined as in (26).
+
+2) PIDForest [28] favors partitions of greatly varying sparsity, and detects anomalies based on the PID scores.
+3) GOAD [24] is a classification-based anomaly detector
+with deep neural networks.
+4) LOF [36] is a distance-based anomaly detector focus on
+the locality of samples.
+5) k-NN [37], [38] is a prevailing distance-based anomaly
+detection method, while it has computational cost when
+data size and dimension is high.
+6) OCSVM [39] trains a classifier to perform the separation
+of normal points and outliers.
+7) COPOD [40], parameter-free method which first constructs an empirical copula, and then uses it to predict
+tail probabilities of each given data point to determine
+its level of “extremeness.”
+B. Experiments on Synthetic Data
+In this part, we first demonstrate the advantage of applying
+a self-supervised learning mechanism to anomaly detection
+through two synthetic datasets. We conduct the experiment by
+generating two datasets that each of which contains 400 points,
+where the proportion of abnormal samples is set to 20%.
+For the first dataset “moon,” the normal points are generated
+by sklearn with noise setting 0.5, and the second dataset
+is obtained by employing “make_blobs.” For both datasets,
+the abnormal data are uniformly sampled in the region of
+[−7, 7] × [−7, 7].
+More specifically, we compare the performance of the proposed method with seven state-of-the-art methods introduced
+in Section IV-A. For fair comparisons, the number of trees is
+set as 100 for all the tree-based algorithms, and three fully
+connected layers are employed for GOAD with the hidden
+layer setting 100. The default node setting is adapting for
+k-NN and LOF. For sForest, we first change the dimension
+to 100 by RFT, and then conduct 16 orthogonal rotations to
+generate self-supervised labels.
+Fig. 3 provides the visual results for different methods on
+the two datasets, where the normal and abnormal data are,
+respectively, represented by white and black dots. The red
+
+2682
+
+Fig. 3.
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+Comparison of different methods on two synthetic datasets, where the red line denotes the decision boundary for normal and abnormal data.
+
+dotted line is the decision boundary with the yellow and
+blue regions denoting normal and abnormal data, respectively.
+Besides, we also provide the degree for abnormal data in the
+blue region, where the darker region means higher degree of
+certainty. The number on the downside is the corresponding
+error for each algorithm for different datasets. Based on the
+result presented in Fig. 3 that our method could predict
+the region for normal data more correctly, which is more
+closed to the ground-truth distribution. In the meanwhile, the
+lower number of errors can also prove the advantage of our
+method. Note that our method is consistently and significantly
+superior to GOAD [24], which is also constructed by the selfsupervised mechanism. These synthetic data experiments can
+also efficiently demonstrate the advantage of our method for
+anomaly detection compared with other methods.
+C. Experiments on Real-World Data
+We perform numerical experiments to illustrate the effectiveness of our sForest method compared with other typical
+anomaly detection algorithms on real-world outlier detection
+benchmark datasets.
+1) Datasets:
+1) Low-dimensional datasets: We perform numerical experiments on 30 real datasets to illustrate the effectiveness
+of our proposed sForest on real-world outlier detection benchmark datasets. There are 28 multidimensional real datasets from Outlier Detection DataSets
+(ODDS), with various sample sizes and dimensionalities. For example, small-size datasets such as glass,
+ionosphere, wbc, and wine, and large-scale datasets
+such as forestcover, http, and smtp are included
+in the experiments. High-dimensional datasets such
+as arrhythmia and speech are also included.
+Details of datasets are shown in Table I. For these
+28 datasets, our configuration follows that of Bergman
+and Hoshen [24]. We use 50% of the normal data to
+train the outlier detector, and evaluate the outlier detector
+
+on the remaining 50% of the normal data and all the
+anomalies.
+2) High-dimensional datasets: Since the feature dimensions of the above datasets are too low and there
+are the maximum of 400-D in datasets, we introduce
+another three datasets with higher dimensions including:
+1) OSQ-768d; 2) OSQ-1024d: these two datasets are
+generated from a textual dataset OSQ in task-oriented
+dialogue systems. OSQ provides a set of manually
+labeled out-of-scope queries (OSQs) that are not supported by the current system. These OSQs are regarded
+as anomaly instances in our experiments. We take each
+utterance as input and obtain its feature vector using
+the two pre-trained English language models BERT-base
+and BERT-large [41], respectively; and 3) IPA dataset: it
+contains a set of Chinese utterances that were collected
+and annotated in the development process of a commercialized intelligent personal assistant (IPA) named
+Bixby. This dataset covers 81 intents, but 15 intents
+are not supported by the current IPA system. In this
+study, these non-supported intents are selected as the
+out-of-domain intents, and the corresponding utterances
+are considered as anomaly data. We generate their feature vectors by Chinese BERT-base.1 The datasets are
+divided into the train, validation, and test sets, while the
+anomaly data were only used for validation and test.
+We keep the same data splits with [42] and [43]. The
+partitions of the data used in our experiment are shown
+in Table II.
+2) Parameter Settings: In the following, we present the
+details of implementation. For the proposed sForest, we fix the
+number_of_rotations M = 64 and randomly sample
+each element of d × d transformation matrices according
+to the standard normal distribution. For the RF classifier, we fix the number_of_trees B = 100 and the
+1 https://github.com/google-research/bert
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+2683
+
+TABLE I
+D ESCRIPTIONS OF A NOMALY D ETECTION B ENCHMARK DATASETS
+
+TABLE II
+D ESCRIPTIONS OF A NOMALY D ETECTION B ENCHMARK DATASETS .
+OSQ-768d AND OSQ-1024d H AVE 768- AND 1024-D F EATURES ,
+R ESPECTIVELY, W HICH A RE B OTH G ENERATED F ROM OSQ BY
+BERT-BASE AND BERT-L ARGE . IPA I S C ONVERTED I NTO
+768-D DATA T HROUGH B ERT-BASE
+
+min_samples_split p = 2. For PIDForest, we use
+the implementation of the authors provided in github.2 For
+iForest, LOF and OCSVM, we utilize the implementation of
+scikit-learn. For k-NN, we use the PyOD implementation.3
+For hyperparameter settings, we fix the hyperparameters of
+sub-sampling size to 256 and the number of trees to 100 for
+iForest. For PIDForest, we fix the hyperparameters of depth to
+10 and the number of trees to 50, which is used in [28]. We fix
+the number of neighbors to 20 for LOF, and use RBF kernel
+with default hyperparameter gamma for OCSVM, referred to
+hyperparameter settings in scikit-learn. For k-NN, we fix k to
+be 5.
+The performance evaluation has been done based on the area
+under the ROC curve (AUC). We run these algorithms 10 times
+and record the means and standard deviations of the AUC
+values. Since some methods such as LOF, k-NN, OCSVM,
+and COPOD are deterministic, it is not necessary to repeat
+experiments for three datasets (OSQ-768d, OSQ-1024d, and
+IPA) in which data partitions are provided.
+3) Main Results: The experimental results for the
+low-dimensional datasets are illustrated in Table III. In the
+aspect of best performance, our method wins 14 out of
+31 datasets, and the other three forest-based methods, iForest,
+PIDforest, win 7 and 5 out of 31 datasets, respectively.
+The network-based GOAD wins only 1, and the other three
+deterministic methods, k-NN, LOF, OCSVM, and COPOD,
+2 https://github.com/vatsalsharan/pidforest
+3 https://github.com/yzhao062/pyod
+
+win 6, 6, 2, and 3 out of 31 datasets, respectively. Besides,
+in the perspective of the top two performance, sForest, iForest,
+PIDforest, GOAD, k-NN, LOF, OCSVM, and COPOD win 20,
+6, 4, 2, 9, 13, 6, and 5 out of 31 datasets. Moreover, in the
+aspect of the average performance of benchmark datasets, our
+method has the lowest rank sum.
+When it comes to the three high-dimensional datasets as
+shown in Table IV, sForest consistently outperforms other
+baselines by a large margin. Specifically, there are 1.3, 4.1, and
+8.5 AUC improvements compared to the second best results
+for OSQ-768d, OSQ-1024d, and IPA, respectively. Note
+that the performance gap for high-dimensional datasets is more
+obvious compared to that in low-dimensional datasets. The
+main reason is that high-dimensional data has more redundant
+features, and it can boost the performance of the downstream
+tasks by reducing the dimensionality of the data.
+The above results can efficiently demonstrate the advantage
+of sForest in dealing with tabular data. In the meanwhile,
+it can also indicate that the self-supervision-based methods
+can not only achieve the best performance for image data,
+but also for tabular data. Furthermore, it is also consistent
+with our analysis that the data distribution obtained by the
+combination of RFT and orthogonal rotation is more stable and
+robust. Thus, a better performance is achieved by the proposed
+sForest.
+D. Analysis on Relationship Between Classification
+and Anomaly Detection
+To demonstrate the efficacy of classification-based anomaly
+detection, we perform simulations on four real datasets
+of varying sizes and dimensions. We assess the baseline
+classifiers by calculating the classification accuracy of the
+self-labeled normal samples in the testing set, each adhering
+to a specific classification rule. The anomaly detection performance is measured by the area under the ROC curve, denoted
+as AUC. A higher AUC value signifies greater anomaly
+detection accuracy.
+For parameter settings, we fix the number_of_
+rotations M = 32 and the number_of_trees
+B = 100 for the all datasets. Then, we vary the
+min_samples_split p to adjust the performance of
+
+2684
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+TABLE III
+AUC P ERFORMANCE (E XPRESSED IN P ERCENTAGES ) ON B ENCHMARK DATASETS . T HE B EST R ESULTS A RE M ARKED IN B OLD , AND THE S ECOND B EST
+IN U NDERLINE . F OR S F OREST, I F OREST, PID FOREST, AND GOAD, THE S TANDARD D EVIATION I S R EPORTED IN THE S UBSCRIPT. T HE L AST
+ROW S HOWS THE S UMMATION OF R ANKS FOR E ACH M ETHOD , W HICH I S THE L OWER THE B ETTER . I F OREST [26], PID FOREST [28],
+GOAD [24], k-NN [37], LOF [36], OCSVM [39], AND COPOD [40]
+
+TABLE IV
+AUC P ERFORMANCE (E XPRESSED IN P ERCENTAGES ) ON T HREE T EXTUAL DATASETS . G IVEN THE S TABILITY OF AUC P ERFORMANCE
+D UE TO THE L ARGE S IZE OF T HESE DATASETS , S TANDARD D EVIATION I S O MITTED
+
+the RF classifier, and observe its impact on the accuracy of
+anomaly detection. We apply PCA to remove the feature
+correlation in datasets by transforming the dimensionality of
+Mnist and Ionosphere to 32. For IPA and OSQ-678d,
+their dimensionality is reduced to 128. We run the
+experiment five times under different random seeds to
+obtain the average value of AUC and the classification
+accuracy.
+The results for the four datasets are shown in Fig. 4. As the
+min_samples_split p increases, first the self-label classification accuracy and the AUC criterion for anomaly detection
+show a negative correlation trend. Meanwhile, as the classification accuracy of the RF classifier decreases, the AUC criterion
+for anomaly detection turns better. This indicates that choosing
+an appropriate weak classifier or constructing a more difficult self-supervised classification task is useful for anomaly
+detection. However, the performance of both classifiers will
+eventually turn worse consistently. This consistency in the
+performance of the classification and anomaly detection-based
+methods can be reasonable properties so that a good classifier
+
+is needed to capture the features of the self-labeled normal
+class. From Fig. 4 for Mnist, the classification accuracy
+drops rapidly, while the anomaly detection AUC declines
+at a slower pace (e.g., when p increases from 2 to 100,
+the classification accuracy drops by 10%, but the AUC only
+decreases by 0.5%). The reason may be that for the self-labeled
+classification data of Mnist, the data distributions of different
+categories overlap each other, so a classifier with stronger
+classification ability is required to discriminate. In addition,
+sForest achieves a high AUC when p is large (indicating the
+classifier’s weaker classification ability). This could be because
+the abnormal samples are derived from one of the handwritten digits, making them distinctly different from the normal
+samples.
+E. Analysis on the Effect of RFT
+In this experiment, we compare the performance between
+the self-labeled data obtained by the RFT + orthogonal
+rotation transform and the self-labeled data obtained by the
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+Fig. 4.
+
+2685
+
+Relationship between accuracy of classification and anomaly detection.
+
+random affine transform (RAT).4 For a fair comparison, we set
+the same setting for both RFT and RAT. We normalize each
+row of the affine transformation matrix wm .5 Note that we
+denote RFT + orthogonal rotation transform as RFT for simplicity of notation. Specifically, we first generate the training
+data according to the corresponding setting, where the number
+of orthogonal rotation transforms is set as 16. Meanwhile,
+the initial input feature is d, and then is transformed to
+D. For RFT, we randomly sampled transformation matrices
+wm using the normal distribution for each element. Each
+matrix has dimensionality D × d. We examine changes in the
+performance and the trend of the approximation error (MSE)
+of RBF kernel under different transformation dimensions. The
+odds from Ionosphere and Mnist are regarded as test data.
+In the experiment, the parameter γ of RBF is set to 0.01, and
+the final experimental results are shown in Fig. 5.
+As shown in Fig. 5, the AUC value of sForest is very stable
+with the increase of transformation dimension when choosing
+the self-labeled data generated by RFT. This indicates that
+RFT method can achieve comparable performance without
+an extra increasing transformation dimension. In addition,
+the kernel approximation error of this method presents a
+steady downward trend with the increase of transformation
+dimension, which indicates that RFT + orthogonal transformation can maintain a good kernel approximation, as well
+as reflecting the stability of transformation data distribution.
+However, when it comes to sForest based on RAT, although
+the kernel approximation error of samples also reduces with
+the increase of affine transformation dimension, its MSE is
+far more than the results of RFT. Moreover, the performance
+fluctuates a lot with different dimensions and has a larger
+prediction variance. These experiments can indicate the high
+
+4 This self-labeled data is done by transforming data X ∈ Rn×d using M
+different affine transformations into T (x, m) = wm X ⊤ , where wm ∈ R D×d is
+a random matrix.
+5 If normalization is not performed, the MSE of its kernel approximation
+shows a rapid increase with the increase of D/d. After normalizing wm , the
+kernel approximation MSE of RAT shows a decreasing trend with the increase
+of D/d. Besides, we also find that normalizing or not normalizing wm has
+no significant effect on its anomaly detection results.
+
+Fig. 5.
+
+Comparison of RFT and RAT with the same setting.
+
+effectiveness of generating proper data distribution by our
+method.
+F. Effect of Different Classifiers and Transformations
+We conduct the comparison by replacing the RF classifier
+and our random transformations RFT with other classifiers
+and RAT, respectively. More specifically, we mainly select
+Gaussian Naive Bayesian (GNB), logical regression (LR), support vector machine (SVM), k-NN, and multilayer perceptrons
+(MLPs) as the base classifiers. The final results are shown in
+Table V, where different combinations are constructed to compare the performance with six datasets including satellite,
+arrhythmia, ionosphere, mnist, OSQ-768d, and
+IPA.
+The table clearly indicates that both the choice of classifier
+and the corresponding data distribution significantly influence
+the final performance. Notably, when combined with various
+
+2686
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+TABLE V
+E XPERIMENTAL R ESULTS OF THE P ROPOSED A LGORITHM U NDER D IFFERENT C LASSIFIERS AND T RANSFORMATIONS (RAT AND RFT). T HE AUC
+P ERFORMANCE I S E XPRESSED IN P ERCENTAGES , AND THE S UBSCRIPT R EFER TO THE S TANDARD D EVIATION OF THE R EPEATED E XPERIMENTS
+
+Fig. 6. AUC score versus the number_of_rotations M for datasets
+with different dimensions.
+
+classifiers, RFT consistently outperforms RAT. Specifically,
+when employing GNB, k-NN, LR, and MLP as classifiers,
+RFT demonstrates superiority across all datasets in comparison
+to RAT. Furthermore, RF appears to be more competitive
+relative to the other five classifiers. It is worth noting that in
+this section, we only replace the RF and RFT with MLP and
+RAT, which is inconsistent with GOAD.
+
+As is shown in Fig. 6, we can observe the following
+conclusions: 1) the performances of anomaly detection would
+be decreased when the dimensionality of datasets d is too
+low, such as dim = 2 for Mnist and Ionosphere, dim =
+4 for the other two datasets; 2) for the difficult anomaly
+detection tasks IPA and OSQ-768d, as the dimension of
+datasets d becomes higher, the optimal M becomes larger.
+For example, when the dimension d ′ of the PCA-transformed
+OSQ-768d dataset is 8, the best M lies in the range [20, 30].
+In addition, when the dimension d ′ raises up to 16 or more,
+it can consistently boost the performances when M increases,
+and become steady when M is sufficiently large; 3) for easy
+anomaly detection datasets Ionophere and Mnist, the best
+Ms lie in the range (0, 10], which are relatively small. This
+indicates that choosing a small M is enough to capture their
+data information and achieve better AUC; and 4) from dim =
+64 in Mnist, the AUC value eventually shows a decreasing
+trend as the number_of_rotations M becomes larger.
+The reason may be that the PCA-transformed features with
+higher dimensions contain much redundant information. As the
+number of rotations M increases, the negative impact of this
+redundant information will be amplified which will further
+reduce or suppress the accuracy of anomaly detection algorithms. Therefore, before using sForest, it is necessary to
+perform feature selection or feature learning on the datasets to
+reduce the redundant information or the correlation of features.
+
+G. Analysis on Relationship Between the Dimension
+of Data and the Number of Rotations
+
+H. Adversarial Samples Experiment
+
+For the purpose of investigating the relationship between
+the best number_of_rotations M and the dimension of
+dataset, we conduct experiments among datasets with different
+dimensions. Here, we employ the PCA for dimensionality
+reduction, and generate datasets with different dimensions
+among {2, 4, 8, 16, 32, 64}. The four datasets used in
+Section IV-D are selected for this experiment. We conduct
+anomaly detection with our sForest algorithm with different
+M, and evaluate its performances via AUC. The plots of
+the AUC score versus the number_of_rotations M for
+datasets with different dimensions are provided in Fig. 6.
+
+1) Setting: Let us assume an adversarial model in which
+the attacker knows the model architecture and normal training
+data with attempting to modify normal samples to become
+anomalies. We examine three settings: 1) the attacker knows
+random orthogonal transformation (ROT) and the classifier,
+but not know the RFT; 2) the attacker knows the classifier,
+but not RFT and ROT; and 3) the attacker does not know
+RFT, ROT, and the classifier. Since adversarial samples are
+mainly targeted at neural network models, we first choose an
+MLP as the classifier to obtain adversarial samples and test
+the model’s adversarial robustness.
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+1) To evaluate the benefits of the components of our proposed anomaly detection framework, we construct four
+self-supervised anomaly detection models using MLP as
+the classifier: sMLP1 (RFT + ROT + MLP), sMLP2
+(RFT + ROT + MLP), sMLP3 (RFT + ROT + MLP),
+and sMLP4 (RFT + ROT + MLP). More specifically,
+sMLP2 has the same ROT and MLP as sMLP1 and
+sMLP3 has the same MLP as sMLP1. For sMLP4, it has
+different RFT, ROT, and MLP from sMLP1. We use the
+same color to indicate the same components used, where
+the same MLP refers to the same network structure and
+initialization.
+2) We also construct three self-supervised anomaly detection models with RF as the classifier: sForest1 (RFT +
+ROT + RF), sForest2 (RFT + ROT + RF), and
+sForest3 (RFT + ROT + RF). In detail, sForest1 has
+the same RFT and ROT as sMLP1, but with different
+classifiers; sForest2 has the same ROT as sMLP1 but
+with different RFTs and classifiers; sForest3 has different RFTs, ROTs, and classifiers from sMLP1.
+3) In addition, we also compare the performance
+with incorporating RAT-based methods including
+RAT + MLP, RAT + MLP, and RAT + RF.
+Specifically, RAT + MLP has the same MLP as
+sMLP1, while RAT + MLP has different MLPs from
+sMLP1. For RAT + RF, it employs RF as the classifier.
+In the experiment, sMLP1 is employed to generate adversarial samples. The number of random orthogonal rotations
+M is set to 32, and the transformation dimension of the
+RFT is set to 200. The parameter γ of the RFT for each
+dataset takes its optimal parameters used in Section IV-C. The
+MLP is a three-layer perception with hidden size 256 and
+ReLU activation function. Adversarial examples are created
+using projected gradient descent algorithm (PGD) [44] based
+on sMLP1 (making normal samples appear like anomalies).
+Divide the original test set into two parts: test normal data and
+test abnormal data, and then combine the adversarial samples
+obtained from sMLP1 on test normal data with test abnormal
+data as the final adversarial sample test set to evaluate various
+models. Here, we run 40 iterations of PGD as our adversary,
+with a step size of α = 0.01 and against perturbations of
+size ϵ = 0.1. The increase of false classification rate on the
+adversarial examples is measured using the above models.
+Besides, we also design a similar new experiment with
+the above experiment and test whether our proposed method,
+using RFT + ROT, has superiority in adversarial robustness
+compared to RAT. We used another model with RAT transformation, named RAT + MLP, to generate adversarial samples,
+which were then applied to other model variations including
+RAT + RF, RFT + ROT + RF, etc. The RATs are obtained
+through the standard normal distribution generation function
+numpy.random.randn(). Note that it is similar to the above
+experimental setting in this experiment, where the same color
+indicates the same component.
+2) Results: The experimental results on six datasets are
+shown in Tables VI and VII. From the results, we can draw
+the following conclusions.
+
+2687
+
+1) The AUC values of the models in the first row of
+both tables significantly decrease under the attack of
+their generated adversarial samples, indicating that these
+adversarial samples can effectively attack the model.
+2) When the generated adversarial samples are applied
+to models with significant differences, the adversarial samples basically become ineffective. For example,
+in Table VI, the adversarial samples generated by RFT +
+ROT + MLP applied to the model using RAT, and in
+Table VII, the adversarial samples generated by RAT +
+MLP applied to the model using RFT + ROT, show that
+the model performance is largely unaffected, with both
+increases and decreases on different datasets. This result
+also aligns with our intuition.
+3) In Table VI, the AUC value of RFT + ROT + Forest still
+shows a significant decrease under adversarial samples.
+This model shares the same RFT + ROT transformation
+with RFT + ROT + MLP, but even with a different
+classifier, RF, the performance decline of other models with different RFTs is very small, mostly ranging
+between 0% and 2%. This indicates that RFT + ROT
+can enhance the model’s robustness against adversarial
+samples.
+4) In Table VII, the adversarial samples of RAT + MLP
+applied to other models using RAT still show a significant decrease in performance. The reduction generally
+exceeds 2%, even if the model uses a different classifier,
+RF. Compared to Table VI, it is evident that using
+RFT + ROT provides more advantages in terms of
+adversarial robustness than using RFT.
+I. Contamination Experiment
+1) Setting: Our proposed model assumes that the training
+data are all normal samples. Here, we conduct a contamination
+experiment to observe the robustness of the model when
+some anomalies are given normal labels and mixed into the
+training data. Different from the previous experiment setup,
+here the anomalies are divided into train and test parts. The
+train anomalies are all used for data contamination, and the
+test anomalies are all used for evaluation. We mix the original
+training set’s 1%, 2%, . . . , 10% degree of anomalies into
+the training data and observe the model’s anomaly detection
+AUC value. Since some datasets have relatively few training anomalies, such as OSQ-768d, which is less than 2%
+(250/15 000), we resample from the training anomalies to
+obtain the corresponding ratio of contamination samples.
+2) Results: Fig. 7 shows the experimental results of the proposed framework under two classifiers RF and MLP, denoted
+as RFT + Forest (sForest) and RFT + MLP (sMLP). Each
+experiment is executed five times using different random seeds.
+From Fig. 7(a) and (b), we can observe that: 1) the AUCs
+of sForest and sMLP show stable changes on almost all
+datasets except for mnist, which indicates that the proposed
+framework is generally robust to the degree of contamination
+and 2) the AUC value of sForest fluctuates steadily and
+insignificant, but the AUC value of sMLP fluctuates greatly.
+This indicates that sForest is more stable in anomaly detection
+than the MLP-based sMLP overall.
+
+2688
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 2, FEBRUARY 2025
+
+TABLE VI
+E XPERIMENTAL R ESULTS (E XPRESSED IN P ERCENTAGES ) ON A DVERSARIAL ROBUST OF O UR M ETHOD . adv AND no_adv R EPRESENT THE E VALUATION
+R ESULTS OF THE M ODEL U NDER THE A DVERSARIAL S AMPLE T EST S ET AND THE O RIGINAL T EST S ET (W ITHOUT A DVERSARIAL S AMPLES ),
+R ESPECTIVELY. T HE VALUE W ITH ↓ D ENOTES A D ECREASE IN AUC U NDER A DVERSARIAL S AMPLES , W HILE ↑ I NDICATES AN I NCREASE .
+T HE M ODEL IN THE F IRST ROW W ITH A L IGHT B LUE BACKGROUND I S U SED TO G ENERATE A DVERSARIAL S AMPLES AND I S
+A PPLIED TO T EST THE R EMAINING M ODELS . T HE B EST R ESULTS A RE M ARKED IN B OLD
+
+TABLE VII
+E XPERIMENTAL R ESULTS ON A DVERSARIAL ROBUST OF O UR M ETHOD . adv AND no_adv R EPRESENT THE E VALUATION R ESULTS OF THE M ODEL U NDER
+THE A DVERSARIAL S AMPLE T EST S ET AND THE O RIGINAL T EST S ET (W ITHOUT A DVERSARIAL S AMPLES ), R ESPECTIVELY. T HE VALUE W ITH
+↓ D ENOTES A D ECREASE IN AUC U NDER A DVERSARIAL S AMPLES , W HILE ↑ I NDICATES AN I NCREASE . T HE M ODEL IN THE F IRST ROW
+W ITH A L IGHT B LUE BACKGROUND I S U SED TO G ENERATE A DVERSARIAL S AMPLES AND I S A PPLIED TO T EST THE R EMAINING
+M ODELS . T HE B EST R ESULTS A RE M ARKED IN B OLD
+
+Fig. 7. Plots of the relationship between the degree of contamination and
+the anomaly detection accuracy (measured by AUC) on six datasets. The
+proposed sForest is generally robust to the degree of contamination. Each line
+plot corresponds to the average AUC values, and the shaded region around
+each line represents the range (from minimum to maximum) of AUC values
+observed. (a) sForest. (b) sMLP.
+
+V. C ONCLUSION
+
+constructed to the self-supervised training date by orthogonal
+rotation transform. Furthermore, a theoretical description is
+given to show that the proposed method produces more stable
+data distribution (kernel approximation with lower expected
+variance) rather than RAT. We conduct different experiments
+on some artificial and real data to evaluate the performance
+of the proposed method is more stable and efficient than the
+distance-based, kernel-based, forest-based, and network-based
+methods, where the RF classifier is employed to connect the
+data distribution.
+In the future, we aim to extend our method to other
+domain such as the anomaly detection for time series. Besides,
+this work is designed for semi-supervised anomaly detection,
+where the given training data only contain normal samples.
+In the future work, we plan to design an algorithm for
+unsupervised anomaly detection, in which both normal and
+abnormal data are contained in the training data.
+R EFERENCES
+
+In this article, we solve the classification-based anomaly
+detection by proposing a more suitable data distribution, which
+is created for general data with RFT combined with orthogonal
+rotation transform. Specifically, the training data is first transformed to a new feature space by RFT, and then the feature is
+
+[1] J. Liu, B. Wang, Z. Qi, Y. Tian, and Y. Shi, “Learning from label
+proportions with generative adversarial networks,” in Proc. Adv. Neural
+Inf. Process. Syst., vol. 32, 2019.
+[2] J. Liu et al., “LLP-GAN: A GAN-based algorithm for learning from
+label proportions,” IEEE Trans. Neural Netw. Learn. Syst., vol. 34,
+no. 11, pp. 8377–8388, 2023.
+
+LIU et al.: SELF-SUPERVISED RF ON TRANSFORMED DISTRIBUTION
+
+[3] J. Mao, T. Wang, C. Jin, and A. Zhou, “Feature grouping-based outlier
+detection upon streaming trajectories,” IEEE Trans. Knowl. Data Eng.,
+vol. 29, no. 12, pp. 2696–2709, Dec. 2017.
+[4] P. Banerjee, P. Yawalkar, and S. Ranu, “MANTRA: A scalable approach
+to mining temporally anomalous sub-trajectories,” in Proc. 22nd ACM
+SIGKDD Int. Conf. Knowl. Discovery Data Mining, Aug. 2016,
+pp. 1415–1424.
+[5] J. Mao, P. Sun, C. Jin, and A. Zhou, “Outlier detection over distributed
+trajectory streams,” in Proc. SIAM Int. Conf. Data Mining, 2018,
+pp. 64–72.
+[6] Y. Yuan, J. Fang, and Q. Wang, “Online anomaly detection in crowd
+scenes via structure analysis,” IEEE Trans. Cybern., vol. 45, no. 3,
+pp. 548–561, Mar. 2015.
+[7] U. Fiore, A. De Santis, F. Perla, P. Zanetti, and F. Palmieri,
+“Using generative adversarial networks for improving classification effectiveness in credit card fraud detection,” Inf. Sci.,
+vol. 479, pp. 448–455, Apr. 2019.
+[8] V. S. Tseng, J.-C. Ying, C.-W. Huang, Y. Kao, and K.-T. Chen,
+“FrauDetector: A graph-mining-based framework for fraudulent phone
+call detection,” in Proc. 21st ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining, Aug. 2015, pp. 2157–2166.
+[9] Y.-H. Yoo, U.-H. Kim, and J.-H. Kim, “Recurrent reconstructive network
+for sequential anomaly detection,” IEEE Trans. Cybern., vol. 51, no. 3,
+pp. 1704–1715, Mar. 2021.
+[10] C. Yin, S. Zhang, J. Wang, and N. N. Xiong, “Anomaly detection
+based on convolutional recurrent autoencoder for IoT time series,”
+IEEE Trans. Syst. Man, Cybern. Syst., vol. 52, no. 1, pp. 112–122,
+Jan. 2022.
+[11] L. Li, J. Yan, H. Wang, and Y. Jin, “Anomaly detection of time
+series with smoothness-inducing sequential variational auto-encoder,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 3, pp. 1177–1191,
+Mar. 2021.
+[12] T. Ergen and S. S. Kozat, “Unsupervised anomaly detection with LSTM
+neural networks,” IEEE Trans. Neural Netw. Learn. Syst., vol. 31, no. 8,
+pp. 3127–3141, Aug. 2020.
+[13] T. Schlegl, P. Seebock, S. M. Waldstein, U. Schmidterfurth, and
+G. Langs, “Unsupervised anomaly detection with generative adversarial
+networks to guide marker discovery,” in Proc. Int. Conf. Inf. Process.
+Med. Imag., 2017, pp. 146–157.
+[14] R. Chalapathy and S. Chawla, “Deep learning for anomaly detection: A
+survey,” 2019, arXiv:1901.03407.
+[15] H. Wang, M. J. Bah, and M. Hammad, “Progress in outlier detection techniques: A survey,” IEEE Access, vol. 7, pp. 107964–108000,
+2019.
+[16] S. Gidaris, P. Singh, and N. Komodakis, “Unsupervised representation learning by predicting image rotations,” in Proc. 6th Int. Conf.
+Learn. Represent. (ICLR). Vancouver, BC, Canada: OpenReview.net,
+Apr./May 2018, pp. 1–12.
+[17] I. Golan and R. El-Yaniv, “Deep anomaly detection using geometric transformations,” in Proc. Adv. Neural Inf. Process. Syst., 2018,
+pp. 9758–9769.
+[18] J. Liu, Z. Qi, B. Wang, Y. Tian, and Y. Shi, “SELF-LLP: Self-supervised
+learning from label proportions with self-ensemble,” Pattern Recognit.,
+vol. 129, Sep. 2022, Art. no. 108767.
+[19] C. Doersch, A. Gupta, and A. A. Efros, “Unsupervised visual representation learning by context prediction,” in Proc. IEEE Int. Conf.
+Comput. Vis. (ICCV), Santiago, Chile, Dec. 2015, pp. 1422–1430, doi:
+10.1109/ICCV.2015.167.
+[20] M. Noroozi and P. Favaro, “Unsupervised learning of visual representations by solving jigsaw puzzles,” in Computer Vision—ECCV 2016,
+vol. 9910. Amsterdam, The Netherlands. Cham, Switzerland: Springer,
+Oct. 2016, pp. 69–84, doi: 10.1007/978-3-319-46466-4_5.
+[21] R. Zhang, P. Isola, and A. Efros, “Colorful image colorization,” in Proc.
+Eur. Conf. Comput. Vis., vol. 9907. Amsterdam, The Netherlands. Cham,
+Switzerland: Springer, Oct. 2016, pp. 649–666, doi: 10.1007/978-3-31946487-9_40.
+[22] G. Larsson, M. Maire, and G. Shakhnarovich, “Learning representations
+for automatic colorization,” in Computer Vision—ECCV 2016, vol. 9908.
+Amsterdam, The Netherlands. Cham, Switzerland: Springer, Oct. 2016,
+pp. 577–593, doi: 10.1007/978-3-319-46493-0_35.
+
+2689
+
+[23] D. Hendrycks and K. Gimpel, “A baseline for detecting misclassified and out-of-distribution examples in neural networks,” in
+Proc. 5th Int. Conf. Learn. Represent. (ICLR). Toulon, France:
+OpenReview.net, Apr. 2017, pp. 1–12. [Online]. Available: https://
+openreview.net/forum?id=Hkg4TI9xl
+[24] L. Bergman and Y. Hoshen, “Classification-based anomaly detection
+for general data,” in Proc. 8th Int. Conf. Learn. Represent. (ICLR).
+Addis Ababa, Ethiopia: OpenReview.net, Apr. 2020, pp. 1–12. [Online].
+Available: https://openreview.net/forum?id=H1lK_lBtvS
+[25] A. Rahimi and B. Recht, “Random features for large-scale kernel
+machines,” in Proc. NIPS, vol. 3, no. 4. Princeton, NJ, USA: Citeseer,
+2007, p. 5.
+[26] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th
+IEEE Int. Conf. Data Mining, Dec. 2008, pp. 413–422.
+[27] T. R. Bandaragoda, K. M. Ting, D. Albrecht, F. T. Liu, Y. Zhu, and
+J. R. Wells, “Isolation-based anomaly detection using nearest-neighbor
+ensembles,” Comput. Intell., vol. 34, no. 4, pp. 968–998, Nov. 2018.
+[28] P. Gopalan, V. Sharan, and U. Wieder, “PIDForest: Anomaly detection
+via partial identification,” in Proc. Adv. Neural Inf. Process. Syst., 2019,
+pp. 15783–15793.
+[29] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+pp. 1–19.
+[30] X. Yang, L. J. Latecki, and D. Pokrajac, “Outlier detection with globally
+optimal exemplar-based GMM,” in Proc. SIAM Int. Conf. Data Mining,
+Apr. 2009, pp. 145–154.
+[31] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly
+detection on attributed networks via contrastive self-supervised learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6,
+pp. 2378–2392, Jun. 2022.
+[32] R. Blaser and P. Fryzlewicz, “Random rotation ensembles,” J. Mach.
+Learn. Res., vol. 17, no. 1, pp. 126–151, 2016.
+[33] F. Liu, X. Huang, Y. Chen, and J. A. K. Suykens, “Random features
+for kernel approximation: A survey on algorithms, theory, and beyond,”
+IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 10, pp. 7128–7148,
+Oct. 2022.
+[34] L. Breiman, “Random forests,” Mach. Learn., vol. 45, no. 1, pp. 5–32,
+2001.
+[35] T. Hastie, R. Tibshirani, and J. Friedman, The Elements of Statistical
+Learning: Data Mining, Inference, and Prediction. Cham, Switzerland:
+Springer, 2009.
+[36] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” ACM SIGMOD Rec., vol. 29, no. 2,
+pp. 93–104, Jun. 2000.
+[37] S. Ramaswamy, R. Rastogi, and K. Shim, “Efficient algorithms for
+mining outliers from large data sets,” in Proc. ACM SIGMOD Int. Conf.
+Manage. Data, May 2000, pp. 427–438.
+[38] F. Angiulli and C. Pizzuti, “Fast outlier detection in high dimensional
+spaces,” in Proc. Eur. Conf. Princ. Data Mining Knowl. Discovery.
+Cham, Switzerland: Springer, 2002, pp. 15–27.
+[39] B. Schölkopf, J. C. Platt, J. Shawe-Taylor, A. J. Smola, and
+R. C. Williamson, “Estimating the support of a high-dimensional distribution,” Neural Comput., vol. 13, no. 7, pp. 1443–1471, Jul. 2001.
+[40] Z. Li, Y. Zhao, N. Botta, C. Ionescu, and X. Hu, “COPOD: Copulabased outlier detection,” in Proc. IEEE Int. Conf. Data Mining (ICDM),
+Nov. 2020, pp. 1118–1123.
+[41] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+of deep bidirectional transformers for language understanding,” 2018,
+arXiv:1810.04805.
+[42] S. Larson et al., “An evaluation dataset for intent classification and
+out-of-scope prediction,” in Proc. Conf. Empirical Methods Natural
+Lang. Process. 9th Int. Joint Conf. Natural Lang. Process. (EMNLPIJCNLP), 2019, pp. 1311–1316.
+[43] Y. Zheng, G. Chen, and M. Huang, “Out-of-domain detection for natural
+language understanding in dialog systems,” IEEE/ACM Trans. Audio,
+Speech, Language Process., vol. 28, pp. 1198–1209, 2020.
+[44] A. Madry, A. Makelov, L. Schmidt, D. Tsipras, and A. Vladu,
+“Towards deep learning models resistant to adversarial attacks,” in
+Proc. Int. Conf. Learn. Represent., 2018, pp. 1–23. [Online]. Available:
+https://openreview.net/forum?id=rJzIBfZAb

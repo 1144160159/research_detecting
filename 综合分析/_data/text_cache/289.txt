@@ -1,0 +1,138 @@
+                                                                        Neurocomputing 592 (2024) 127797
+
+
+                                                                     Contents lists available at ScienceDirect
+
+
+                                                                           Neurocomputing
+                                                         journal homepage: www.elsevier.com/locate/neucom
+
+
+
+
+Relation-aware heterogeneous graph neural network for entity alignment
+Zirui Zhang a , Yiyu Yang a , Benhui Chen a,b ,∗
+a
+    Dali University, Dali, 671000, Yunnan, China
+b
+    Lijiang Normal College, Lijiang, 674100, Yunnan, China
+
+
+
+ARTICLE                 INFO                                 ABSTRACT
+
+Communicated by G. Fenza                                     Entity alignment refers to finding equivalent entities from different knowledge graphs. Most of the existing
+                                                             entity alignment methods are studied based on homogeneous graphs. However, the knowledge graph is a
+Keywords:
+                                                             heterogeneous graph containing many types of nodes, such as entities, relations, and attributes. Therefore,
+Entity alignment
+Knowledge graph
+                                                             we propose introducing a heterogeneous graph neural network to model entities and relations simultaneously
+Heterogeneous graph neural network                           and propose an iterative fusion method to enhance the interaction between these two semantic nodes. Since
+Relation awareness                                           not all datasets contain relation information, this paper does not directly introduce a feature representation
+Iterative fusion                                             of relations. The generalizability of the approach is improved by utilizing a relation-aware strategy to obtain
+                                                             information about the relation. Specifically, the information propagation of the head and tail entities in the
+                                                             triplet is utilized to obtain the feature representation of the relation. Experimental results show that the present
+                                                             method performs better on three cross-lingual datasets 𝐷𝐵𝑃 15𝐾 and two large-scale datasets 𝐷𝑊 𝑌 100𝐾.
+
+
+
+1. Introduction                                                                                    Currently, embedding-based models are broadly classified into two
+                                                                                               categories: one is based on TransE [10–13]. This approach interprets
+    In recent years, knowledge graph (KG) has become a very hot re-                            the relations in a relation triplet as translation vectors from head
+search direction, and research results related to knowledge graph have                         entity to tail entity, and the low-dimensional embedding vector space
+been launched continuously [1–3]. Entity alignment, as an essential                            reflects the semantic information of the entities. Another category
+step in knowledge graph construction and fusion, aims to determine                             is GNN-based models [14,15]. This approach treats the knowledge
+whether two entities from different knowledge graphs are equivalent.                           graph entities as nodes and relations as edges. It uses the edges to
+More specifically, it is to judge whether these two entities point to                          propagate information to obtain more expressive embeddings by fusing
+the same object in the real world. The accuracy and completeness of                            the entity’s neighborhood information into the entity embeddings. One
+the entity alignment results will directly affect the final constructed                        problem with this approach is that relations are used only as edges, ig-
+knowledge graph’s quality and indirectly determine the downstream                              noring the rich information in them. This may lead to poor performance
+tasks’ performance. This also indicates that the link of entity alignment                      on entity alignment with similar structures.
+is crucial. Entities can be aligned mainly based on the assumption that                            The two entities in Fig. 2 have the same structure, and the two cen-
+entities adjacent to an aligned entity may also be aligned. As shown in                        tral entities, ‘‘China’’ and ‘‘Beijing’’, are aligned based on the structure
+Fig. 1, new aligned entities can be inferred in the knowledge graph if                         information alone. However, in reality, the two entities are entirely
+a portion of the aligned entities is known in advance.                                         different, which is the disadvantage of relying solely on structural
+    There are two main types of traditional entity alignment meth-                             information. In order to solve this problem, this paper adds relation
+ods: one is based on probabilistic models [4–6], and the other is                              information to the entity alignment task, and the entity alignment
+based on machine learning [7,8]. However, with the increasing size                             after considering the relation is shown in Fig. 3. After considering
+of knowledge graphs, traditional entity alignment methods can no                               the relation information, although the two entities have the same sur-
+longer effectively align entities in different knowledge graphs and are                        rounding structure, they do not have the same relation with the same
+thus gradually no longer used. As representation learning techniques                           neighboring entities. Therefore, it can be judged that the probability
+begin to be widely used in knowledge graphs, some researchers have                             of these two entities not matching is relatively high, thus successfully
+begun to apply representation learning to the entity alignment task and                        avoiding mismatching.
+have performed well. Entity alignment methods using representation                                 This paper proposes an entity alignment method based on relation-
+learning to obtain entity embeddings [9] have become mainstream.                               aware heterogeneous graph neural networks to address the above
+
+
+     ∗ Corresponding author.
+       E-mail addresses: zzr@stu.dali.edu.cn (Z. Zhang), yangyiyu@dali.edu.cn (Y. Yang), bhchen@dali.edu.cn (B. Chen).
+
+https://doi.org/10.1016/j.neucom.2024.127797
+Received 14 January 2024; Received in revised form 24 April 2024; Accepted 27 April 2024
+Available online 6 May 2024
+0925-2312/© 2024 Elsevier B.V. All rights reserved.
+Z. Zhang et al.                                                                                                                    Neurocomputing 592 (2024) 127797
+
+
+                                                                                      2. Related work
+
+                                                                                          Early approaches to entity alignment relied heavily on manual
+                                                                                      annotation with crowdsourcing techniques [17,18]. With the contin-
+                                                                                      uous development of the knowledge graph scale, manual annotation
+                                                                                      will consume a lot of time and human resources. Most existing entity
+                                                                                      alignment methods are based on embedding, and TransE [10] is one
+                                                                                      of the main techniques for entity embedding. MTransE proposed by
+                                                                                      Chen et al. [19] first embeds each knowledge graph into a separate
+                                                                                      low-dimensional vector space and then constructs transitions between
+                                                                                      different vector spaces. TransE can only model single-hop relations
+                                                                                      between entities and cannot handle complex multi-hop relations, thus
+                                                                                      losing important information. Therefore, Zhu et al. [20] proposed
+                                                                                      PTransE to embed entities and relations from different knowledge
+                                                                                      graphs into the joint semantic space based on the seed set. Instead of
+                                                                                      TransE, PTransE [21] is used to model multi-step relations. At the same
+                                                                                      time, high-confidence predicted aligned entities are filtered and added
+                                                                                      to the seed set to guide the subsequent entity alignment training. A
+Fig. 1. Example of alignment of two heterogeneous KGs(Circles of the same color       truncated uniform negative sampling approach is designed in BootEA,
+indicate priority alignment.).
+                                                                                      proposed by Sun et al. [22]. From the original random selection of
+                                                                                      entities from all entities to replace the head or tail entity, it is changed
+                                                                                      to selecting one of several entities with the closest cosine distance to
+                                                                                      the head or tail entity. In addition, BootEA uses an iterative alignment
+                                                                                      method similar to IPTransE. However, BootEA can edit new entity pairs
+                                                                                      to reduce error propagation.
+                                                                                          Graph Convolutional Networks (GCN) [23–25] is another major
+                                                                                      technique for KG embedding that has made significant progress in
+                                                                                      recent years. Wang et al. [26] proposed GCN-Align, which for the first
+                                                                                      time, uses a GCN model for the entity alignment task. The structural
+                      Fig. 2. An incorrect entity alignment.                          and entity attributes of the knowledge graph are embedded by two
+                                                                                      GCN models stacked in two layers, respectively. However, GCN can
+                                                                                      aggregate the neighbors’ information around an entity well but ignores
+                                                                                      the relation information. RDGCN, proposed by Wu et al. [27] is a bi-
+                                                                                      graph convolutional structure constructing a dyadic graph for each
+                                                                                      knowledge graph. By alternating convolution operations on the original
+                                                                                      graph and the dyadic graph, the relation information in the knowledge
+                                                                                      graph is fully utilized to enhance the entity representation. The graph
+                                                                                      attention mechanism is applied in RDGCN, and the MuGNN proposed
+                                                                                      by Cao et al. [28] also applies the graph attention network. The
+                                                                                      knowledge graph is first complemented using rule knowledge, reducing
+                  Fig. 3. Consider entity alignment of relations.
+                                                                                      heterogeneity between the two knowledge graphs. Then, two adjacency
+                                                                                      matrices are generated based on the self-attention and cross-graph
+                                                                                      attention channels and input into the GNN for embedding entities.
+problems. The basic idea of this method is to model both entities                     Finally, a pooling function aggregates the two representations for en-
+and relations simultaneously by introducing a heterogeneous graph                     tity alignment. Wu et al. [29] proposed a cross-graph neighborhood
+neural network. An iterative fusion method is also utilized to obtain                 matching network NMN, which samples the entity neighbors to obtain
+a better entity representation. A concise version of this work has been               the most informative neighbors. Their attention weights are computed
+successfully published in the IJCNN conference. See [16] for details.                 based on the neighbor representation. Then, cross-graph matching
+                                                                                      vectors containing information about the entity and neighbor-matching
+This paper increases the generalizability of the approach compared to
+                                                                                      information are generated for entity alignment. Most GNN-based ap-
+the work at that time. Since not all datasets contain information about
+                                                                                      proaches learn the embeddings of different KGs separately and ignore
+relations, this paper does not directly introduce a feature representation            the useful pre-aligned links between two KGs. Xie et al. [30] proposed a
+of relations. Instead, a relation-aware strategy is used to obtain the re-            new context-aligned augmented cross-graph attentional network CAEC-
+lations information, and the performance is slightly improved from the                GAT for cross-lingual entity alignment tasks. This network can co-
+experimental results. Meanwhile, this paper also verifies the method’s                learn embeddings in different KGs by propagating cross-KG information
+effectiveness from different angles through many experiments.                         through pre-aligned seed alignment. Also, Xie et al. [31] proposed
+                                                                                      DuGa-DIT, a dual-gated graph attention network with dynamic iterative

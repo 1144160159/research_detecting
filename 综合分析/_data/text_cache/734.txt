@@ -1,0 +1,156 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026                                                                             767
+
+
+
+
+  MADGuard: A High-Performance Microservice
+ Anomaly Detection System With Multidimensional
+    Data Fusion and Temporal Causal Analysis
+                    Yanshang Yin , Tiantian Zhu , Member, IEEE, Tieming Chen , and Mingqi Lv
+
+
+   Abstract—With the widespread adoption of microservice                         Scaling: The dynamic scaling mechanism causes continuous
+architectures, the security threats they face have become                        changes in service instance topology, leading to an exponential
+increasingly sophisticated. Existing anomaly detection methods                   increase in the attack surface [6]. (2) Cross-Network
+based on system calls exhibit significant limitations in three
+key aspects: multidimensional data fusion, temporal causal-                      Communication: Frequent communication between services
+ity modeling, and forensic analysis of anomalies. This paper                     renders traditional perimeter defense models ineffective.
+proposes MADGuard, a provenance graph-based anomaly detec-                       Middleware components, such as API gateways and
+tion system for microservices. MADGuard addresses these                          service meshes, become new targets for attacks [6]. (3)
+challenges through three key innovations: (1) It constructs a                    Containerized Deployment: The use of containerization
+native provenance graph by integrating multisource services and
+multidimensional data, employing feature hashing and positional                  introduces cloud-native security risks, including image
+encoding for efficient graph representation; (2) The system                      vulnerabilities and container escape [7], [8], [9]. Once a
+introduces a Temporal Graph Network (TGN) model combined                         single microservice is compromised, attackers can quickly
+with edge reconstruction error and Inverse Document Frequency                    move laterally to penetrate the entire system, potentially
+(IDF) weighting, achieving a 15. 07% improvement in the                          causing catastrophic consequences such as data breaches and
+F1 score compared to existing methods; (3) For the first time
+in microservice security, an integrated forensic analysis module                 service interruptions [10]. These security challenges mean
+is implemented, allowing rapid anomaly path reconstruction                       that anomaly detection systems in microservices environments
+through aggregated anomaly subgraphs. Comprehensive evalua-                      must not only address traditional network attacks but also
+tions on typical microservice benchmarks (TeaStore, RobotShop,                   meet new defense needs, such as distributed tracing and zero-
+SockShop) demonstrate MADGuard’s superior performance:                           trust verification [11], [12]. As a result, anomaly detection
+94.08% detection accuracy, significantly outperforming state-
+of-the-art approaches while maintaining practical operational                    has become a cornerstone for ensuring the stable operation of
+efficiency.                                                                      cloud-native systems [13].
+  Index Terms—Microservices security, provenance graph, tem-
+                                                                                    Current research in microservice anomaly detection focuses
+poral graph network, anomaly forensics, anomaly detection.                       primarily on analysis of system calls using machine learn-
+                                                                                 ing or signature-based methods [14], [15], [16], [17], [18],
+                          I. I NTRODUCTION                                       [19]. However, three critical limitations persist in enterprise
+     HE MICROSERVICE architecture improves the                                   environments:
+T    scalability and agility of the system by decoupling
+monolithic applications into lightweight, loosely coupled
+                                                                                    (1) Multi-dimensional data fusion: Existing approaches
+                                                                                 such as CDL [20] oversimplify detection by relying solely on
+services [1], [2], [3]. This architecture is characterized                       system call frequencies, neglecting crucial contextual features
+by service modularization, independent deployment,                               (process hierarchies, file process patterns, network flows).
+decentralized governance, and API-based communication                            This feature sparsity severely limits the detection accuracy for
+mechanisms [4], [5]. These characteristics enable each                           sophisticated attacks.
+microservice to be independently scalable and updatable,                            (2) Shallow temporal causality: Methods such as STIDE-
+but also introduce unique security challenges: (1) Dynamic                       BoSC [21], CHIDS [22], and ReplicaWatcher [23] analyze
+                                                                                 short system call sequences without modeling temporal depen-
+   Received 19 March 2025; revised 6 September 2025; accepted 15 November        dencies, leading to high false negatives for multistage attacks.
+2025. Date of publication 24 November 2025; date of current version
+29 December 2025. This work was supported in part by the National Natural        For example, our TeaStore case study (Section II) reveals
+Science Foundation of China under Grant U22B2028, Grant 62002324, and            how these methods fail to detect low-frequency attack patterns
+Grant 62372410; in part by the Fundamental Research Funds for the Provincial     masked within normal operational sequences.
+Universities of Zhejiang under Grant RF-A2023009; in part by the Zhejiang
+Provincial Natural Science Foundation of China under Grant LQ21F020016,             (3) Lack of anomaly forensic analysis: Current
+Grant LD22F020002, and Grant LZ23F020011; and in part by “Pioneer” and           systems [20], [21], [22], [23] lack causal analysis capabilities,
+“Leading Goose” R&D Program of Zhejiang under Grant 2025C01082 and               providing isolated alerts without reconstruction of the attack
+Grant 2025C01013. The associate editor coordinating the review of this article
+and approving it for publication was R. Riggio. (Corresponding authors:          path. This gap significantly impedes incident response, partic-
+Tiantian Zhu; Tieming Chen.)                                                     ularly for cross-service attacks requiring end-to-end visibility.
+   The authors are with the School of Computer Science and Technology,              Table I presents the detection capabilities of existing
+Zhejiang University of Technology, Hangzhou 310023, China (e-mail:
+ttzhu@zjut.edu.cn; tmchen@zjut.edu.cn).                                          microservice anomaly detection systems across various dimen-
+   Digital Object Identifier 10.1109/TNSM.2025.3634590                           sions. However, no existing method can simultaneously
+                1932-4537 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+768                                                              IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+
+                                                                   TABLE I
+      T HE E XISTING A NOMALY D ETECTION M ETHODS A RE C OMPARED IN T HREE D IMENSIONS : DATA F EATURE M ULTI -D IMENSIONAL F USION , T IME
+                                       S ERIES C AUSAL C ORRELATION , AND A NOMALY F ORENSICS A NALYSIS
+
+
+
+
+address the three main challenges. The provenance graph                   the accuracy and efficiency of anomaly detection. Moreover,
+represents the control flow and data flow relationships between           by adopting provenance graphs, the original data’s tem-
+system subjects (such as processes, threads, etc.) and objects            poral information is retained, and the causal relationships
+(such as files, network sockets, etc.) through a directed                 between data are more intuitively represented, providing
+graph, thereby reflecting the causal relationship between                 stronger explanatory and predictive power in complex data
+system events. Due to their rich semantics and robustness,                environments.
+provenance graphs are widely used in network intrusion detec-                Abnormal forensic analysis can infer the chain of abnormal
+tion [24], [25], [26]. To address these challenges and improve            events and restore the abnormal path based on the prove-
+the performance of anomaly detection systems in microservice              nance graph. However, as time passes and the volume of
+environments, this paper designs a microservice anomaly                   data increases, the size of the provenance graphs increases
+detection system based on provenance graphs. The system                   exponentially [29], making manual construction impractical.
+integrates multidimensional information from the microservice             Existing forensic methods in other fields construct concise
+environment and combines graph learning to construct an                   summary graphs to restore abnormal event paths, reducing
+effective anomaly detection model.                                        the need for human intervention [30]. However, in microser-
+   Considering the distributed nature of the microservice archi-          vice environments, virtualization characteristics can confuse
+tecture, this paper collects key information events covering              identical data information across different services, leading
+multiple dimensions (e.g., processes, files, networks) in a mul-          to inaccurate exception source localization. To address this,
+tisource service environment. To integrate these multi-source             this paper introduces unique identifiers to distinguish services
+and multi-dimensional data information without causing con-               and designs an anomaly forensic analysis algorithm. The
+fusion, this paper employs service identification (mid) and               experimental results show that the proposed algorithm sig-
+Hasche algorithm to uniquely identify system objects across               nificantly reduces the workload of security staff, clarifies
+different services. Based on these objects, related events are            abnormal data in different microservice environments, and
+merged. After data fusion, these complex data are uniformly               shortens the forensic analysis time. Furthermore, this paper is
+characterized to facilitate subsequent model learning. Inspired           the first to integrate an anomaly forensic analysis module into
+by previous work [27], this paper adopts feature hashing                  the microservice anomaly detection system, enhancing overall
+and location encoding techniques to efficiently encode multi-             system efficiency and accuracy.
+source information in the microservice environment into                      To verify the effectiveness of the proposed method, exper-
+compact and semantic-rich feature vectors. Furthermore, a                 iments were conducted in three representative microservice
+time-sliding window mechanism with a time interval T is                   environments, simulating three typical attack scenarios. The
+designed to accumulate feature vectors in real-time. This                 results indicate that the proposed anomaly detection system
+mechanism not only maintains data timeliness but also                     outperforms existing methods, with a 15.07% improvement
+addresses the issue of insufficient multi-dimensional fusion in           in detection accuracy. The main contributions of this paper
+existing data features. Experimental results in the deployed              are:
+microservice environment demonstrate that embedding feature                  (1) Innovative System Design: A novel microservice
+vectors through the time-sliding window mechanism effec-                  anomaly detection system based on provenance graphs is
+tively improves anomaly detection accuracy and reduces the                proposed. By integrating multi-source services and multi-
+false alarm rate.                                                         dimensional data, the system constructs a provenance graph
+   To address the issue that existing anomaly detection meth-             in the microservice environment and leverages graph learning
+ods do not fully consider temporal causal relationships in                to significantly enhance anomaly detection accuracy.
+data sequences, this paper uses the structural characteris-                  (2) Enhanced Data Features: Advanced feature hashing
+tics of provenance graphs to construct data information. By               techniques are employed to efficiently fuse multi-source,
+structuring data into provenance graphs, temporal continuity              multi-dimensional data, optimizing data samples. The time-
+and causality are strengthened. The Temporal Graph Network                sliding window mechanism enriches data diversity and
+(TGN) model is also introduced to dynamically capture com-                timeliness, providing more comprehensive and accurate data
+plex temporal causal relationships between data [28]. The                 for anomaly detection.
+unique advantage of the TGN model is its ability to analyze                  (3) Integrated Forensic Analysis: The system introduces an
+both temporal and spatial characteristics of graph sequences,             anomaly forensic analysis module for the first time, enabling
+enabling the identification of local and global abnormal events           accurate restoration of abnormal events and saving consider-
+with high accuracy. This capability significantly enhances                able time in security forensic analysis.
+YIN et al.: MADGuard: A HIGH-PERFORMANCE MICROSERVICE ANOMALY DETECTION SYSTEM                                                                        769
+
+
+
+
+Fig. 1. Teastore-webshell attack. Initially, the attacker leveraged the WebUI
+service to upload a WebShell file named shell.jsp, thereby gaining unautho-
+rized access to the server. Subsequently, through local port scanning, the
+attacker obtained the database connection details. Using this information, they
+created a Shell script named sql.sh to access the remote user database. Finally,
+the attacker employed the mysqldump tool to export sensitive information,
+including user login credentials and credit card details.
+
+
+
+   (4) Comprehensive System Evaluation: The system’s
+performance is comprehensively evaluated in three real-
+world microservice environments, demonstrating excellent
+performance in key metrics such as detection accuracy, detec-
+tion time, and overhead.
+                                                                                   Fig. 2.    ReplicaWatcher and CHIDS anomaly detection methods identify
+                            II. M OTIVATION                                        feature.
+
+   This chapter presents a critical examination of webshell
+                                                                                      CDL ano
