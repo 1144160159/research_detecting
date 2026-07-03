@@ -1,0 +1,157 @@
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 32, NO. 5, OCTOBER 2024                                                                                            3945
+
+
+
+
+        FOSS: Towards Fine-Grained Unknown Class
+          Detection Against the Open-Set Attack
+                 Spectrum With Variable
+                    Legitimate Traffic
+    Ziming Zhao , Student Member, IEEE, Zhaoxuan Li , Student Member, IEEE, Xiaofei Xie, Jiongchi Yu ,
+          Fan Zhang , Member, IEEE, Rui Zhang , Binbin Chen , Member, IEEE, Xiangyang Luo ,
+                               Ming Hu , Member, IEEE, and Wenrui Ma
+
+    Abstract— Anomaly-based network intrusion detection systems                   and leverage the concept of isolation, as well as advance the
+(NIDSs) are essential for ensuring cybersecurity. However, the                    incremental model update. We utilize the isolation tree as the
+security communities realize some limitations when they put                       backbone to design our model, named FOSS, to echo back
+most existing proposals into practice. The challenges are mainly                  three norms. By analyzing the popular dataset of network intru-
+concerned with (i) fine-grained unknown attack detection and                      sion traces, we show that FOSS significantly outperforms the
+(ii) ever-changing legitimate traffic adaptation. To tackle these                 state-of-the-art methods. Further, we perform an initial deploy-
+problem, we present three key design norms. The core idea is                      ment of FOSS by working with the Internet Service Provider
+to construct a model to split the data distribution hyperplane                    (ISP) to detect distributed denial of service (DDoS) attacks.
+                                                                                  With real-world tests and manual analysis, we demonstrate the
+   Manuscript received 27 February 2023; revised 9 January 2024;                  effectiveness of FOSS to identify previously-unseen attacks in a
+accepted 8 May 2024; approved by IEEE/ACM T RANSACTIONS ON N ET-                  fine-grained manner.
+WORKING Editor Y. Zhang. Date of publication 19 August 2024; date of cur-
+rent version 17 October 2024. This work was supported in part by the National       Index Terms— Intrusion detection system,                       fine-grained
+Natural Science Foundation of China under Grant 62227805, Grant 62072398,         unknown class detection, isolation forest.
+and Grant 62172405; in part by the National Research Foundation, Singapore,
+and the Cyber Security Agency under its National Cybersecurity Research
+and Development Programme under Grant NCRP25-P04-TAICeN; in part                                           I. I NTRODUCTION
+by Singapore University of Technology and Design-Zhejiang University
+Innovation, Design and Entrepreneurship Alliance (SUTD-ZJU IDEA) IDEA
+Grant for Visiting Professors under Grant SUTD-ZJUVP201901; in part by the
+Natural Science Foundation of Jiangsu Province under Grant BK20220075;
+                                                                                  N      ETWORK intrusion detection systems (NIDSs) occupy a
+                                                                                         significant role in cybersecurity infrastructures. Over the
+                                                                                  past decades, the academic and industrial communities have
+in part by the Fok Ying-Tung Education Foundation for Young Teachers in
+the Higher Education Institutions of China under Grant 20193218210004; in         invested a lot of research to advance NIDS. The proposed
+part by the State Key Laboratory of Mathematical Engineering and Advanced         approaches gradually evolve from signature-based to anomaly-
+Computing; in part by the Open Foundation of Henan Key Laboratory of              based detection in the NIDS landscape [1], [2]. The former
+Cyberspace Situation Awareness under Grant HNTS2022001; and in part by
+the Key Research and Development Program of Zhejiang Province under               aims to characterize the malicious behaviors and hence to
+Grant 2023C01039. (Corresponding authors: Fan Zhang; Wenrui Ma.)                  depict the per-class attack fingerprint [3], [4], [5], [6]. Yet
+   Ziming Zhao is with the College of Computer Science and Technology, Zhe-       the adversaries could adopt previously-unseen strategies such
+jiang University, Hangzhou 310027, China (e-mail: zhaoziming@zju.edu.cn).         as zero-day attacks. We term the unknown a priori and known
+   Zhaoxuan Li and Rui Zhang are with the State Key Laboratory of Infor-
+mation Security, Institute of Information Engineering, Chinese Academy            attacks collectively as the open-set attack spectrum. To cope
+of Sciences, Beijing 100093, China, and also with the School of Cyber             with the open-set attack spectrum, the anomaly-based solutions
+Security, UCAS, Beijing 100049, China (e-mail: lizhaoxuan@iie.ac.cn;              construct profiles of benign traffic to discover unforeseen
+zhangrui@iie.ac.cn).
+   Xiaofei Xie and Jiongchi Yu are with the School of Computing and
+                                                                                  attacks that deviate from legitimate samples [1], [7], [8], [9],
+Information Systems, Singapore Management University, Singapore 188065            [10]. Thus anomaly detection becomes an indispensable step
+(e-mail: xfxie@smu.edu.sg; jcyu.2022@phdcs.smu.edu.sg).                           for security in the real world. However, academic communi-
+   Fan Zhang is with the College of Computer Science and Technology,              ties and industrial practitioners reveal a series of limitations
+Zhejiang University, Hangzhou 310027, China, and also with Zhengzhou
+Xinda Institute of Advanced Technology, Zhengzhou 450000, China (e-mail:          when they put most existing anomaly-based proposals into
+fanzhang@zju.edu.cn).                                                             practice [10], [11], [12], [13]. By summarizing those issues,
+   Binbin Chen is with the Advanced Digital Sciences Center, Singapore            we recognize the following two main challenges.
+138632, and also with the Information Systems Technology and Design
+(ISTD) Pillar, Singapore University of Technology and Design, Singapore              (i) Fine-grained unknown attack detection. The anomaly-
+487372 (e-mail: binbin_chen@sutd.edu.sg).                                         based methods can identify unknown attacks, while previous
+   Xiangyang Luo is with Henan Province Key Laboratory of Cyberspace Sit-         proposals are usually binary classification models1 [7], [8].
+uation Awareness, Zhengzhou 450001, China (e-mail: luoxy_ieu@sina.com).           That is to say, they could only infer whether the sample is
+   Ming Hu is with the School of Computer Science and Engineering, Nanyang
+Technological University, Singapore 639798 (e-mail: ecnu_hm@163.com).             “benign” or “abnormal”, but cannot recognize that the anomaly
+   Wenrui Ma is with the School of Computer Science and Technol-                  is “unknown attack 1”, “unknown attack 2”, or “unknown
+ogy, Zhejiang Gongshang University, Hangzhou 310018, China (e-mail:
+mawenrui@zjgsu.edu.cn).                                                             1 Some existing multi-class detection methods have strong assumptions, and
+   Digital Object Identifier 10.1109/TNET.2024.3413789                            we summarize them in baselines (§ V-A).
+                       1558-2566 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:17:55 UTC from IEEE Xplore. Restrictions apply.
+3946                                                                            IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 32, NO. 5, OCTOBER 2024
+
+
+
+attack 3”, etc. Yet these fine-grained labels are the key for                           II. A SSUMPTIONS AND P ROBLEM F ORMULATION
+defenders to deploy effective countermeasures against the                        A. Motivating Scenarios
+attacks [10], [12]. For example, the victims can count the
+per-flow protocol flag to mitigate flood-based DDoS [14],                           Consider security practitioners in the Internet Service
+                                                                                 Provider (ISP) data center, where they need to analyze traffic
+[15]. And they can defend the reflection-based attacks by
+                                                                                 and report fine-grained labels for each session, e.g., “Benign”,
+source verification [16]. In other words, it exists a semantic
+                                                                                 “Attack 1”, “Attack 2”, etc. In the open world, traffic instances
+gap between the model identification results and the action-
+                                                                                 to be analyzed involve unknown attacks (previously unseen in
+able reports for network operators [11]. If the proposed
+                                                                                 the training set), such as zero-day attacks. Naturally, practi-
+scheme can automatically distinguish different unknown attack
+                                                                                 tioners thought of leveraging anomaly-based models to detect
+classes based on the network traffic characterization, it could
+                                                                                 unknown attacks. However, it has been found in practice
+facilitate understanding attack details and implementing coun-
+                                                                                 that existing anomaly-based detection solutions mainly report
+termeasures. Consequently, the first challenge is to detect
+                                                                                 “benign” or “malicious” and cannot support fine-grained attack
+the unknown (and known as well) attack in a fine-grained
+                                                                                 outcomes, which means that practitioners need to analyze
+manner.
+                                                                                 all malicious samples to mark fine-grained labels (is labor
+   (ii) Ever-changing legitimate traffic adaptation. Another cru-
+                                                                                 intensive). Alternatively, unsupervised algorithms such as clus-
+cial problem is that legitimate traffic could be ever-changing.
+                                                                                 tering are considered. The problem faced by this solution is
+In most anomaly-based detection, they advocate only using
+                                                                                 that it does not use the prior knowledge of known attacks,
+benign traffic to train the classifier, also known as “zero-
+                                                                                 resulting in misclassifications for some known attack samples.
+positive” learning [17], [18], then those samples deviating
+                                                                                 And practitioners do not know how many unknown attacks
+from legitimate traffic will be considered malicious. However,
+                                                                                 are included in the real-world samples, which may affect the
+it could appear a large number of false positives when the
+                                                                                 clustering hyperparameters settings (such as K-means [19]).
+legitimate traffic manifested as different from priors properties.
+                                                                                 More details about the disadvantages of common clustering
+Intuitively, an anomaly detector trained on benign HTTP traffic
+                                                                                 algorithms are discussed in § III.
+would identify normal FTP traces as malicious given that these
+                                                                                    One piece of good news is that a new network intrusion
+two protocols are indeed different. Therefore, a pending issue
+                                                                                 detection system (i.e., FOSS) is provided, which can support
+is to adapt to the changing legitimate traffic as the system
+                                                                                 fine-grained identification of unknown attacks. Specifically, the
+service variation or scenario alteration.
+                                                                                 proposed NIDS is able to report “Benign”, “Known Attack 1”,
+   In this paper, we aim to enable fine-grained unknown attack
+                                                                                 “Known Attack 2”, “Unknown Attack 1”, “Unknown Attack
+detection, as well as consider ever-changing legitimate traffic.
+                                                                                 2”, and so on. Benign and known attack labels correspond
+To this end, we present FOSS (Fine-Grained Unknown Class
+                                                                                 to the prior knowledge in the label library, which is readily
+Detection against the Open-Set Attack Spectrum, for short),
+                                                                                 available for result reports. For unknown attacks, the pro-
+a novel tree-based model to handle the above challenges.
+                                                                                 posed NIDS can divide these unseen attack samples into
+At the high level, FOSS is designed to abide by three norms.
+                                                                                 fine-grained categories based on traffic characteristics (ideally,
+Norm ①: Splitting the data distribution hyperplane instead of
+                                                                                 each category corresponds to one attack method/vulnerability).
+dividing the samples. Norm ②: Leveraging the concept of iso-
+                                                                                 With these preliminary identification results, practitioners only
+lation different from distance or density. Norm ③: Advancing
+                                                                                 need to verify a small number of samples for each unknown
+the incremental model update to cope with variable legitimate
+                                                                                 attack type, and could report specific attack characteristics,
+traffic. We will provide detailed elaboration on these norms
+                                                                                 for subsequent cross-verifying with the threat intelligence
+in § III. To satisfy them, we design FOSS including: feature
+                                                                                 and expanding the attack knowledge base. Such a new
+extraction, model construction (Norm ①), outlier detection and
+                                                                                 NIDS is practical and feasible for practitioners. Furthermore,
+classification (Norm ②), an

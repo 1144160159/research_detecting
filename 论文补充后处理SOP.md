@@ -90,6 +90,23 @@ pdfinfo "paper/xxx.pdf"
 
 如果只是临时补充少量理论根论文，也至少要更新 `论文分析总表.csv`、`文献.md`、`文献引用.txt` 和相关方向报告。
 
+推荐在元数据补齐后直接重跑综合分析生成器，避免“底表已更新、汇总报告仍显示旧数量”的不一致：
+
+```powershell
+$env:PYTHONUTF8='1'
+python '综合分析/analyze_850_papers.py'
+python '综合分析/generate_fulltext_per_paper_docs.py'
+node '综合分析/create_research_ppt.js'
+```
+
+如果当前环境中的 `python` 命令不可用或被 Windows 文件关联拦截，可改用明确解释器路径，例如：
+
+```powershell
+$env:PYTHONUTF8='1'
+& 'D:\soft\Anaconda3\python.exe' '综合分析/analyze_850_papers.py'
+& 'D:\soft\Anaconda3\python.exe' '综合分析/generate_fulltext_per_paper_docs.py'
+```
+
 ## 6. 生成逐篇分析
 
 每篇新增论文都应至少形成一份中文解析。强相关论文建议生成完整精读。
@@ -159,6 +176,18 @@ pdfinfo "paper/xxx.pdf"
 4. 方向报告中类似“850篇论文”的标题和正文。
 5. README 中关于论文数量的描述。
 
+强制质检命令：
+
+```powershell
+(Get-ChildItem -LiteralPath 'paper' -File -Filter '*.pdf' | Measure-Object).Count
+(Import-Csv -LiteralPath '综合分析/论文分析总表.csv').Count
+(Import-Csv -LiteralPath '综合分析/正文解析质量统计.csv').Count
+(Get-Content -LiteralPath '综合分析/_data/papers_enriched.jsonl' -Encoding UTF8 | Measure-Object).Count
+rg -n "850篇|850 篇|科研汇报PPT_850|--end 850|Total = 850" '综合分析' -g '*.md' -g '*.py' -g '*.ps1' -g '*.js' --glob '!GPT5.5逐篇精读/**' --glob '!逐篇中文解析/**' --glob '!_data/**'
+```
+
+其中，论文编号 `[850]` 或质量报告中“编号 850 PDF 缺失”不属于总数口径错误；需要修复的是“850 篇”“PPT_850”“--end 850”等表示语料总量的旧文本。
+
 如果旧报告确实只基于旧数量，可以保留旧名，但要新增一段说明：
 
 ```text
@@ -208,6 +237,10 @@ pdfinfo "paper/xxx.pdf"
 - [ ] `文献.md` 总数、编号、PDF 链接、DOI 链接正确。
 - [ ] `文献引用.txt` 与 `文献.md` 编号一致。
 - [ ] `综合分析/论文分析总表.csv` 已新增条目。
+- [ ] `综合分析/_data/papers_enriched.json` 与 `papers_enriched.jsonl` 行数/条目数一致。
+- [ ] `综合分析/正文解析质量统计.csv` 覆盖新增论文。
+- [ ] `综合分析/06_总结报告.md`、`08_正文级逐篇解析质量报告.md` 和 `README.md` 的总数口径一致。
+- [ ] 新版 `科研汇报PPT_[总数]篇论文综合分析.pptx` 已生成，旧数量 PPT 已删除或明确归档。
 - [ ] 强相关论文已生成逐篇精读。
 - [ ] 方向分析文件已吸收新增论文结论。
 - [ ] 论文初稿已补相关工作、方法依据或实验基线。
@@ -227,3 +260,6 @@ pdfinfo "paper/xxx.pdf"
 7. 已更新 `可信开放集检测方向整体方案分析.md`，把“外部检索补充来源”改为“已补入本地文献”。
 8. 已更新论文初稿的相关工作和方法章节，使 evidence、OpenMax、Energy、Mahalanobis、Calibration 都有正式引用支撑。
 9. PDF 命名与引用路径已同步完成。
+10. 已将综合分析派生产物刷新到 858 篇口径：`论文分析总表.csv`、`papers_enriched.jsonl`、`正文解析质量统计.csv` 均为 858 条。
+11. 已重生成 `06_总结报告.md`、`08_正文级逐篇解析质量报告.md`、`README.md` 和 `科研汇报PPT_858篇论文综合分析.pptx`。
+12. 已将综合分析生成脚本中的固定 850 口径改为动态总数，后续补充论文后可重跑脚本自动同步。

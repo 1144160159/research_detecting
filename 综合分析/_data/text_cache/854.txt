@@ -1,0 +1,198 @@
+    A Simple Unified Framework for Detecting
+Out-of-Distribution Samples and Adversarial Attacks
+
+
+                       Kimin Lee1 , Kibok Lee2 , Honglak Lee3,2 , Jinwoo Shin1,4
+                  1
+                      Korea Advanced Institute of Science and Technology (KAIST)
+                                       2
+                                         University of Michigan
+                                            3
+                                              Google Brain
+                                                4
+                                                  AItrics
+
+
+
+                                              Abstract
+
+         Detecting test samples drawn sufficiently far away from the training distribution
+         statistically or adversarially is a fundamental requirement for deploying a good
+         classifier in many real-world machine learning applications. However, deep neu-
+         ral networks with the softmax classifier are known to produce highly overconfident
+         posterior distributions even for such abnormal samples. In this paper, we propose
+         a simple yet effective method for detecting any abnormal samples, which is appli-
+         cable to any pre-trained softmax neural classifier. We obtain the class conditional
+         Gaussian distributions with respect to (low- and upper-level) features of the deep
+         models under Gaussian discriminant analysis, which result in a confidence score
+         based on the Mahalanobis distance. While most prior methods have been evalu-
+         ated for detecting either out-of-distribution or adversarial samples, but not both,
+         the proposed method achieves the state-of-the-art performances for both cases in
+         our experiments. Moreover, we found that our proposed method is more robust
+         in harsh cases, e.g., when the training dataset has noisy labels or small number of
+         samples. Finally, we show that the proposed method enjoys broader usage by ap-
+         plying it to class-incremental learning: whenever out-of-distribution samples are
+         detected, our classification rule can incorporate new classes well without further
+         training deep models.
+
+
+1   Introduction
+
+Deep neural networks (DNNs) have achieved high accuracy on many classification tasks, e.g.,
+speech recognition [1], object detection [9] and image classification [12]. However, measuring the
+predictive uncertainty still remains a challenging problem [20, 21]. Obtaining well-calibrated pre-
+dictive uncertainty is indispensable since it could be useful in many machine learning applications
+(e.g., active learning [8] and novelty detection [18]) as well as when deploying DNNs in real-world
+systems [2], e.g., self-driving cars and secure authentication system [6, 30].
+The predictive uncertainty of DNNs is closely related to the problem of detecting abnormal sam-
+ples that are drawn far away from in-distribution (i.e., distribution of training samples) statistically
+or adversarially. For detecting out-of-distribution (OOD) samples, recent works have utilized the
+confidence from the posterior distribution [13, 21]. For example, Hendrycks & Gimpel [13] pro-
+posed the maximum value of posterior distribution from the classifier as a baseline method, and it
+is improved by processing the input and output of DNNs [21]. For detecting adversarial samples,
+confidence scores were proposed based on density estimators to characterize them in feature spaces
+of DNNs [7]. More recently, Ma et al. [22] proposed the local intrinsic dimensionality (LID) and
+empirically showed that the characteristics of test samples can be estimated effectively using the
+
+
+32nd Conference on Neural Information Processing Systems (NeurIPS 2018), Montréal, Canada.
+LID. However, most prior works on this line typically do not evaluate both OOD and adversarial
+samples. To best of our knowledge, no universal detector is known to work well on both tasks.
+Contribution. In this paper, we propose a simple yet effective method, which is applicable to
+any pre-trained softmax neural classifier (without re-training) for detecting abnormal test samples
+including OOD and adversarial ones. Our high-level idea is to measure the probability density of test
+sample on feature spaces of DNNs utilizing the concept of a “generative” (distance-based) classifier.
+Specifically, we assume that pre-trained features can be fitted well by a class-conditional Gaussian
+distribution since its posterior distribution can be shown to be equivalent to the softmax classifier
+under Gaussian discriminant analysis (see Section 2.1 for our justification). Under this assumption,
+we define the confidence score using the Mahalanobis distance with respect to the closest class-
+conditional distribution, where its parameters are chosen as empirical class means and tied empirical
+covariance of training samples. To the contrary of conventional beliefs, we found that using the
+corresponding generative classifier does not sacrifice the softmax classification accuracy. Perhaps
+surprisingly, its confidence score outperforms softmax-based ones very strongly across multiple
+other tasks: detecting OOD samples, detecting adversarial samples and class-incremental learning.
+We demonstrate the effectiveness of the proposed method using deep convolutional neural networks,
+such as DenseNet [14] and ResNet [12] trained for image classification tasks on various datasets
+including CIFAR [15], SVHN [28], ImageNet [5] and LSUN [32]. First, for the problem of detecting
+OOD samples, the proposed method outperforms the current state-of-the-art method, ODIN [21], in
+all tested cases. In particular, compared to ODIN, our method improves the true negative rate (TNR),
+i.e., the fraction of detected OOD (e.g., LSUN) samples, from 45.6% to 90.9% on ResNet when
+95% of in-distribution (e.g., CIFAR-100) samples are correctly detected. Next, for the problem
+of detecting adversarial samples, e.g., generated by four attack methods such as FGSM [10], BIM
+[16], DeepFool [26] and CW [3], our method outperforms the state-of-the-art detection measure,
+LID [22]. In particular, compared to LID, ours improves the TNR of CW from 82.9% to 95.8% on
+ResNet when 95% of normal CIFAR-10 samples are correctly detected.
+We also found that our proposed method is more robust in the choice of its hyperparameters as well
+as against extreme scenarios, e.g., when the training dataset has some noisy, random labels or a
+small number of data samples. In particular, Liang et al. [21] tune the hyperparameters of ODIN
+using validation sets of OOD samples, which is often impossible since the knowledge about OOD
+samples is not accessible a priori. We show that hyperparameters of the proposed method can be
+tuned only using in-distribution (training) samples, while maintaining its performance. We further
+show that the proposed method tuned on a simple attack, i.e., FGSM, can be used to detect other
+more complex attacks such as BIM, DeepFool and CW.
+Finally, we apply our method to class-incremental learning [29]: new classes are added progressively
+to a pre-trained classifier. Since the new class samples are drawn from an out-of-training distribution,
+it is natural to expect that one can classify them using our proposed metric without re-training the
+deep models. Motivated by this, we present a simple method which accommodates a new class at
+any time by simply computing the class mean of the new class and updating the tied covariance of all
+classes. We show that the proposed method outperforms other baseline methods, such as Euclidean
+distance-based classifier and re-trained softmax classifier. This evidences that our approach have a
+potential to apply to many other related machine learning tasks, such as active learning [8], ensemble
+learning [19] and few-shot learning [31].
+
+
+2     Mahalanobis distance-based score from generative classifier
+
+Given deep neural networks (DNNs) with the softmax classifier, we propose a simple yet effective
+method for detecting abnormal samples such as out-of-distribution (OOD) and adversarial ones. We
+first present the proposed confidence score based on an induced generative classifier under Gaussian
+discriminant analysis (GDA), and then introduce additional techniques to improve its performance.
+We also discuss how the confidence score is applicable to incremental learning.
+
+2.1   Why Mahalanobis distance-based score?
+
+Derivation of generative classifiers from softmax ones. Let x 2 X be an input and y 2
+Y = {1, · · · , C} be its label. Suppose that a pre-trained softmax neural classifier is given:
+
+
+                                                   2
+                                                                                                       TPR on in-distribution (CIFAR-10)
+                                                              100                                                                          1.0
+                                                                      Softmax            Mahalanobis
+
+
+
+
+                                      Test set accuracy (%)
+                                                                                                                                           0.8                                 1.00
+                                                               90                                                                                                              0.95
+                                                                                                                                           0.6                                 0.90
+                                                                                                                                                                               0.85
+                                                                                                                                           0.4
+                                                               80                                                                                    0      0.2        0.4
+
+                                                                                                                                           0.2                        Softmax
+                                                                                                                                                                      Euclidean
+                                                                                                                                                                      Mahalanobis
+                                                               70                                                                            0
+                                                                    CIFAR-10 CIFAR-100        SVHN                                            0                  0.5              1.0
+                                                                              Datasets                                                       FPR on out-of-distribution (TinyImageNet)
+
+    (a) Visualization by t-SNE                                 (b) Classification accuracy                                                           (c) ROC curve
+
+Figure 1: Experimental results under the ResNet with 34 layers. (a) Visualization of final features
+from ResNet trained on CIFAR-10 by t-SNE, where the colors of points indicate the classes of the
+corresponding objects. (b) Classification test set accuracy of ResNet on CIFAR-10, CIFAR-100 and
+SVHN datasets. (c) Receiver operating characteristic (ROC) curves: the x-axis and y-axis represent
+the false positive rate (FPR) and true positive rate (TPR), respectively.
+
+                    exp(wc> f (x)+bc )
+P (y = c|x) = P                             , where wc and bc are the weight and the bias of the soft-
+                    c0 exp(wc>0 f (x)+bc0 )
+max classifier for class c, and f (·) denotes the output of the penultimate layer of DNNs. Then,
+without any modification on the pre-trained softmax neural classifier, we obtain a generative clas-
+sifier assuming that a class-conditional distribution follows the multivariate Gaussian distribu-
+tion. Specifically, we define C class-conditional Gaussian distributions with a tied covariance ⌃:
+P (f (x)|y = c) = N (f (x)|µc , ⌃) , where µc is the mean of multivariate Gaussian distribution of
+class c 2 {1, ..., C}. Here, our approach is based on a simple theoretical connection between GDA
+and the softmax classifier: the posterior distribution defined by the generative classifier under GDA
+with tied covariance assumption is equivalent to the softmax classifier (see the supplementary mate-
+rial for more details). Therefore, the pre-trained features of the softmax neural classifier f (x) might
+also follow the class-conditional Gaussian distribution.
+To estimate the parameters of the generative classifier from the pre-trained softmax neural classifier,
+we compute the empirical class mean and covariance of training samples {(x1 , y1 ), . . . , (xN , yN )}:
+                    1 X                b = 1
+                                               X X                                    >
+              bc =
+              µ               f (xi ), ⌃                  (f (xi ) µ              bc ) ,
+                                                                    bc ) (f (xi ) µ                  (1)
+                    Nc i:y =c              N c i:y =c
+                             i                                                       i
+
+
+where Nc is the number of training samples with label c. This is equivalent to fitting the class-
+conditional Gaussian distributions with a tied covariance to training samples under the maximum
+likelihood estimator.
+Mahalanobis distance-based confidence score. Using the above induced class-conditional Gaus-
+sian distributions, we define the confidence score M (x) using the Mahalanobis distance between
+test sample x and the closest class-conditional Gaussian distribution, i.e.,
+                                                                                        > b 1
+                         M (x) = max                                 (f (x)         bc ) ⌃
+                                                                                    µ         (f (x)                                        bc ) .
+                                                                                                                                            µ                                       (2)
+                                              c
+
+Note that this metric corresponds to measuring the log of the probability densities of the test sample.
+Here, we remark that abnormal samples can be characterized better in the representation space of
+DNNs, rather than the “label-overfitted” output space of softmax-based posterior distribution used
+in the prior works [13, 21] for detecting them. It is because a confidence measure obtained from the
+posterior distribution can show high confidence even for abnormal samples that lie far away from
+the softmax decision boundary. Feinman et al. [7] and Ma et al. [22] process the DNN features for
+detecting adversarial samples in a sense, but do not utilize the Mahalanobis distance-based metric,
+i.e., they only utilize the Euclidean distance in their scores. In this paper, we show that Mahalanobis
+distance is significantly more effective than the Euclidean distance in various tasks.
+Experimental supports for generative classifiers. To evaluate our hypothesis that trained features
+of DNNs support the assumption of GDA, we measure the classification accuracy as follows:
+                                                                                    > b 1
+                             yb(x) = arg min (f (x)                             bc ) ⌃
+             
