@@ -296,6 +296,19 @@ function Invoke-GitCommitAndPush {
     Write-Log ("Committed and pushed {0} path(s)." -f $trackable.Count)
 }
 
+function Invoke-PushPending {
+    $aheadResult = Invoke-Git @('rev-list', '--count', 'origin/main..HEAD') -AllowFailure
+    if ($aheadResult.ExitCode -ne 0 -or -not $aheadResult.Output) {
+        return
+    }
+    $ahead = 0
+    if ([int]::TryParse(($aheadResult.Output | Select-Object -First 1), [ref]$ahead) -and $ahead -gt 0) {
+        Write-Log ("Pushing {0} pending local commit(s)." -f $ahead)
+        Invoke-Git @('push', 'origin', 'main') | Out-Null
+        Write-Log 'Pending local commits pushed.'
+    }
+}
+
 function Invoke-SyncOnce {
     param([string]$Reason = 'manual')
     Initialize-Paths
@@ -316,6 +329,18 @@ function Invoke-SyncOnce {
     Write-Log ("Sync scan finished. Eligible={0}; Copied={1}." -f $scanned, $changed.Count)
     if ($changed.Count -gt 0) {
         Invoke-GitCommitAndPush @($changed)
+    } else {
+        Invoke-PushPending
+    }
+}
+
+function Invoke-SyncSafely {
+    param([string]$Reason)
+    try {
+        Invoke-SyncOnce $Reason
+    }
+    catch {
+        Write-Log ("ERROR during sync ({0}): {1}" -f $Reason, $_.Exception.Message)
     }
 }
 
@@ -393,7 +418,7 @@ function Start-WatchLoop {
     Initialize-Paths
     Set-Content -LiteralPath $PidPath -Value $PID -Encoding ASCII
     Write-Log "Watcher started. PID=$PID"
-    Invoke-SyncOnce 'startup'
+    Invoke-SyncSafely 'startup'
 
     $global:ResearchDetectingPendingSync = $false
     $global:ResearchDetectingLastEventUtc = [DateTime]::UtcNow
@@ -422,11 +447,11 @@ function Start-WatchLoop {
             $now = [DateTime]::UtcNow
             if ($global:ResearchDetectingPendingSync -and (($now - $global:ResearchDetectingLastEventUtc).TotalSeconds -ge $DebounceSeconds)) {
                 $global:ResearchDetectingPendingSync = $false
-                Invoke-SyncOnce 'filesystem event'
+                Invoke-SyncSafely 'filesystem event'
                 $lastFullScanUtc = [DateTime]::UtcNow
             }
             if (($now - $lastFullScanUtc).TotalSeconds -ge $FullScanSeconds) {
-                Invoke-SyncOnce 'periodic full scan'
+                Invoke-SyncSafely 'periodic full scan'
                 $lastFullScanUtc = [DateTime]::UtcNow
             }
         }
