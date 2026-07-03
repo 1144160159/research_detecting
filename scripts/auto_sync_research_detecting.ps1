@@ -418,30 +418,32 @@ function Start-WatchLoop {
     Initialize-Paths
     Set-Content -LiteralPath $PidPath -Value $PID -Encoding ASCII
     Write-Log "Watcher started. PID=$PID"
-    Invoke-SyncSafely 'startup'
-
-    $global:ResearchDetectingPendingSync = $false
-    $global:ResearchDetectingLastEventUtc = [DateTime]::UtcNow
-    $lastFullScanUtc = [DateTime]::UtcNow
-
-    $watcher = New-Object System.IO.FileSystemWatcher
-    $watcher.Path = $SourceRoot
-    $watcher.IncludeSubdirectories = $true
-    $watcher.NotifyFilter = [IO.NotifyFilters]'FileName, DirectoryName, LastWrite, Size'
-    $watcher.EnableRaisingEvents = $true
-
-    $action = {
-        $global:ResearchDetectingPendingSync = $true
-        $global:ResearchDetectingLastEventUtc = [DateTime]::UtcNow
-    }
-
-    $subscriptions = @(
-        Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action,
-        Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action,
-        Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action
-    )
-
+    $watcher = $null
+    $subscriptions = @()
     try {
+        Invoke-SyncSafely 'startup'
+
+        $global:ResearchDetectingPendingSync = $false
+        $global:ResearchDetectingLastEventUtc = [DateTime]::UtcNow
+        $lastFullScanUtc = [DateTime]::UtcNow
+
+        $watcher = New-Object System.IO.FileSystemWatcher
+        $watcher.Path = $SourceRoot
+        $watcher.IncludeSubdirectories = $true
+        $watcher.NotifyFilter = [IO.NotifyFilters]'FileName, DirectoryName, LastWrite, Size'
+        $watcher.EnableRaisingEvents = $true
+
+        $action = {
+            $global:ResearchDetectingPendingSync = $true
+            $global:ResearchDetectingLastEventUtc = [DateTime]::UtcNow
+        }
+
+        $subscriptions = @()
+        $subscriptions += Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action
+        $subscriptions += Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action
+        $subscriptions += Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action
+
+        Write-Log 'File watcher armed.'
         while ($true) {
             Start-Sleep -Seconds 2
             $now = [DateTime]::UtcNow
@@ -456,11 +458,17 @@ function Start-WatchLoop {
             }
         }
     }
+    catch {
+        Write-Log ("FATAL watcher error: {0}" -f $_.Exception.Message)
+        throw
+    }
     finally {
         foreach ($subscription in $subscriptions) {
             Unregister-Event -SubscriptionId $subscription.Id -ErrorAction SilentlyContinue
         }
-        $watcher.Dispose()
+        if ($watcher) {
+            $watcher.Dispose()
+        }
         Remove-Item -LiteralPath $PidPath -Force -ErrorAction SilentlyContinue
         Write-Log 'Watcher stopped.'
     }
