@@ -8,6 +8,15 @@ $OutDir = if ($OutDirItem) { $OutDirItem.FullName } else { Join-Path $AnalysisDi
 $WorkDir = Join-Path $AnalysisDir "_data\codex_cli_deep_read"
 $PidFile = Join-Path $WorkDir "full_run.pid"
 $LogFile = Join-Path $WorkDir "run_log.jsonl"
+$PapersJson = Join-Path $AnalysisDir "_data\papers_enriched.json"
+
+$Total = 0
+if (Test-Path -LiteralPath $PapersJson) {
+    $Total = @((Get-Content -LiteralPath $PapersJson -Encoding UTF8 -Raw | ConvertFrom-Json)).Count
+}
+if ($Total -eq 0) {
+    $Total = @(Get-ChildItem -LiteralPath (Join-Path $Root "paper") -File -Filter "*.pdf").Count
+}
 
 $Completed = 0
 if (Test-Path -LiteralPath $OutDir) {
@@ -25,8 +34,8 @@ if (Test-Path -LiteralPath $PidFile) {
 
 [PSCustomObject]@{
     Completed = $Completed
-    Total = 850
-    Remaining = 850 - $Completed
+    Total = $Total
+    Remaining = [Math]::Max(0, $Total - $Completed)
     Running = $Running
     Pid = $PidValue
     OutputDir = $OutDir

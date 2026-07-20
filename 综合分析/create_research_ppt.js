@@ -6,9 +6,10 @@ const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "综合分析");
 const DATA = path.join(OUT, "_data", "papers_enriched.json");
 const CHARTS = path.join(OUT, "图表");
-const OUTPUT = path.join(OUT, "科研汇报PPT_850篇论文综合分析.pptx");
 
 const papers = JSON.parse(fs.readFileSync(DATA, "utf8"));
+const PAPER_COUNT = papers.length;
+const OUTPUT = path.join(OUT, `科研汇报PPT_${PAPER_COUNT}篇论文综合分析.pptx`);
 
 function countBy(key) {
   const c = {};
@@ -42,8 +43,8 @@ const pptx = new pptxgen();
 pptx.layout = "LAYOUT_WIDE";
 pptx.author = "Codex";
 pptx.company = "Quancheng Laboratory";
-pptx.subject = "850篇论文综合分析";
-pptx.title = "850篇异常检测与网络流量安全论文综合分析";
+pptx.subject = `${PAPER_COUNT}篇论文综合分析`;
+pptx.title = `${PAPER_COUNT}篇异常检测与网络流量安全论文综合分析`;
 pptx.lang = "zh-CN";
 pptx.theme = {
   headFontFace: "Microsoft YaHei",
@@ -79,7 +80,7 @@ function addBg(slide, dark = false) {
 }
 
 function addFooter(slide, idx) {
-  slide.addText("850篇论文综合分析 | AI驱动网络流量检测分析系统", {
+  slide.addText(`${PAPER_COUNT}篇论文综合分析 | AI驱动网络流量检测分析系统`, {
     x: 0.45, y: 7.12, w: 8.7, h: 0.18,
     fontFace: "Microsoft YaHei", fontSize: 8.5, color: C.gray, margin: 0,
   });
@@ -188,7 +189,7 @@ s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: C.ink }
 s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.22, h: H, fill: { color: C.lime }, line: { color: C.lime } });
 s.addShape(pptx.ShapeType.arc, { x: 8.5, y: -0.2, w: 4.8, h: 4.8, line: { color: C.teal, transparency: 10, width: 2 }, adjustPoint: 0.25 });
 s.addShape(pptx.ShapeType.arc, { x: 9.35, y: 0.72, w: 3.2, h: 3.2, line: { color: C.lime, transparency: 20, width: 2 }, adjustPoint: 0.3 });
-s.addText("850篇异常检测与网络流量安全论文", {
+s.addText(`${PAPER_COUNT}篇异常检测与网络流量安全论文`, {
   x: 0.8, y: 1.2, w: 7.4, h: 0.46,
   fontFace: "Microsoft YaHei", fontSize: 20, color: C.lime, bold: true, margin: 0,
 });
@@ -200,7 +201,7 @@ s.addText("大类归类 | 创新点 | 相关性 | 科学问题 | 逐篇中文解
   x: 0.82, y: 3.08, w: 8.6, h: 0.38,
   fontFace: "Microsoft YaHei", fontSize: 15, color: "DDEEEA", margin: 0,
 });
-metric(s, 0.84, 4.45, "850", "论文总数", C.lime);
+metric(s, 0.84, 4.45, String(PAPER_COUNT), "论文总数", C.lime);
 metric(s, 2.72, 4.45, strongPapers, "强相关论文", "FFFFFF");
 metric(s, 4.6, 4.45, downloadedCode, "已下载代码", C.lime);
 s.addText("面向 AI驱动网络流量检测分析系统 的文献地图", {
@@ -239,7 +240,7 @@ s = pptx.addSlide();
 addBg(s);
 addTitle(s, "总体画像：强相关论文接近半数，代码资源具备复现基础", "EXECUTIVE SNAPSHOT");
 const metricData = [
-  ["850", "论文总量", C.teal],
+  [String(PAPER_COUNT), "论文总量", C.teal],
   [strongPapers, "强相关", C.coral],
   [midPapers, "中相关", C.tealDark],
   [weakPapers, "弱相关", C.gray],
@@ -477,7 +478,7 @@ addBg(s, true);
 s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: C.ink }, line: { color: C.ink } });
 s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.22, h: H, fill: { color: C.lime }, line: { color: C.lime } });
 s.addText("结论", { x: 0.82, y: 0.95, w: 2.0, h: 0.38, fontFace: "Microsoft YaHei", fontSize: 18, color: C.lime, bold: true, margin: 0 });
-s.addText("850篇论文已经转化为可检索、可统计、可汇报的研究地图", {
+s.addText(`${PAPER_COUNT}篇论文已经转化为可检索、可统计、可汇报的研究地图`, {
   x: 0.82, y: 1.55, w: 9.3, h: 0.8, fontFace: "Microsoft YaHei", fontSize: 31, color: "FFFFFF", bold: true, margin: 0, fit: "shrink",
 });
 card(s, 0.88, 3.1, 11.5, 2.1, "FFFFFF");

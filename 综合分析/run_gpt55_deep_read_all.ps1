@@ -6,4 +6,12 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 $ScriptPath = Join-Path $PSScriptRoot "codex_cli_deep_read.py"
-python $ScriptPath --start 1 --end 850 --timeout 1800
+$PythonExe = $env:PYTHON_EXE
+if (-not $PythonExe -and (Test-Path -LiteralPath "D:\soft\Anaconda3\python.exe")) {
+    $PythonExe = "D:\soft\Anaconda3\python.exe"
+}
+if (-not $PythonExe) {
+    $PythonExe = (Get-Command python -ErrorAction Stop).Source
+}
+
+& $PythonExe $ScriptPath --start 1 --timeout 1800

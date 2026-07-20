@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generate a comprehensive analysis package for the 850-paper corpus.
+Generate a comprehensive analysis package for the paper corpus.
 
 Inputs:
 - 文献.md
@@ -907,6 +907,7 @@ def write_per_paper_report(papers: list[dict]) -> None:
 
 
 def write_summary_report(papers: list[dict]) -> None:
+    paper_count = len(papers)
     category_counter = count_primary(papers, "category")
     innovation_counter = count_multilabel(papers, "innovations")
     science_counter = count_multilabel(papers, "science_problems")
@@ -961,7 +962,7 @@ def write_summary_report(papers: list[dict]) -> None:
         "- `05_逐篇中文解析.md`",
         "- `论文分析总表.csv`",
         "- `图表/`",
-        "- `科研汇报PPT_850篇论文综合分析.pptx`",
+        f"- `科研汇报PPT_{paper_count}篇论文综合分析.pptx`",
     ]
     (OUT / "06_总结报告.md").write_text("\n".join(lines), encoding="utf-8")
 
@@ -1046,11 +1047,21 @@ def write_charts(papers: list[dict]) -> None:
 
 
 def write_readme(papers: list[dict]) -> None:
+    paper_count = len(papers)
     readme = f"""# 综合分析输出说明
 
 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
 
-本文件夹汇总 `paper/` 下 850 篇论文的自动化综合分析结果。
+本文件夹汇总 `paper/` 下 {paper_count} 篇论文的自动化综合分析结果。
+
+## GPT5.5 精读版
+
+按用户要求，逐篇深度解析已切换为 Codex CLI 驱动的 GPT5.5 精读流程：
+
+- `codex_cli_deep_read.py`：调用 `codex exec` 逐篇读取论文正文包和代码包，生成理解型中文解析。
+- `GPT5.5逐篇精读/`：GPT5.5 精读版单篇 Markdown 输出目录。
+- `09_GPT5.5逐篇精读索引.md`：GPT5.5 精读版索引与完成状态。
+- `_data/codex_cli_deep_read/`：每篇论文的 prompt、原始输出和运行日志。
 
 ## 文件清单
 
@@ -1059,21 +1070,30 @@ def write_readme(papers: list[dict]) -> None:
 - `03_论文相关性分析.md`
 - `04_科学问题归类分析.md`
 - `05_逐篇中文解析.md`
+- `逐篇中文解析/`（{paper_count} 篇独立详细解析文档）
+- `08_正文级逐篇解析质量报告.md`
+- `09_GPT5.5逐篇精读索引.md`
+- `GPT5.5逐篇精读/`
 - `06_总结报告.md`
+- `07_代码对照总表.md`
 - `论文分析总表.csv`
+- `代码对照总表.csv`
 - `相关性矩阵_大类x创新点.csv`
+- `科研汇报PPT_{paper_count}篇论文综合分析.pptx`
 - `图表/`
 - `_data/papers_enriched.json`
 - `_data/papers_enriched.jsonl`
+- `_data/code_repository_summaries.json`
 
 ## 方法说明
 
 1. 从 `文献.md` 抽取编号、题名、年份、DOI 和 PDF 路径。
 2. 用 `pdftotext` 抽取 PDF 前 3 页，识别摘要和关键词。
 3. 基于题名、摘要、关键词和已有代码索引进行规则化多标签分类。
-4. 分类结果用于生成统计、逐篇中文解析和科研汇报 PPT。
+4. 分类结果用于生成统计、逐篇中文解析索引、独立解析文档和科研汇报 PPT。
+5. 对已下载代码仓库扫描 README、语言、目录结构、训练/评估/模型/数据处理入口，并写入每篇论文的“代码对照分析”章节。
 
-注意：逐篇解析用于批量初筛，正式论文综述或引用前仍建议核对原文。
+注意：`逐篇中文解析/` 为规则增强版，适合批量初筛；`GPT5.5逐篇精读/` 为 Codex CLI 逐篇理解生成，适合正式综述、科研汇报和复现实验准备。
 """
     (OUT / "README.md").write_text(readme, encoding="utf-8")
 
@@ -1081,8 +1101,8 @@ def write_readme(papers: list[dict]) -> None:
 def main() -> None:
     ensure_dirs()
     entries = parse_bibliography()
-    if len(entries) != 850:
-        print(f"warning: parsed {len(entries)} entries, expected 850", file=sys.stderr)
+    if not entries:
+        print("warning: parsed 0 entries from bibliography", file=sys.stderr)
     start = time.time()
     text_results: dict[int, dict] = {}
     max_workers = min(6, (os.cpu_count() or 4))

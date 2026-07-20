@@ -18,6 +18,7 @@
 | 查看 Evidence-OpenEMTD 初稿 | [论文初稿](方向分析/多模态开放集加密恶意流量检测/论文初稿_MM-OpenEMTD_多模态开放集加密恶意流量检测.md) |
 | 查看可信开放集检测补充论文并入记录 | [可信开放集检测补充论文并入记录](方向分析/多模态开放集加密恶意流量检测/可信开放集检测补充论文并入记录.md) |
 | 查看 DA-FDIDS 主线 | [方向分析/AI驱动的网络流量检测分析系统/README.md](方向分析/AI驱动的网络流量检测分析系统/README.md) |
+| 查看 Zotero-Codex 科研流水线 | [Zotero-Codex异常检测科研流水线](Zotero-Codex异常检测科研流水线.md) |
 | 查看 PDF 论文库说明 | [paper/README.md](paper/README.md) |
 | 查看开源代码库说明 | [source/README.md](source/README.md) |
 

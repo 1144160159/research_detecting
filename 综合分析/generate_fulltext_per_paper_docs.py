@@ -802,6 +802,7 @@ def make_fulltext_doc(paper: dict, filename: str, quality: dict) -> str:
 
 def make_index(papers: list[dict], file_map: dict[int, str], quality_rows: list[dict]) -> str:
     index = base.make_index(papers, file_map)
+    paper_count = len(papers)
     quality = {
         "with_method": sum(1 for r in quality_rows if r.get("has_method_section")),
         "with_experiment": sum(1 for r in quality_rows if r.get("has_experiment_section")),
@@ -809,11 +810,11 @@ def make_index(papers: list[dict], file_map: dict[int, str], quality_rows: list[
         "avg_chars": int(sum(int(r.get("chars") or 0) for r in quality_rows) / max(1, len(quality_rows))),
     }
     replacement = (
-        "本文件现在作为 850 篇论文正文级详细解析的总索引。每篇论文的独立文档已基于 PDF 全文文本、章节标题、"
+        f"本文件现在作为 {paper_count} 篇论文正文级详细解析的总索引。每篇论文的独立文档已基于 PDF 全文文本、章节标题、"
         "引言/方法/实验/结论等正文线索重新生成，并在有开源代码时继续保留代码对照分析。"
     )
     index = re.sub(
-        r"本文件现在作为 850 篇论文详细解析的总索引。.*?`逐篇中文解析/` 文件夹中。",
+        r"本文件现在作为 \d+ 篇论文详细解析的总索引。.*?`逐篇中文解析/` 文件夹中。",
         replacement,
         index,
         count=1,
@@ -834,6 +835,7 @@ def make_index(papers: list[dict], file_map: dict[int, str], quality_rows: list[
 
 
 def write_quality_reports(quality_rows: list[dict], extraction_results: list[dict]) -> None:
+    paper_count = len(quality_rows)
     fieldnames = [
         "num", "title", "chars", "body_chars", "section_count", "sections",
         "has_method_section", "has_experiment_section", "has_conclusion_section",
@@ -857,7 +859,7 @@ def write_quality_reports(quality_rows: list[dict], extraction_results: list[dic
         "",
         f"生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}",
         "",
-        "本报告说明 `逐篇中文解析/` 下 850 个独立文档的正文级解析来源和自动抽取质量。解析以 PDF 全文为主，识别引言、方法、实验、讨论和结论等章节，再提炼具体问题、创新点、科学问题、科学方法、实验步骤、总结和待解决问题。",
+        f"本报告说明 `逐篇中文解析/` 下 {paper_count} 个独立文档的正文级解析来源和自动抽取质量。解析以 PDF 全文为主，识别引言、方法、实验、讨论和结论等章节，再提炼具体问题、创新点、科学问题、科学方法、实验步骤、总结和待解决问题。",
         "",
         "## 抽取概况",
         "",
