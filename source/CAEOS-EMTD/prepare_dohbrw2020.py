@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +20,9 @@ IDENTIFIER_COLUMNS = {
     "Label",
 }
 
+ISO_CAPTURE_TIME = re.compile(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)")
+COMPACT_CAPTURE_TIME = re.compile(r"_(\d{14})(?:\.|_)")
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -29,6 +34,17 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--captures-per-class", type=int, default=30)
     parser.add_argument("--rows-per-capture", type=int, default=200)
     parser.add_argument("--target-rows-per-class", type=int, default=0)
+    parser.add_argument(
+        "--selection",
+        choices=("random", "all"),
+        default="random",
+        help="Select a random bounded capture set or retain every discovered capture.",
+    )
+    parser.add_argument(
+        "--require-capture-time",
+        action="store_true",
+        help="Exclude captures whose timestamp cannot be parsed from the filename.",
+    )
     parser.add_argument("--seed", type=int, default=7)
     return parser.parse_args()
 
@@ -53,6 +69,17 @@ def discover_csvs(directories: list[Path]) -> list[Path]:
     )
 
 
+def capture_time(path: Path) -> str | None:
+    iso_match = ISO_CAPTURE_TIME.search(path.name)
+    if iso_match:
+        return datetime.fromisoformat(iso_match.group(1)).isoformat(timespec="microseconds")
+    compact_match = COMPACT_CAPTURE_TIME.search(path.name)
+    if compact_match:
+        value = datetime.strptime(compact_match.group(1), "%Y%m%d%H%M%S")
+        return value.isoformat(timespec="seconds")
+    return None
+
+
 def sample_frame(path: Path, rows: int, rng: np.random.RandomState) -> pd.DataFrame:
     frame = pd.read_csv(path, low_memory=False)
     if len(frame) > rows:
@@ -74,12 +101,22 @@ def main() -> None:
     feature_columns: list[str] | None = None
     for label, directories in class_directories(root).items():
         candidates = discover_csvs(directories)
-        if not args.target_rows_per_class and len(candidates) < args.captures_per_class:
+        if args.require_capture_time:
+            candidates = [path for path in candidates if capture_time(path) is not None]
+        if not candidates:
+            raise ValueError("%s has no eligible captures" % label)
+        if (
+            args.selection == "random"
+            and not args.target_rows_per_class
+            and len(candidates) < args.captures_per_class
+        ):
             raise ValueError(
                 "%s has %d captures, requested %d"
                 % (label, len(candidates), args.captures_per_class)
             )
-        if args.target_rows_per_class:
+        if args.selection == "all":
+            selected = candidates
+        elif args.target_rows_per_class:
             selected = [candidates[index] for index in rng.permutation(len(candidates))]
         else:
             indices = rng.choice(
@@ -105,6 +142,7 @@ def main() -> None:
                 raise ValueError("feature columns differ in %s" % path)
             frame["Label"] = label
             frame["CaptureId"] = "%s/%s" % (label, path.name)
+            frame["CaptureTime"] = capture_time(path)
             parts.append(frame)
             class_rows += len(frame)
             selected_files[label].append(str(path.relative_to(root)))
@@ -124,6 +162,8 @@ def main() -> None:
         "captures_per_class": args.captures_per_class,
         "rows_per_capture": args.rows_per_capture,
         "target_rows_per_class": args.target_rows_per_class,
+        "selection": args.selection,
+        "require_capture_time": bool(args.require_capture_time),
         "rows": int(len(output_frame)),
         "features": feature_columns,
         "class_rows": {

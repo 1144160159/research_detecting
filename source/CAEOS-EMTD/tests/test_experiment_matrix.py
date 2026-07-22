@@ -413,6 +413,41 @@ class NestedGateMatrixTest(unittest.TestCase):
             "0.5",
         )
 
+    def test_lcb_tail_aware_matrix_forwards_conservative_evidence_gates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.arguments(directory)
+            args.suite = "cic_ton_iot"
+            args.scenarios = "mitm"
+            args.seeds = "173"
+            args.risk_selection = (
+                "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend"
+            )
+            args.tail_aware_confidence_z = 1.645
+            args.tail_aware_min_metric_lcb_gain = 0.0
+            args.tail_aware_min_aupr_lcb_gain = 0.0
+            args.tail_aware_min_aupr_fold_gain = -0.05
+            experiment = build_experiments(args)[0]
+            command = command_for(experiment, args)
+        self.assertEqual(
+            command[command.index("--risk-selection") + 1],
+            "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+        )
+        self.assertEqual(
+            command[command.index("--tail-aware-confidence-z") + 1], "1.645"
+        )
+        self.assertEqual(
+            command[command.index("--tail-aware-min-metric-lcb-gain") + 1],
+            "0.0",
+        )
+        self.assertEqual(
+            command[command.index("--tail-aware-min-aupr-lcb-gain") + 1],
+            "0.0",
+        )
+        self.assertEqual(
+            command[command.index("--tail-aware-min-aupr-fold-gain") + 1],
+            "-0.05",
+        )
+
     def test_hikari_keeps_spaced_unknown_class_as_one_argument(self):
         with tempfile.TemporaryDirectory() as directory:
             args = self.arguments(directory)

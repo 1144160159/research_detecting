@@ -232,19 +232,39 @@ def fit_tail_aware_weights(
     return weights / weights.sum(), audit
 
 
-def _gain_summary(rows: Sequence[dict[str, float]]) -> dict[str, object]:
+def _gain_summary(
+    rows: Sequence[dict[str, float]], *, confidence_z: float = 0.0
+) -> dict[str, object]:
+    if float(confidence_z) < 0.0:
+        raise ValueError("confidence z must be non-negative")
     by_metric = {
         metric: np.asarray([row[metric] for row in rows], dtype=np.float64)
         for metric in ORIENTED_METRICS
     }
     means = {metric: float(values.mean()) for metric, values in by_metric.items()}
     minima = {metric: float(values.min()) for metric, values in by_metric.items()}
+    standard_errors = {
+        metric: float(values.std(ddof=1) / np.sqrt(len(values)))
+        if len(values) > 1
+        else 0.0
+        for metric, values in by_metric.items()
+    }
+    lower_confidence_bounds = {
+        metric: float(means[metric] - float(confidence_z) * standard_errors[metric])
+        for metric in ORIENTED_METRICS
+    }
     return {
         "metric_mean_oriented_gains": means,
         "metric_minimum_oriented_gains": minima,
+        "metric_gain_standard_errors": standard_errors,
+        "metric_gain_lower_confidence_bounds": lower_confidence_bounds,
+        "confidence_z": float(confidence_z),
         "minimum_metric_mean_gain": float(min(means.values())),
         "mean_metric_mean_gain": float(np.mean(list(means.values()))),
         "minimum_fold_metric_gain": float(min(minima.values())),
+        "minimum_metric_lower_confidence_bound": float(
+            min(lower_confidence_bounds.values())
+        ),
     }
 
 
@@ -261,6 +281,10 @@ def cross_fitted_tail_aware_shrinkage(
     interpolation: float = 0.5,
     max_per_task: int = 512,
     powers: Sequence[int] = DEFAULT_POWERS,
+    confidence_z: float = 0.0,
+    minimum_metric_lcb_gain: float | None = None,
+    minimum_aupr_lcb_gain: float | None = None,
+    minimum_aupr_fold_gain: float | None = None,
 ) -> dict[str, object]:
     task_values = tuple(tasks)
     if len(task_values) < 3:
@@ -282,6 +306,8 @@ def cross_fitted_tail_aware_shrinkage(
         raise ValueError("tail-aware shrinkage alphas must lie in (0, 1]")
     if not gamma_values or gamma_values[0] < 0.0:
         raise ValueError("tail-aware gamma values must be non-negative")
+    if float(confidence_z) < 0.0:
+        raise ValueError("confidence z must be non-negative")
 
     gains: dict[tuple[float, float], list[dict[str, float]]] = {
         (gamma, alpha): [] for gamma in gamma_values for alpha in alpha_values
@@ -336,11 +362,18 @@ def cross_fitted_tail_aware_shrinkage(
         )
 
     summaries = {
-        key: _gain_summary(rows) for key, rows in gains.items()
+        key: _gain_summary(rows, confidence_z=confidence_z)
+        for key, rows in gains.items()
     }
     selected_gamma, selected_alpha = max(
         summaries,
         key=lambda key: (
+            summaries[key]["minimum_metric_lower_confidence_bound"]
+            if float(confidence_z) > 0.0
+            else summaries[key]["minimum_metric_mean_gain"],
+            summaries[key]["metric_gain_lower_confidence_bounds"]["unknown_aupr"]
+            if float(confidence_z) > 0.0
+            else summaries[key]["metric_mean_oriented_gains"]["unknown_aupr"],
             summaries[key]["minimum_metric_mean_gain"],
             summaries[key]["mean_metric_mean_gain"],
             -key[0],
@@ -348,9 +381,30 @@ def cross_fitted_tail_aware_shrinkage(
         ),
     )
     selected_summary = summaries[(selected_gamma, selected_alpha)]
-    passes = bool(
-        selected_summary["minimum_metric_mean_gain"] > float(minimum_mean_gain)
-    )
+    gate_checks = {
+        "all_metric_means_above_minimum": bool(
+            selected_summary["minimum_metric_mean_gain"]
+            > float(minimum_mean_gain)
+        ),
+        "all_metric_lcbs_above_minimum": bool(
+            minimum_metric_lcb_gain is None
+            or selected_summary["minimum_metric_lower_confidence_bound"]
+            >= float(minimum_metric_lcb_gain)
+        ),
+        "aupr_lcb_above_minimum": bool(
+            minimum_aupr_lcb_gain is None
+            or selected_summary["metric_gain_lower_confidence_bounds"][
+                "unknown_aupr"
+            ]
+            >= float(minimum_aupr_lcb_gain)
+        ),
+        "aupr_worst_fold_above_minimum": bool(
+            minimum_aupr_fold_gain is None
+            or selected_summary["metric_minimum_oriented_gains"]["unknown_aupr"]
+            >= float(minimum_aupr_fold_gain)
+        ),
+    }
+    passes = bool(all(gate_checks.values()))
     final_weights, final_training_audit = fit_tail_aware_weights(
         task_values,
         feature_names,
@@ -364,15 +418,33 @@ def cross_fitted_tail_aware_shrinkage(
     )
     basis_names = final_training_audit["basis_names"]
     return {
-        "schema_version": "tail_aware_pairwise_ranking_head_v1",
+        "schema_version": (
+            "tail_aware_lcb_pairwise_ranking_head_v1"
+            if float(confidence_z) > 0.0
+            else "tail_aware_pairwise_ranking_head_v1"
+        ),
         "passes": passes,
-        "fallback_reason": None if passes else "joint four-metric mean-gain gate failed",
+        "fallback_reason": (
+            None
+            if passes
+            else "known-only conservative tail evidence gate failed"
+        ),
         "selection_rule": (
             "leave-one-known-attack cross-fitted tail-weighted monotone pairwise "
             "head; jointly select tail gamma and reference shrinkage by worst "
-            "oriented mean gain over AUROC, AUPR, FPR95 and OSCR"
+            + (
+                "one-sided lower confidence bound"
+                if float(confidence_z) > 0.0
+                else "oriented mean gain"
+            )
+            + " over AUROC, AUPR, FPR95 and OSCR"
         ),
         "minimum_mean_gain": float(minimum_mean_gain),
+        "confidence_z": float(confidence_z),
+        "minimum_metric_lcb_gain": minimum_metric_lcb_gain,
+        "minimum_aupr_lcb_gain": minimum_aupr_lcb_gain,
+        "minimum_aupr_fold_gain": minimum_aupr_fold_gain,
+        "gate_checks": gate_checks,
         "selected_alpha": float(selected_alpha if passes else 0.0),
         "development_selected_alpha": float(selected_alpha),
         "selected_tail_gamma": float(selected_gamma),
@@ -414,7 +486,10 @@ def apply_tail_aware_head(
 def selected_tail_aware_fold_metrics(
     result: dict[str, object], fold: dict[str, object]
 ) -> dict[str, float]:
-    if result.get("schema_version") != "tail_aware_pairwise_ranking_head_v1":
+    if result.get("schema_version") not in {
+        "tail_aware_pairwise_ranking_head_v1",
+        "tail_aware_lcb_pairwise_ranking_head_v1",
+    }:
         raise ValueError("unexpected tail-aware ranking result schema")
     gamma = str(float(result["selected_tail_gamma"]))
     alpha = str(float(result["development_selected_alpha"]))

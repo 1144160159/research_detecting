@@ -100,6 +100,53 @@ class TailAwareRankingTests(unittest.TestCase):
         self.assertFalse(result["passes"])
         self.assertEqual(result["final_weights"], [])
 
+    def test_lcb_policy_fails_closed_when_pseudo_fold_evidence_is_unstable(self) -> None:
+        tasks = [task("a", 0.00), task("b", 0.02), task("c", 0.04)]
+        result = cross_fitted_tail_aware_shrinkage(
+            tasks,
+            FEATURE_NAMES,
+            alphas=(0.5, 1.0),
+            tail_gammas=(0.0, 2.0),
+            seed=7,
+            confidence_z=1.645,
+            minimum_metric_lcb_gain=1.0,
+            minimum_aupr_lcb_gain=1.0,
+            minimum_aupr_fold_gain=-0.05,
+        )
+        self.assertEqual(
+            result["schema_version"],
+            "tail_aware_lcb_pairwise_ranking_head_v1",
+        )
+        self.assertFalse(result["passes"])
+        self.assertEqual(result["selected_alpha"], 0.0)
+        self.assertFalse(result["gate_checks"]["all_metric_lcbs_above_minimum"])
+        self.assertFalse(result["unknown_or_test_labels_used"])
+
+    def test_lcb_policy_is_deterministic_and_records_confidence_bounds(self) -> None:
+        tasks = [task("a", 0.00), task("b", 0.02), task("c", 0.04)]
+        kwargs = dict(
+            alphas=(0.5, 1.0),
+            tail_gammas=(0.0, 2.0),
+            seed=11,
+            confidence_z=1.645,
+            minimum_metric_lcb_gain=-1.0,
+            minimum_aupr_lcb_gain=-1.0,
+            minimum_aupr_fold_gain=-1.0,
+        )
+        first = cross_fitted_tail_aware_shrinkage(tasks, FEATURE_NAMES, **kwargs)
+        second = cross_fitted_tail_aware_shrinkage(tasks, FEATURE_NAMES, **kwargs)
+        self.assertTrue(first["passes"])
+        self.assertEqual(first["selected_alpha"], second["selected_alpha"])
+        self.assertEqual(first["selected_tail_gamma"], second["selected_tail_gamma"])
+        self.assertEqual(
+            set(first["selected_summary"]["metric_gain_lower_confidence_bounds"]),
+            {"unknown_auroc", "unknown_aupr", "unknown_fpr95", "oscr"},
+        )
+        self.assertEqual(
+            set(selected_tail_aware_fold_metrics(first, first["folds"][0])),
+            {"unknown_auroc", "unknown_aupr", "unknown_fpr95", "oscr"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

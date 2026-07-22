@@ -71,6 +71,178 @@ class ViewEncoder(nn.Module):
         return self.network(x)
 
 
+class TlsHandshakeEncoder(nn.Module):
+    """Gated encoder for the mixed continuous/discrete TLS handshake vector."""
+
+    def __init__(self, input_dim: int, hidden_dim: int, embedding_dim: int, dropout: float):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, 2 * hidden_dim),
+            nn.GLU(dim=-1),
+            nn.LayerNorm(hidden_dim),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.GELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.network(x)
+
+
+class PacketSequenceTCNEncoder(nn.Module):
+    """Temporal convolution encoder for an ordered packet-side-channel vector."""
+
+    def __init__(self, input_dim: int, hidden_dim: int, embedding_dim: int, dropout: float):
+        super().__init__()
+        if input_dim < 3:
+            raise ValueError("packet sequence encoder requires at least three positions")
+        channels = max(8, min(int(hidden_dim), 64))
+        self.temporal = nn.Sequential(
+            nn.Conv1d(1, channels, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Conv1d(channels, channels, kernel_size=3, padding=2, dilation=2),
+            nn.GELU(),
+        )
+        self.projection = nn.Sequential(
+            nn.Linear(2 * channels, embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.GELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        temporal = self.temporal(x.unsqueeze(1))
+        pooled = torch.cat(
+            [temporal.mean(dim=-1), temporal.amax(dim=-1)], dim=-1
+        )
+        return self.projection(pooled)
+
+
+class ConservativeResidualEncoder(nn.Module):
+    """Add a bounded specialist correction to a full-capacity MLP backbone."""
+
+    def __init__(
+        self,
+        base: nn.Module,
+        specialist: nn.Module,
+        embedding_dim: int,
+        residual_scale: float = 0.25,
+    ):
+        super().__init__()
+        if not 0.0 < residual_scale <= 1.0:
+            raise ValueError("residual scale must be in (0, 1]")
+        self.base = base
+        self.specialist = specialist
+        self.residual_projection = nn.Linear(embedding_dim, embedding_dim)
+        nn.init.zeros_(self.residual_projection.weight)
+        nn.init.zeros_(self.residual_projection.bias)
+        self.residual_scale = float(residual_scale)
+
+    def forward(self, x: Tensor) -> Tensor:
+        base = self.base(x)
+        residual = torch.tanh(self.residual_projection(self.specialist(x)))
+        return base + self.residual_scale * residual
+
+
+class NullEvidenceAdapter(nn.Module):
+    def __init__(self, num_classes: int):
+        super().__init__()
+        self.num_classes = int(num_classes)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x.new_zeros((len(x), self.num_classes))
+
+
+class SpecialistEvidenceAdapter(nn.Module):
+    """Predict a zero-initialized bounded correction to fused class evidence."""
+
+    def __init__(self, encoder: nn.Module, embedding_dim: int, num_classes: int):
+        super().__init__()
+        self.encoder = encoder
+        self.head = nn.Linear(embedding_dim, num_classes)
+        nn.init.zeros_(self.head.weight)
+        nn.init.zeros_(self.head.bias)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.head(self.encoder(x))
+
+
+class ConflictConditionedEvidenceGate(nn.Module):
+    """Apply a zero-initialized bounded log attenuation to fused evidence."""
+
+    def __init__(
+        self,
+        num_modalities: int,
+        hidden_dim: int,
+        max_log_attenuation: float = 1.0,
+    ):
+        super().__init__()
+        if max_log_attenuation <= 0.0:
+            raise ValueError("max log attenuation must be positive")
+        gate_hidden = max(4, hidden_dim // 4)
+        self.network = nn.Sequential(
+            nn.Linear(1 + 3 * num_modalities, gate_hidden),
+            nn.GELU(),
+            nn.Linear(gate_hidden, 1),
+        )
+        nn.init.zeros_(self.network[-1].weight)
+        nn.init.zeros_(self.network[-1].bias)
+        self.max_log_attenuation = float(max_log_attenuation)
+
+    def forward(self, features: Tensor) -> Tensor:
+        return self.max_log_attenuation * torch.tanh(
+            self.network(features).squeeze(-1)
+        )
+
+
+def build_view_encoder(
+    kind: str,
+    input_dim: int,
+    hidden_dim: int,
+    embedding_dim: int,
+    dropout: float,
+) -> nn.Module:
+    if kind == "mlp":
+        return ViewEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    if kind == "tls_gated":
+        return TlsHandshakeEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    if kind == "sequence_tcn":
+        return PacketSequenceTCNEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    if kind == "tls_residual_025":
+        return ConservativeResidualEncoder(
+            ViewEncoder(input_dim, hidden_dim, embedding_dim, dropout),
+            TlsHandshakeEncoder(input_dim, hidden_dim, embedding_dim, dropout),
+            embedding_dim,
+        )
+    if kind == "sequence_residual_025":
+        return ConservativeResidualEncoder(
+            ViewEncoder(input_dim, hidden_dim, embedding_dim, dropout),
+            PacketSequenceTCNEncoder(input_dim, hidden_dim, embedding_dim, dropout),
+            embedding_dim,
+        )
+    raise ValueError(f"unknown view encoder kind: {kind}")
+
+
+def build_evidence_adapter(
+    kind: str,
+    input_dim: int,
+    hidden_dim: int,
+    embedding_dim: int,
+    num_classes: int,
+    dropout: float,
+) -> nn.Module:
+    if kind == "none":
+        return NullEvidenceAdapter(num_classes)
+    if kind == "tls_gated":
+        encoder = TlsHandshakeEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    elif kind == "sequence_tcn":
+        encoder = PacketSequenceTCNEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    else:
+        raise ValueError(f"unknown evidence adapter kind: {kind}")
+    return SpecialistEvidenceAdapter(encoder, embedding_dim, num_classes)
+
+
 class ConflictAwareEvidentialNet(nn.Module):
     """Multi-view classifier with evidential opinions and conflict-aware fusion."""
 
@@ -83,6 +255,11 @@ class ConflictAwareEvidentialNet(nn.Module):
         dropout: float = 0.1,
         conflict_scale: float = 2.0,
         fusion_mode: str = "conflict",
+        encoder_kinds: Optional[Sequence[str]] = None,
+        evidence_adapter_kinds: Optional[Sequence[str]] = None,
+        evidence_adapter_scale: float = 0.25,
+        counterfactual_conflict_gate: bool = False,
+        counterfactual_gate_max_log_attenuation: float = 1.0,
     ):
         super().__init__()
         if len(input_dims) < 2:
@@ -92,12 +269,46 @@ class ConflictAwareEvidentialNet(nn.Module):
         self.num_classes = num_classes
         self.embedding_dim = embedding_dim
         self.conflict_scale = conflict_scale
+        if encoder_kinds is None:
+            encoder_kinds = ["mlp"] * len(input_dims)
+        if len(encoder_kinds) != len(input_dims):
+            raise ValueError("encoder kinds must match the modality count")
+        self.encoder_kinds = [str(kind) for kind in encoder_kinds]
+        if evidence_adapter_kinds is None:
+            evidence_adapter_kinds = ["none"] * len(input_dims)
+        if len(evidence_adapter_kinds) != len(input_dims):
+            raise ValueError("evidence adapter kinds must match the modality count")
+        if not 0.0 < evidence_adapter_scale <= 1.0:
+            raise ValueError("evidence adapter scale must be in (0, 1]")
+        self.evidence_adapter_kinds = [str(kind) for kind in evidence_adapter_kinds]
+        self.evidence_adapter_scale = float(evidence_adapter_scale)
         if fusion_mode not in {"sum", "reliability", "conflict"}:
             raise ValueError("fusion_mode must be sum, reliability, or conflict")
         self.fusion_mode = fusion_mode
 
         self.encoders = nn.ModuleList(
-            ViewEncoder(dim, hidden_dim, embedding_dim, dropout) for dim in input_dims
+            build_view_encoder(kind, dim, hidden_dim, embedding_dim, dropout)
+            for kind, dim in zip(self.encoder_kinds, input_dims)
+        )
+        self.evidence_adapters = nn.ModuleList(
+            build_evidence_adapter(
+                kind,
+                dim,
+                hidden_dim,
+                embedding_dim,
+                num_classes,
+                dropout,
+            )
+            for kind, dim in zip(self.evidence_adapter_kinds, input_dims)
+        )
+        self.counterfactual_conflict_gate = (
+            ConflictConditionedEvidenceGate(
+                self.num_modalities,
+                hidden_dim,
+                counterfactual_gate_max_log_attenuation,
+            )
+            if counterfactual_conflict_gate
+            else None
         )
         self.evidence_heads = nn.ModuleList(
             nn.Linear(embedding_dim, num_classes) for _ in input_dims
@@ -170,6 +381,30 @@ class ConflictAwareEvidentialNet(nn.Module):
             )
 
         fused_evidence = (discounts.unsqueeze(-1) * evidence_tensor).sum(dim=1)
+        adapter_delta = sum(
+            (adapter(view) for adapter, view in zip(self.evidence_adapters, views)),
+            fused_evidence.new_zeros(fused_evidence.shape),
+        )
+        fused_evidence = (
+            fused_evidence
+            + self.evidence_adapter_scale * torch.tanh(adapter_delta)
+        ).clamp_min(0.0)
+        if self.counterfactual_conflict_gate is None:
+            gate_log_attenuation = fused_evidence.new_zeros(batch_size)
+        else:
+            gate_features = torch.cat(
+                [
+                    global_conflict.unsqueeze(-1),
+                    modality_conflict,
+                    uncertainty_tensor,
+                    reliability_tensor,
+                ],
+                dim=-1,
+            )
+            gate_log_attenuation = self.counterfactual_conflict_gate(gate_features)
+            fused_evidence = fused_evidence * torch.exp(
+                -gate_log_attenuation.unsqueeze(-1)
+            )
         fused_alpha, fused_belief, fused_uncertainty = evidence_to_opinion(fused_evidence)
         fused_probability = fused_alpha / fused_alpha.sum(dim=-1, keepdim=True)
 
@@ -194,6 +429,8 @@ class ConflictAwareEvidentialNet(nn.Module):
             "modality_conflict": modality_conflict,
             "discount": discounts,
             "fused_evidence": fused_evidence,
+            "evidence_adapter_delta": adapter_delta,
+            "counterfactual_gate_log_attenuation": gate_log_attenuation,
             "fused_alpha": fused_alpha,
             "fused_belief": fused_belief,
             "fused_probability": fused_probability,

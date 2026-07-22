@@ -472,6 +472,7 @@ def parse_arguments() -> argparse.Namespace:
             "nested_boundary_pseudo_unknown_blend",
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
+            "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
             "nested_conflict_gate",
             "nested_modality_gate",
             "nested_modality_support_gate",
@@ -499,6 +500,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--boundary-hard-pseudo-fraction", type=float, default=0.5)
     parser.add_argument("--boundary-interpolation", type=float, default=0.5)
     parser.add_argument("--boundary-max-per-task", type=int, default=512)
+    parser.add_argument("--tail-aware-confidence-z", type=float, default=1.645)
+    parser.add_argument("--tail-aware-min-metric-lcb-gain", type=float, default=0.0)
+    parser.add_argument("--tail-aware-min-aupr-lcb-gain", type=float, default=0.0)
+    parser.add_argument("--tail-aware-min-aupr-fold-gain", type=float, default=-0.05)
     parser.add_argument(
         "--boundary-training-objective",
         choices=("pointwise", "pairwise"),
@@ -999,6 +1004,14 @@ def command_for(experiment: Experiment, args: argparse.Namespace) -> list[str]:
         str(getattr(args, "boundary_interpolation", 0.5)),
         "--boundary-max-per-task",
         str(getattr(args, "boundary_max_per_task", 512)),
+        "--tail-aware-confidence-z",
+        str(getattr(args, "tail_aware_confidence_z", 1.645)),
+        "--tail-aware-min-metric-lcb-gain",
+        str(getattr(args, "tail_aware_min_metric_lcb_gain", 0.0)),
+        "--tail-aware-min-aupr-lcb-gain",
+        str(getattr(args, "tail_aware_min_aupr_lcb_gain", 0.0)),
+        "--tail-aware-min-aupr-fold-gain",
+        str(getattr(args, "tail_aware_min_aupr_fold_gain", -0.05)),
         "--boundary-training-objective",
         str(getattr(args, "boundary_training_objective", "pointwise")),
         "--structural-gate-minimum-gain",
