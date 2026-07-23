@@ -18,6 +18,11 @@ class RuntimeMetricsTests(unittest.TestCase):
         self.assertEqual(summary["key_flow_coverage"], 1.0)
         self.assertEqual(summary["fallback_batches"], 1)
         self.assertEqual(summary["budget_overrun_count"], 0)
+        self.assertEqual(summary["estimated_budget_overrun_count"], 0)
+        self.assertEqual(summary["actual_budget_overrun_count"], 0)
+        self.assertEqual(summary["actual_budget_overrun_batch_indices"], [])
+        self.assertEqual(summary["actual_optional_cost_us"]["max"], 0.0)
+        self.assertEqual(summary["tier_decision_counts"], {"base": 0, "deep": 0, "flow": 0})
 
     def test_parses_nvidia_smi_sample(self):
         sample = parse_nvidia_smi_sample("75, 2048, 8192")

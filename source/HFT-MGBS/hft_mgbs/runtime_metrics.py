@@ -133,6 +133,13 @@ class RuntimeMetricsCollector:
     batch_latencies_us: List[float] = field(default_factory=list)
     packets_processed: int = 0
     budget_overrun_count: int = 0
+    estimated_budget_overrun_count: int = 0
+    actual_budget_overrun_count: int = 0
+    actual_optional_costs_us: List[float] = field(default_factory=list)
+    actual_budget_overrun_batch_indices: List[int] = field(default_factory=list)
+    tier_decision_counts: Dict[str, int] = field(
+        default_factory=lambda: {"base": 0, "flow": 0, "deep": 0}
+    )
     key_flow_total: int = 0
     key_flow_covered: int = 0
     fallback_batches: int = 0
@@ -152,6 +159,16 @@ class RuntimeMetricsCollector:
         self.batch_latencies_us.append(latency_us)
         self.packets_processed += packets
         self.budget_overrun_count += plan.budget_overrun_count
+        self.estimated_budget_overrun_count += plan.estimated_budget_overrun_count
+        self.actual_budget_overrun_count += plan.actual_budget_overrun_count
+        self.actual_optional_costs_us.append(plan.actual_used_us)
+        if plan.actual_budget_overrun_count:
+            self.actual_budget_overrun_batch_indices.append(
+                len(self.batch_latencies_us) - 1
+            )
+        for decision in plan.decisions:
+            self.tier_decision_counts.setdefault(decision.tier, 0)
+            self.tier_decision_counts[decision.tier] += 1
         self.key_flow_total += plan.key_flow_total
         self.key_flow_covered += plan.key_flow_covered
         self.fallback_batches += int(plan.fallback_active)
@@ -186,6 +203,18 @@ class RuntimeMetricsCollector:
                 "max": max(self.batch_latencies_us) if self.batch_latencies_us else 0.0,
             },
             "budget_overrun_count": self.budget_overrun_count,
+            "estimated_budget_overrun_count": self.estimated_budget_overrun_count,
+            "actual_budget_overrun_count": self.actual_budget_overrun_count,
+            "actual_budget_overrun_batch_indices": (
+                self.actual_budget_overrun_batch_indices[:20]
+            ),
+            "actual_optional_cost_us": {
+                "p99": percentile(self.actual_optional_costs_us, 0.99),
+                "max": max(self.actual_optional_costs_us)
+                if self.actual_optional_costs_us
+                else 0.0,
+            },
+            "tier_decision_counts": dict(sorted(self.tier_decision_counts.items())),
             "key_flow_total": self.key_flow_total,
             "key_flow_covered": self.key_flow_covered,
             "key_flow_coverage": 1.0 if self.key_flow_total == 0 else self.key_flow_covered / self.key_flow_total,

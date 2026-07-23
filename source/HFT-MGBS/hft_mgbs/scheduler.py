@@ -33,6 +33,10 @@ class SchedulePlan:
     key_flow_covered: int
     key_flow_coverage: float
     fallback_active: bool
+    configured_budget_us: float = 0.0
+    actual_used_us: float = 0.0
+    estimated_budget_overrun_count: int = 0
+    actual_budget_overrun_count: int = 0
 
 
 class AdaptiveBudgetScheduler:
@@ -43,12 +47,14 @@ class AdaptiveBudgetScheduler:
         target_utilization: float = 0.85,
         ema_alpha: float = 0.2,
         min_budget_ratio: float = 0.25,
-        max_budget_ratio: float = 1.25,
+        max_budget_ratio: float = 1.0,
     ) -> None:
         if not 0 < target_utilization <= 1:
             raise ValueError("target_utilization must be in (0, 1]")
         if not 0 < ema_alpha <= 1:
             raise ValueError("ema_alpha must be in (0, 1]")
+        if not 0 < min_budget_ratio <= max_budget_ratio <= 1.0:
+            raise ValueError("budget ratios must satisfy 0 < min <= max <= 1")
         self.target_utilization = target_utilization
         self.ema_alpha = ema_alpha
         self.min_budget_ratio = min_budget_ratio
@@ -108,6 +114,11 @@ class AdaptiveBudgetScheduler:
             (candidate for candidate in candidates if candidate.is_key_flow),
             key=lambda item: (-item.priority, str(item.key)),
         )
+        # Pressure feedback may shrink optional work, but must not create an
+        # avoidable key-flow coverage violation when the configured hard cap
+        # can still fund the flow tier for every key candidate.
+        key_reserve = flow_cost * len(key_candidates)
+        budget = min(configured_budget_us, max(budget, key_reserve))
         for candidate in key_candidates:
             if used + flow_cost > budget:
                 break
@@ -149,15 +160,18 @@ class AdaptiveBudgetScheduler:
         key_total = len(key_candidates)
         coverage = 1.0 if key_total == 0 else key_covered / key_total
         ordered = tuple(sorted(decisions.values(), key=lambda item: str(item.key)))
+        estimated_overrun = int(used > configured_budget_us + 1e-9)
         return SchedulePlan(
             decisions=ordered,
             effective_budget_us=budget,
             estimated_used_us=used,
-            budget_overrun_count=int(used > budget + 1e-9),
+            budget_overrun_count=estimated_overrun,
             key_flow_total=key_total,
             key_flow_covered=key_covered,
             key_flow_coverage=coverage,
             fallback_active=not allow_deep,
+            configured_budget_us=configured_budget_us,
+            estimated_budget_overrun_count=estimated_overrun,
         )
 
     def observe(self, tier: str, measured_cost_us: float, realized_utility: float, utilization: float) -> None:

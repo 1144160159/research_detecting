@@ -67,7 +67,14 @@ def main() -> int:
         "schedule": {
             "effective_budget_us": pipeline.last_schedule_plan.effective_budget_us,
             "estimated_used_us": pipeline.last_schedule_plan.estimated_used_us,
+            "actual_used_us": pipeline.last_schedule_plan.actual_used_us,
             "budget_overrun_count": pipeline.last_schedule_plan.budget_overrun_count,
+            "estimated_budget_overrun_count": (
+                pipeline.last_schedule_plan.estimated_budget_overrun_count
+            ),
+            "actual_budget_overrun_count": (
+                pipeline.last_schedule_plan.actual_budget_overrun_count
+            ),
             "key_flow_total": pipeline.last_schedule_plan.key_flow_total,
             "key_flow_covered": pipeline.last_schedule_plan.key_flow_covered,
             "key_flow_coverage": pipeline.last_schedule_plan.key_flow_coverage,

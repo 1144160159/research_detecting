@@ -32,12 +32,24 @@ class AdaptiveExtractionPipeline:
         circuit_breaker: Optional[DeepPathCircuitBreaker] = None,
         clock: Callable[[], float] = time.monotonic,
         cost_clock: Callable[[], float] = time.perf_counter,
+        execution_budget_safety_ratio: float = 0.90,
+        initial_flow_guard_us: float = 20.0,
+        initial_deep_guard_us: float = 50.0,
     ) -> None:
+        if not 0 < execution_budget_safety_ratio <= 1.0:
+            raise ValueError("execution_budget_safety_ratio must be in (0, 1]")
+        if initial_flow_guard_us <= 0 or initial_deep_guard_us <= 0:
+            raise ValueError("execution cost guards must be positive")
         self.extractor = extractor or MultiGranularityExtractor()
         self.scheduler = scheduler or AdaptiveBudgetScheduler()
         self.circuit_breaker = circuit_breaker or DeepPathCircuitBreaker()
         self.clock = clock
         self.cost_clock = cost_clock
+        self.execution_budget_safety_ratio = execution_budget_safety_ratio
+        self._execution_cost_guard_us = {
+            "flow": initial_flow_guard_us,
+            "deep": initial_deep_guard_us,
+        }
         self.last_schedule_plan: Optional[SchedulePlan] = None
         self.last_deep_error: Optional[str] = None
         self.last_fallback_recovery_s: Optional[float] = None
@@ -97,7 +109,17 @@ class AdaptiveExtractionPipeline:
         deep_utilities: List[float] = []
         self.last_deep_error = None
         results: List[PipelineResult] = []
-        for key, flow_packets in by_flow.items():
+        actual_used_us = 0.0
+        execution_limit_us = budget_us * self.execution_budget_safety_ratio
+        execution_items = sorted(
+            by_flow.items(),
+            key=lambda item: (
+                item[0] not in key_flow_set,
+                -decisions[item[0]].score if item[0] in decisions else 0.0,
+                str(item[0]),
+            ),
+        )
+        for key, flow_packets in execution_items:
             last = flow_packets[-1]
             features: Dict[str, float] = self.extractor.packet_features(last)
             features.update(self.extractor.window_features(last.timestamp))
@@ -105,27 +127,60 @@ class AdaptiveExtractionPipeline:
             tier = "base"
             if decision is not None:
                 tier = decision.tier
-                flow_started = self.cost_clock()
-                flow_features = self.extractor.flow_features(key)
-                flow_costs_us.append((self.cost_clock() - flow_started) * 1_000_000.0)
-                flow_utilities.append(priorities[key])
-                features.update(flow_features)
+                flow_guard_us = self._execution_cost_guard_us["flow"]
+                if actual_used_us + flow_guard_us > execution_limit_us:
+                    tier = "base"
+                else:
+                    flow_started = self.cost_clock()
+                    flow_features = self.extractor.flow_features(key)
+                    flow_elapsed_us = (
+                        self.cost_clock() - flow_started
+                    ) * 1_000_000.0
+                    actual_used_us += flow_elapsed_us
+                    flow_costs_us.append(flow_elapsed_us)
+                    flow_utilities.append(priorities[key])
+                    self._execution_cost_guard_us["flow"] = max(
+                        self._execution_cost_guard_us["flow"] * 0.98,
+                        flow_elapsed_us * 1.25,
+                    )
+                    features.update(flow_features)
                 if tier == "deep":
-                    if deep_available:
+                    deep_guard_us = self._execution_cost_guard_us["deep"]
+                    if actual_used_us + deep_guard_us > execution_limit_us:
+                        tier = "flow"
+                    elif deep_available:
                         try:
                             deep_started = self.cost_clock()
                             deep_features = self.extractor.deep_payload_features(
                                 packet.payload for packet in flow_packets
                             )
                         except Exception as exc:
+                            deep_elapsed_us = (
+                                self.cost_clock() - deep_started
+                            ) * 1_000_000.0
+                            actual_used_us += deep_elapsed_us
+                            deep_costs_us.append(deep_elapsed_us)
+                            deep_utilities.append(0.0)
+                            self._execution_cost_guard_us["deep"] = max(
+                                self._execution_cost_guard_us["deep"] * 0.98,
+                                deep_elapsed_us * 1.25,
+                            )
                             self.circuit_breaker.record_failure(self.clock())
                             self.last_deep_error = "{}: {}".format(type(exc).__name__, exc)
                             deep_available = False
                             deep_failure = True
                             tier = "flow"
                         else:
-                            deep_costs_us.append((self.cost_clock() - deep_started) * 1_000_000.0)
+                            deep_elapsed_us = (
+                                self.cost_clock() - deep_started
+                            ) * 1_000_000.0
+                            actual_used_us += deep_elapsed_us
+                            deep_costs_us.append(deep_elapsed_us)
                             deep_utilities.append(priorities[key])
+                            self._execution_cost_guard_us["deep"] = max(
+                                self._execution_cost_guard_us["deep"] * 0.98,
+                                deep_elapsed_us * 1.25,
+                            )
                             features.update(deep_features)
                             self.circuit_breaker.record_success(self.clock())
                     else:
@@ -142,15 +197,31 @@ class AdaptiveExtractionPipeline:
             )
             for decision in planned.decisions
         )
+        actual_budget_overrun = int(actual_used_us > budget_us + 1e-9)
+        present_key_flows = key_flow_set.intersection(by_flow)
+        actual_key_covered = sum(
+            actual_tiers.get(key, "base") in ("flow", "deep")
+            for key in present_key_flows
+        )
+        actual_key_total = len(present_key_flows)
+        actual_key_coverage = (
+            1.0 if actual_key_total == 0 else actual_key_covered / actual_key_total
+        )
         self.last_schedule_plan = SchedulePlan(
             decisions=actual_decisions,
             effective_budget_us=planned.effective_budget_us,
             estimated_used_us=planned.estimated_used_us,
-            budget_overrun_count=planned.budget_overrun_count,
-            key_flow_total=planned.key_flow_total,
-            key_flow_covered=planned.key_flow_covered,
-            key_flow_coverage=planned.key_flow_coverage,
+            budget_overrun_count=max(
+                planned.estimated_budget_overrun_count, actual_budget_overrun
+            ),
+            key_flow_total=actual_key_total,
+            key_flow_covered=actual_key_covered,
+            key_flow_coverage=actual_key_coverage,
             fallback_active=planned.fallback_active or deep_failure,
+            configured_budget_us=budget_us,
+            actual_used_us=actual_used_us,
+            estimated_budget_overrun_count=planned.estimated_budget_overrun_count,
+            actual_budget_overrun_count=actual_budget_overrun,
         )
         self.last_batch_runtime_us = (self.cost_clock() - batch_started) * 1_000_000.0
         utilization = self.last_batch_runtime_us / max(0.001, budget_us)
