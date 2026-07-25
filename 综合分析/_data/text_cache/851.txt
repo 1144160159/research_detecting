@@ -1,150 +1,3 @@
-                                    2016 IEEE Conference on Computer Vision and Pattern Recognition
-
-
-
-
-                                              Towards Open Set Deep Networks
-
-                                                  Abhijit Bendale*, Terrance E. Boult
-                                               University of Colorado at Colorado Springs
-                                                     {abendale,tboult}@vast.uccs.edu ∗
-
-
-
-                                Abstract                                          vision and learning. Recent research in deep networks has
-                                                                                  signiﬁcantly improved many aspects of visual recognition
-      Deep networks have produced signiﬁcant gains for var-                       [26, 3, 11]. Co-evolution of rich representations, scalable
-  ious visual recognition problems, leading to high impact                        classiﬁcation methods and large datasets have resulted in
-  academic and commercial applications. Recent work in                            many commercial applications [5, 28, 16, 6]. However, a
-  deep networks highlighted that it is easy to generate images                    wide range of operational challenges occur while deploying
-  that humans would never classify as a particular object                         recognition systems in the dynamic and ever-changing real
-  class, yet networks classify such images high conﬁdence                         world. A vast majority of recognition systems are designed
-  as that given class – deep network are easily fooled with                       for a static closed world, where the primary assumption is
-  images humans do not consider meaningful. The closed set                        that all categories are known a priori. Deep networks, like
-  nature of deep networks forces them to choose from one of                       many classic machine learning tools, are designed to per-
-  the known classes leading to such artifacts. Recognition in                     form closed set recognition.
-  the real world is open set, i.e. the recognition system should                      Recent work on open set recognition [20, 21] and
-  reject unknown/unseen classes at test time. We present a                        open world recognition [1], has formalized processes for
-  methodology to adapt deep networks for open set recogni-                        performing recognition in settings that require rejecting
-  tion, by introducing a new model layer, OpenMax, which                          unknown objects during testing. While one can always
-  estimates the probability of an input being from an unknown                     train with an “other” class for uninteresting classes (known
-  class. A key element of estimating the unknown probabil-                        unknowns), it is impossible to train with all possible exam-
-  ity is adapting Meta-Recognition concepts to the activation                     ples of unknown objects. Hence the need arises for design-
-  patterns in the penultimate layer of the network. Open-                         ing visual recognition tools that formally account for the
-  Max allows rejection of “fooling” and unrelated open set                        “unknown unknowns”[18]. Altough a range of algorithms
-  images presented to the system; OpenMax greatly reduces                         has been developed to address this issue [4, 20, 21, 25, 2],
-  the number of obvious errors made by a deep network. We                         performing open set recognition with deep networks has
-  prove that the OpenMax concept provides bounded open                            remained an unsolved problem.
-  space risk, thereby formally providing an open set recog-
-  nition solution. We evaluate the resulting open set deep net-                      In the majority of deep networks [11, 26, 3], the output of
-  works using pre-trained networks from the Caffe Model-zoo                       the last fully-connected layer is fed to the SoftMax function,
-  on ImageNet 2012 validation data, and thousands of fooling                      which produces a probability distribution over the N known
-  and open set images. The proposed OpenMax model signif-                         class labels. While a deep network will always have a most-
-  icantly outperforms open set recognition accuracy of basic                      likely class, one might hope that for an unknown input all
-  deep networks as well as deep networks with thresholding                        classes would have low probability and that thresholding on
-  of SoftMax probabilities.                                                       uncertainty would reject unknown classes. Recent papers
-                                                                                  have shown how to produce “fooling” [14] or “rubbish”
-                                                                                  [8] images that are visually far from the desired class but
-                                                                                  produce high-probability/conﬁdence scores. They strongly
-  1     Introduction                                                              suggests that thresholding on uncertainty is not sufﬁcient
-  Computer Vision datasets have grown from few hundred                            to determine what is unknown. In Sec. 3, we show that
-  images to millions of images and from few categories to                         extending deep networks to threshold SoftMax probabil-
-  thousands of categories, thanks to research advances in                         ity improves open set recognition somewhat, but does not
-     ∗ Research performed at Univ. of Colorado at Colorado Springs funded
-                                                                                  resolve the issue of fooling images. Nothing in the the-
-  in part by NSF IIS-1320956. Abhijit Bendale is currently with Samsung           ory/practice of deep networks, even with thresholded prob-
-  Research America, Mountain View, CA                                             abilities, satisﬁes the formal deﬁnition of open set recog-
-
-1063-6919/16 $31.00 © 2016 IEEE                                              1563
-DOI 10.1109/CVPR.2016.173
- Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
-                                                     Baseball                                                         Baseball                      Hammerhead 
-                                                                                                                                                      
-   
-     
-       
-                                             Hammerhead Shark                                                     %     (&0,    (&0,       %   (&-.$     (&-/
-          
-   
-     
-       
-                                             Great White Shark
-          
-                                                                                                      %     )&($    (&((   %    (&0/$     (&((
-     
-       
-                                                   Scuba Diver
-          
-   
-                                                                                                                  %(&)-$       %(&).     %     (&*-$     (&)(
-     
-       
-                                                                                                                         " !"
-                            Adversarial Scuba Diver (from Hammerhead)                                                         (&+* !"
-                                                                                                                                 (&,0#
-                                                                                                                                               
-                                                                                                                !  (&.0
-          Sharks                       Whales     Dogs                                   Fish Baseball
-
-Figure 1. Examples showing how an activation vector model provides sufﬁcient information for our Meta-Recognition and OpenMax
-extension of a deep network to support open-set recognition. The OpenMax algorithm measures distance between an activation vector
-(AV) for an input and the model vector for the top few classes, adjusting scores and providing an estimate of probability of being unknown.
-The left side shows activation vectors (AV) for different images, with different AVs separated by black lines. Each input image becomes
-an AV, displayed as 10x450 color pixels, with the vertical being one pixel for each of 10 deep network channel activation energy and the
-horizontal dimension showing the response for the ﬁrst 450 ImageNet classes. Ranges of various category indices (sharks, whales, dogs,
-ﬁsh, etc.) are identiﬁed on the bottom of the image. For each of four classes (baseball, hammerhead shark, great white shark and scuba
-diver), we show an AV for 4 types of images: the model, a real image, a fooling image and an open set image. The AVs show patterns of
-activation in which, for real images, related classes are often responding together, e.g., sharks share many visual features, hence correlated
-responses, with other sharks, whales, large ﬁshes, but not with dogs or with baseballs. Visual inspection of the AVs shows signiﬁcant
-difference between the response patterns for fooling and open set images compared to a real image or the model AV. For example, note
-the darker (deep blue) lines in many fooling images and different green patterns in many open set images. The bottom AV is from an
-“adversarial” image, wherein a hammerhead image was converted, by adding nearly invisible pixel changes, into something classiﬁed as
-scuba-diver. On the right are two columns showing the associated images for two of the classes. Each example shows the SoftMax (SM)
-and OpenMax (OM) scores for the real image, the fooling and open set image that produced the AV shown on the left. The red OM scores
-implies the OM algorithm classiﬁed the image as unknown, but for completeness we show the OM probability of baseball/hammerhead
-class for which there was originally confusion. The bottom right shows the adversarial image and its associated scores – despite the
-network classifying it as a scuba diver, the visual similarity to the hammerhead is clearly stronger. OpenMax rejects the adversarial image
-as an outlier from the scuba diver class. As an example of recovery from failure, we note that if the image is Gaussian blurred OpenMax
-classiﬁes it as a hammerhead shark with .79 OM probability.
-nition offered in [20]. This leads to the ﬁrst question                          information is incorporated in our OpenMax model and
-addressed in this paper, “how to adapt deep networks sup-                        used to characterize failure of recognition system. By drop-
-port to open set recognition?”                                                   ping the restriction for the probability for known classes
-                                                                                 to sum to 1, and rejecting inputs far from known inputs,
-    The SoftMax layer is a signiﬁcant component of the
-                                                                                 OpenMax can formally handle unknown/unseen classes
-problem because of its closed nature. We propose an alter-
-                                                                                 during operation. Our experiments demonstrate that the
-native, OpenMax, which extends SoftMax layer by enabling
-                                                                                 proposed combination of OpenMax and Meta-Recognition
-it to predict an unknown class. OpenMax incorporates like-
-                                                                                 ideas readily address open set recognition for deep networks
-lihood of the recognition system failure. This likelihood is
-                                                                                 and reject high conﬁdence fooling images [14].
-used to estimate the probability for a given input belong-
-ing to an unknown class. For this estimation, we adapt the                           While fooling/rubbish images are, to human observers,
-concept of Meta-Recognition[22, 32, 9] to deep networks.                         clearly not from a class of interest, adversarial images
-We use the scores from the penultimate layer of deep net-                        [8, 27] present a more difﬁcult challenge. These adversarial
-works (the fully connected layer before SoftMax, e.g., FC8)                      images are visually indistinguishable from a training sam-
-to estimate if the input is “far” from known training data.                      ple but are designed so that deep networks produce high-
-We call scores in that layer the activation vector(AV). This                     conﬁdence but incorrect answers. This is different from
-
-                                                                            1564
-
-Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
-standard open space risk because adversarial images are                          layer (feature space) in which we can build a compact abat-
-“near” a training sample in input space, for any given output                    ing probability model that can be thresholded to limit open
-class.                                                                           space risk. We develop this model as a decaying probability
-    A key insight in our opening deep networks is noting                         model based on distance from a learned model. In follow-
-that “open space risk” should be measured in feature space,                      ing section, we elaborate on the space and meta-recognition
-rather than in pixel space. In prior work, open space risk                       approach for estimating distance from known training data,
-is not measured in pixel space for the majority of problems                      followed by a methodology to incorporate such distance in
-[20, 21, 1]. Thus, we ask “is there a feature space, ide-                        decision function of deep networks. We call our method-
-ally a layer in the deep network, where these adversarial                        ology OpenMax, an alternative for the SoftMax function
-images are far away from training examples, i.e., a layer                        as the ﬁnal layer of the network. Finally, we show that
-where unknown, fooling and adversarial images become                             the overall model is a compact abating probability model,
-outliers in an open set recognition problem?” In Sec. 2.1,                       hence, it satisﬁes the deﬁnition for an open set recognition.
-we investigate the choice of the feature space/layer in deep
-networks for measuring open space risk. We show that                             2.1     Multi-class Meta-Recognition
-an extreme-value meta-recognition inspired distance nor-                         Our ﬁrst step is to determine when an input is likely not
-malization process on the overall activation patterns of the                     from a known class, i.e., we want to add a meta-recognition
-penultimate network layer provides a rejection probability             
+version https://git-lfs.github.com/spec/v1
+oid sha256:42412546c98709ef3f39aa47dd0aa0295af0af2df65549261728241cb47a6c11
+size 16254
