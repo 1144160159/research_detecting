@@ -13,6 +13,7 @@ BATCH_SIZES="${BATCH_SIZES:-512 2048 4096}"
 BUDGET_US_VALUES="${BUDGET_US_VALUES:-5000 10000 25000}"
 MODES="${MODES:-normal fallback}"
 RUN_TAG="${RUN_TAG:-}"
+SAFETY_RATIO="${SAFETY_RATIO:-0.75}"
 
 if ! [[ "${REPEATS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "REPEATS must be a positive integer" >&2
@@ -67,6 +68,7 @@ cd "${CODE_ROOT}"
   echo "measured_repeats=${REPEATS}"
   echo "batch_sizes=${BATCH_SIZES}"
   echo "budget_us_values=${BUDGET_US_VALUES}"
+  echo "execution_budget_safety_ratio=${SAFETY_RATIO}"
   echo "modes=${MODES}"
   echo "conda_env=${CONDA_ENV}"
   echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -90,6 +92,7 @@ for batch_size in "${batch_sizes[@]}"; do
           --max-packets "${MAX_PACKETS}" \
           --batch-size "${batch_size}" \
           --budget-us "${budget_us}" \
+          --execution-budget-safety-ratio "${SAFETY_RATIO}" \
           --key-flow-ratio 0.10 \
           --gpu-index "${GPU_INDEX}" \
           "${extra[@]}" > "${output}"

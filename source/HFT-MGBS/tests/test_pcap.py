@@ -30,9 +30,14 @@ def ipv4_tcp_frame(payload=b"abc", vlan=False):
     return ethernet + ip + tcp + payload
 
 
-def pcap_bytes(frames):
+def linux_sll_frame(payload=b"abc"):
+    header = struct.pack("!HHH8sH", 0, 1, 6, b"\x00" * 8, 0x0800)
+    return header + ipv4_tcp_frame(payload)[14:]
+
+
+def pcap_bytes(frames, link_type=1):
     content = bytearray(b"\xd4\xc3\xb2\xa1")
-    content.extend(struct.pack("<HHiIII", 2, 4, 0, 0, 65535, 1))
+    content.extend(struct.pack("<HHiIII", 2, 4, 0, 0, 65535, link_type))
     for index, frame in enumerate(frames):
         content.extend(struct.pack("<IIII", 1, index * 1000, len(frame), len(frame)))
         content.extend(frame)
@@ -52,6 +57,17 @@ class PcapReaderTests(unittest.TestCase):
     def test_supports_vlan(self):
         packet = next(PcapReader(io.BytesIO(pcap_bytes([ipv4_tcp_frame(vlan=True)]))))
         self.assertEqual(packet.protocol, 6)
+
+    def test_supports_linux_cooked_capture_v1(self):
+        packet = next(
+            PcapReader(
+                io.BytesIO(pcap_bytes([linux_sll_frame(b"abcdef")], link_type=113)),
+                max_payload_bytes=3,
+            )
+        )
+        self.assertEqual(packet.src_ip, "10.0.0.1")
+        self.assertEqual(packet.dst_port, 443)
+        self.assertEqual(packet.payload, b"abc")
 
     def test_skips_non_ip_without_counting_it_as_malformed(self):
         arp = b"\x00" * 12 + struct.pack("!H", 0x0806) + b"\x00" * 28

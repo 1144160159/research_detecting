@@ -1,17 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-project(packet_parse)
-set(CMAKE_CXX_STANDARD 14)
-
-aux_source_directory(. DIR_LIB_SRCS)
-add_library (${PROJECT_NAME} ${DIR_LIB_SRCS})
-
-target_link_libraries(${PROJECT_NAME} 
-    libPcap++.a 
-    libPacket++.a 
-    libCommon++.a
-)
-
-target_link_libraries(${PROJECT_NAME}
-    pcap
-    pthread
-)
+version https://git-lfs.github.com/spec/v1
+oid sha256:f836393ce5ce3a27e2cb40ba267d51a1ef9717203634e97bb0ff0d0e682dd4d0
+size 357

@@ -47,6 +47,18 @@ def inputs():
         "external_confirmation_file_sha256": "5" * 64,
         "candidate_implementation_sha256": "6" * 64,
         "comparator_implementation_sha256": "7" * 64,
+        "candidate_runtime_sha256": "8" * 64,
+        "candidate_capture_sha256": "9" * 64,
+        "candidate_benchmark_sha256": "a" * 64,
+        "comparator_runtime_sha256": "b" * 64,
+        "comparator_capture_sha256": "c" * 64,
+        "comparator_training_capture_sha256": "1" * 64,
+        "comparator_benchmark_sha256": "d" * 64,
+        "paired_runner_sha256": "e" * 64,
+        "execution_plan_creator_sha256": "2" * 64,
+        "execution_plan_executor_sha256": "3" * 64,
+        "efficiency_summarizer_sha256": "4" * 64,
+        "protocol_creator_sha256": "f" * 64,
         "efficiency_metrics_observed_at_freeze": 0,
     }
     return [coverage, v1, readiness, decision, external], kwargs
@@ -64,6 +76,27 @@ class StrictV4FinalEfficiencyProtocolV2Tests(unittest.TestCase):
             len(first["training_calibration_benchmark"]["sentinel_scenarios"]), 7
         )
         self.assertEqual(first["efficiency_metrics_observed_at_freeze"], 0)
+        self.assertEqual(first["inference_benchmark"]["seed"], 7)
+        self.assertEqual(len(first["implementation_sha256"]), 14)
+        self.assertTrue(
+            first["instrumentation_equivalence_gate"][
+                "stable_runtime_same_device_shadow_required_per_capture"
+            ]
+        )
+        self.assertTrue(
+            first["instrumentation_equivalence_gate"][
+                "source_empirical_tail_risk_difference_is_diagnostic_only"
+            ]
+        )
+        self.assertFalse(
+            first["instrumentation_equivalence_gate"][
+                "separate_stochastic_retraining_shadow_required"
+            ]
+        )
+        self.assertEqual(
+            first["deployment_device_modes"]["required_modes"],
+            ["native_primary", "cpu_normalized_secondary"],
+        )
 
     def test_incomplete_external_confirmation_is_rejected(self) -> None:
         values, kwargs = inputs()

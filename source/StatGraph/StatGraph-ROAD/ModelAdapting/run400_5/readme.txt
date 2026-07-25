@@ -1,3 +1,3 @@
-The data set division is explained in the "dataprocess**" folder.
-
-Run file train32.py and use the training data and validation data to complete the training process. The best weights are saved in the file gcn32.pkl. File predict32.py is used to predict the test data. File utils.py and file load.py are used to store some of the functions that will be used.
+version https://git-lfs.github.com/spec/v1
+oid sha256:a8e69aa0e4f7432acb21a3bef9569ce8de758da2ab4d872b55d561b9da4b8168
+size 362

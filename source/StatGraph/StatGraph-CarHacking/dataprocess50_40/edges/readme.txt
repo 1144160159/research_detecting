@@ -1,1 +1,3 @@
-You can generate the edge files required for training through "generate attack edges.py" and "generate attack edges.py", which process abnormal and normal data sets respectively and include three parts: graph property generation, data slice and data movement.
+version https://git-lfs.github.com/spec/v1
+oid sha256:f695a55f024c4642aa58b4f320baf96640172de49353db2ee9d39e92df93031d
+size 261

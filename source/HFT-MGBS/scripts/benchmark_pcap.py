@@ -8,6 +8,7 @@ import json
 import time
 
 from hft_mgbs import AdaptiveExtractionPipeline, PcapFileReader
+from hft_mgbs.batching import bounded_batches
 from hft_mgbs.runtime_metrics import NvidiaSmiSampler, RuntimeMetricsCollector
 
 
@@ -19,27 +20,15 @@ def is_key_flow(flow_key, ratio):
     return value < ratio
 
 
-def batches(iterator, batch_size, max_packets):
-    batch = []
-    emitted = 0
-    for packet in iterator:
-        if max_packets and emitted >= max_packets:
-            break
-        batch.append(packet)
-        emitted += 1
-        if len(batch) >= batch_size:
-            yield batch
-            batch = []
-    if batch:
-        yield batch
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("pcap")
     parser.add_argument("--batch-size", type=int, default=4096)
     parser.add_argument("--max-packets", type=int, default=0)
     parser.add_argument("--budget-us", type=float, default=25000.0)
+    parser.add_argument(
+        "--execution-budget-safety-ratio", type=float, default=0.75
+    )
     parser.add_argument("--max-payload-bytes", type=int, default=256)
     parser.add_argument("--key-flow-ratio", type=float, default=0.10)
     parser.add_argument("--disable-deep", action="store_true")
@@ -49,15 +38,21 @@ def main():
         parser.error("--batch-size must be positive")
     if not 0 <= args.key_flow_ratio <= 1:
         parser.error("--key-flow-ratio must be in [0, 1]")
+    if not 0 < args.execution_budget_safety_ratio <= 1:
+        parser.error("--execution-budget-safety-ratio must be in (0, 1]")
 
-    pipeline = AdaptiveExtractionPipeline()
+    pipeline = AdaptiveExtractionPipeline(
+        execution_budget_safety_ratio=args.execution_budget_safety_ratio
+    )
     collector = RuntimeMetricsCollector()
     gpu_sampler = None if args.gpu_index is None else NvidiaSmiSampler(args.gpu_index)
     if gpu_sampler is not None:
         gpu_sampler.start()
     try:
         with PcapFileReader(args.pcap, max_payload_bytes=args.max_payload_bytes) as reader:
-            for packet_batch in batches(reader, args.batch_size, args.max_packets):
+            for packet_batch in bounded_batches(
+                reader, args.batch_size, args.max_packets
+            ):
                 flow_keys = {pipeline.extractor.canonical_key(packet) for packet in packet_batch}
                 key_flows = {key for key in flow_keys if is_key_flow(key, args.key_flow_ratio)}
                 started = time.perf_counter()
@@ -103,6 +98,17 @@ def main():
             "gpu_resource_verified": bool(gpu_sampler and gpu_sampler.samples),
             "fallback_recovery_time_verified": False,
             "quality_verified": False,
+        },
+        "application_budget_metric": {
+            "scope": "optional_tier_thread_cpu_time",
+            "configured_budget_us": args.budget_us,
+            "execution_budget_safety_ratio": (
+                args.execution_budget_safety_ratio
+            ),
+            "execution_soft_limit_us": (
+                args.budget_us * args.execution_budget_safety_ratio
+            ),
+            "wall_latency_reported_separately": True,
         },
     }
     print(json.dumps(output, ensure_ascii=False, indent=2, sort_keys=True))

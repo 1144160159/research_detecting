@@ -58,7 +58,12 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--known-acceptance", type=float, default=0.95)
     parser.add_argument(
         "--split-strategy",
-        choices=("random", "fingerprint_grouped", "capture_grouped"),
+        choices=(
+            "random",
+            "fingerprint_grouped",
+            "capture_grouped",
+            "temporal_capture_grouped",
+        ),
         default="random",
     )
     parser.add_argument(
@@ -75,6 +80,7 @@ def parse_arguments() -> argparse.Namespace:
             "nested_boundary_pseudo_unknown_blend",
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
+            "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
             "nested_conflict_gate",
             "nested_modality_gate",
             "nested_modality_support_gate",
@@ -106,6 +112,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--boundary-hard-pseudo-fraction", type=float, default=0.5)
     parser.add_argument("--boundary-interpolation", type=float, default=0.5)
     parser.add_argument("--boundary-max-per-task", type=int, default=512)
+    parser.add_argument("--tail-aware-confidence-z", type=float, default=1.645)
+    parser.add_argument("--tail-aware-min-metric-lcb-gain", type=float, default=0.0)
+    parser.add_argument("--tail-aware-min-aupr-lcb-gain", type=float, default=0.0)
+    parser.add_argument("--tail-aware-min-aupr-fold-gain", type=float, default=-0.05)
     parser.add_argument(
         "--boundary-training-objective",
         choices=("pointwise", "pairwise"),
@@ -1135,10 +1145,14 @@ def select_nested_risk(
                 }
             )
         )
-        if (
-            args.risk_selection
-            == "nested_tail_aware_pairwise_pseudo_unknown_blend"
-        ):
+        if args.risk_selection in {
+            "nested_tail_aware_pairwise_pseudo_unknown_blend",
+            "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+        }:
+            conservative_lcb = (
+                args.risk_selection
+                == "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend"
+            )
             pseudo_unknown_blend = cross_fitted_tail_aware_shrinkage(
                 calibration_tasks,
                 feature_names,
@@ -1150,6 +1164,16 @@ def select_nested_risk(
                 hard_pseudo_fraction=args.boundary_hard_pseudo_fraction,
                 interpolation=args.boundary_interpolation,
                 max_per_task=args.boundary_max_per_task,
+                confidence_z=(args.tail_aware_confidence_z if conservative_lcb else 0.0),
+                minimum_metric_lcb_gain=(
+                    args.tail_aware_min_metric_lcb_gain if conservative_lcb else None
+                ),
+                minimum_aupr_lcb_gain=(
+                    args.tail_aware_min_aupr_lcb_gain if conservative_lcb else None
+                ),
+                minimum_aupr_fold_gain=(
+                    args.tail_aware_min_aupr_fold_gain if conservative_lcb else None
+                ),
             )
         else:
             pseudo_unknown_blend = cross_fitted_shrinkage(
@@ -1192,10 +1216,10 @@ def select_nested_risk(
             fold = fold_by_name.get(report["class_name"])
             if fold is None:
                 continue
-            if (
-                pseudo_unknown_blend.get("schema_version")
-                == "tail_aware_pairwise_ranking_head_v1"
-            ):
+            if pseudo_unknown_blend.get("schema_version") in {
+                "tail_aware_pairwise_ranking_head_v1",
+                "tail_aware_lcb_pairwise_ranking_head_v1",
+            }:
                 metrics = selected_tail_aware_fold_metrics(
                     pseudo_unknown_blend, fold
                 )
@@ -1931,6 +1955,7 @@ def main() -> None:
         "nested_boundary_pseudo_unknown_blend",
         "nested_boundary_pairwise_pseudo_unknown_blend",
         "nested_tail_aware_pairwise_pseudo_unknown_blend",
+        "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
         "nested_conflict_gate",
         "nested_modality_gate",
         "nested_modality_support_gate",
@@ -1950,6 +1975,7 @@ def main() -> None:
             "nested_boundary_pseudo_unknown_blend",
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
+            "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
         }:
             learned = risk_selection_details["pseudo_unknown_learned_blend"]
             robust_gate = None
@@ -1960,6 +1986,7 @@ def main() -> None:
                 "nested_boundary_pseudo_unknown_blend",
                 "nested_boundary_pairwise_pseudo_unknown_blend",
                 "nested_tail_aware_pairwise_pseudo_unknown_blend",
+                "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
             }:
                 robust_gate = robust_fold_gate(
                     learned,
@@ -1972,7 +1999,10 @@ def main() -> None:
                 else (
                     "pseudo_unknown_tail_aware_blend"
                     if args.risk_selection
-                    == "nested_tail_aware_pairwise_pseudo_unknown_blend"
+                    in {
+                        "nested_tail_aware_pairwise_pseudo_unknown_blend",
+                        "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+                    }
                     else "pseudo_unknown_learned_blend"
                 )
             )
@@ -1995,10 +2025,17 @@ def main() -> None:
                     "nested_boundary_pseudo_unknown_blend",
                     "nested_boundary_pairwise_pseudo_unknown_blend",
                     "nested_tail_aware_pairwise_pseudo_unknown_blend",
+                    "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
                 }:
+                    evidence_rule = (
+                        "known-only one-sided confidence-bound and AUPR-tail gates"
+                        if args.risk_selection
+                        == "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend"
+                        else "positive four-metric mean gains"
+                    )
                     risk_selection_details["selection_rule"] = (
                         "training-time leave-one-known-attack boundary hard-negative "
-                        "%s risk learning; require positive four-metric mean gains and "
+                        "%s risk learning; require %s and "
                         "worst fold-metric gain >= %.6f, otherwise fall back to the "
                         "frozen reference"
                         % (
@@ -2007,8 +2044,10 @@ def main() -> None:
                             in {
                                 "nested_boundary_pairwise_pseudo_unknown_blend",
                                 "nested_tail_aware_pairwise_pseudo_unknown_blend",
+                                "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
                             }
                             else "pointwise",
+                            evidence_rule,
                             args.pseudo_unknown_min_fold_gain,
                         )
                     )
@@ -2261,7 +2300,10 @@ def main() -> None:
             )
             tail_aware = (
                 learned_details.get("schema_version")
-                == "tail_aware_pairwise_ranking_head_v1"
+                in {
+                    "tail_aware_pairwise_ranking_head_v1",
+                    "tail_aware_lcb_pairwise_ranking_head_v1",
+                }
             )
             if tail_aware:
                 base_feature_names = tuple(learned_details["base_feature_names"])

@@ -49,7 +49,16 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--config", default="configs/hikari2021.json")
     parser.add_argument("--unknown-classes", required=True)
     parser.add_argument("--benign-class", default="Benign")
-    parser.add_argument("--split-strategy", choices=("random", "fingerprint_grouped", "capture_grouped"), default="random")
+    parser.add_argument(
+        "--split-strategy",
+        choices=(
+            "random",
+            "fingerprint_grouped",
+            "capture_grouped",
+            "temporal_capture_grouped",
+        ),
+        default="random",
+    )
     parser.add_argument("--max-per-class", type=int, default=500)
     parser.add_argument("--chunksize", type=int, default=100000)
     parser.add_argument(

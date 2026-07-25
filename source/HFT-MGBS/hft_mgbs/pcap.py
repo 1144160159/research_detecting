@@ -35,7 +35,7 @@ class PcapFormatError(ValueError):
 
 
 class PcapReader(Iterator[PacketRecord]):
-    """Read Ethernet/IPv4/TCP-or-UDP packets without loading the capture into memory."""
+    """Read Ethernet or Linux-SLL IPv4/TCP-or-UDP packets as a stream."""
 
     _MAGIC = {
         b"\xd4\xc3\xb2\xa1": ("<", 1_000_000.0),
@@ -63,8 +63,12 @@ class PcapReader(Iterator[PacketRecord]):
         major, minor, _, _, _, link_type = struct.unpack(endian + "HHiIII", remainder)
         if major != 2 or minor != 4:
             raise PcapFormatError("unsupported PCAP version {}.{}".format(major, minor))
-        if link_type != 1:
-            raise PcapFormatError("only Ethernet link type is supported, got {}".format(link_type))
+        if link_type not in (1, 113):
+            raise PcapFormatError(
+                "supported link types are Ethernet(1) and Linux SLL(113), got {}".format(
+                    link_type
+                )
+            )
         return endian, scale, link_type
 
     def __iter__(self) -> "PcapReader":
@@ -88,7 +92,7 @@ class PcapReader(Iterator[PacketRecord]):
                 raise StopIteration
             timestamp = ts_sec + ts_fraction / self.timestamp_scale
             try:
-                packet = self._parse_ethernet_ipv4(
+                packet = self._parse_link_ipv4(
                     frame, timestamp=timestamp, wire_length=original_length
                 )
             except (IndexError, struct.error, ValueError):
@@ -99,13 +103,21 @@ class PcapReader(Iterator[PacketRecord]):
             self.stats.parsed_packets += 1
             return packet
 
-    def _parse_ethernet_ipv4(
+    def _parse_link_ipv4(
         self, frame: bytes, timestamp: float, wire_length: int
     ) -> Optional[PacketRecord]:
-        if len(frame) < 14:
-            raise ValueError("truncated Ethernet header")
-        offset = 14
-        ether_type = struct.unpack_from("!H", frame, 12)[0]
+        if self.link_type == 1:
+            if len(frame) < 14:
+                raise ValueError("truncated Ethernet header")
+            offset = 14
+            ether_type = struct.unpack_from("!H", frame, 12)[0]
+        else:
+            # Linux cooked capture v1: packet type(2), ARPHRD(2),
+            # address length(2), address(8), protocol(2).
+            if len(frame) < 16:
+                raise ValueError("truncated Linux SLL header")
+            offset = 16
+            ether_type = struct.unpack_from("!H", frame, 14)[0]
         vlan_depth = 0
         while ether_type in (0x8100, 0x88A8):
             if len(frame) < offset + 4 or vlan_depth >= 2:

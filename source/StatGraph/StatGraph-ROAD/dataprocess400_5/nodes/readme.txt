@@ -1,3 +1,3 @@
-You can generate the node vector files required for training through our "generate nodes.py", which includes three parts: graph property generation, data slice and data movement.
-
-An then, you can get the node vector files after batch data merging through our "merge node vector.py". Its output is three csv files named "train_nodes", "val_nodes" and "test_nodes".
+version https://git-lfs.github.com/spec/v1
+oid sha256:132087b7125fce5379bd0fcdeebf079437d27e90e98b0894867a050ae70a6673
+size 368

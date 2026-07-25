@@ -1,5 +1,3 @@
-We process one-dimensional data sequentially into RGB image data.  For each dataset, there are both attack messages and normal messages. If an image is composed entirely of normal messages, we will label it as normal image. Otherwise, we will label it as attack image. Therefore, each dataset can generate two sets of image. 
-
-See https://github.com/QiguangJiang/StatGraph/tree/main/BaselineModels/CarHacking and https://github.com/QiguangJiang/StatGraph/tree/main/BaselineModels/ROAD for the specific code of data preprocessing.
-
-The key code for each baseline method is "train-CHD", "train-ROAD", "test-CHD" and "test-ROAD".
+version https://git-lfs.github.com/spec/v1
+oid sha256:74bef95e68c2c54693199dbbcb94824802fa7c9822cc09a9c7d9d73f25229c5f
+size 626

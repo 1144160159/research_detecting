@@ -1,1 +1,3 @@
-The folder data_preprocess provides the code for data preprocessing, the folder "Car Hacking Dataset" stores the ROAD data set, and the folder CHD_Split contains the processed graph structure data as the input of the graph comparison learning model.
+version https://git-lfs.github.com/spec/v1
+oid sha256:8a372cc65d88f0a91ec842992eb473934aaca44608cc1d5f1e26156336b0132c
+size 249

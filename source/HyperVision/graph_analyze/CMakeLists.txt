@@ -1,20 +1,3 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(graph_analysis)
-set(CMAKE_CXX_STANDARD 14)
-
-add_compile_options(-fopenmp)
-
-aux_source_directory(. DIR_LIB_SRCS)
-add_library (${PROJECT_NAME} ${DIR_LIB_SRCS})
-
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
-endif()
-
-target_link_libraries(${PROJECT_NAME}
-    armadillo
-    mlpack
-)
-
-target_link_libraries(${PROJECT_NAME} z3)
+version https://git-lfs.github.com/spec/v1
+oid sha256:01585a7cf60d2ab0ac75ca06c38129619ada0d1943ef988e8989b6df7bcbca50
+size 457

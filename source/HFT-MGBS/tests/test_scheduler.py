@@ -4,6 +4,15 @@ from hft_mgbs.scheduler import AdaptiveBudgetScheduler, ExtractionCandidate
 
 
 class SchedulerTests(unittest.TestCase):
+    def test_effective_budget_never_exceeds_configured_hard_cap(self):
+        scheduler = AdaptiveBudgetScheduler(target_utilization=0.8)
+        scheduler.observe("flow", measured_cost_us=1.0, realized_utility=1.0, utilization=0.1)
+        self.assertLessEqual(scheduler.effective_budget(100.0), 100.0)
+
+    def test_budget_ratios_cannot_expand_above_hard_cap(self):
+        with self.assertRaises(ValueError):
+            AdaptiveBudgetScheduler(max_budget_ratio=1.01)
+
     def test_budget_is_never_exceeded(self):
         scheduler = AdaptiveBudgetScheduler(target_utilization=1.0, min_budget_ratio=1.0, max_budget_ratio=1.0)
         decisions = scheduler.plan(
@@ -30,6 +39,18 @@ class SchedulerTests(unittest.TestCase):
         )
         self.assertEqual([item.key for item in plan.decisions], ["key"])
         self.assertEqual(plan.key_flow_coverage, 1.0)
+        self.assertEqual(plan.budget_overrun_count, 0)
+
+    def test_pressure_reduction_does_not_create_avoidable_key_flow_gap(self):
+        scheduler = AdaptiveBudgetScheduler(target_utilization=0.8)
+        scheduler.observe("flow", measured_cost_us=20.0, realized_utility=1.0, utilization=2.0)
+        plan = scheduler.plan_with_audit(
+            [ExtractionCandidate("key", 1.0, is_key_flow=True)],
+            configured_budget_us=100.0,
+            allow_deep=False,
+        )
+        self.assertEqual(plan.key_flow_coverage, 1.0)
+        self.assertLessEqual(plan.effective_budget_us, 100.0)
         self.assertEqual(plan.budget_overrun_count, 0)
 
     def test_fallback_disables_deep_tier_and_is_auditable(self):

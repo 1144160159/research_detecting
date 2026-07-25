@@ -1,1 +1,3 @@
-Run file "graph_train_ROAD-upgrade.py" and use the training data to complete the training process.  The best weights are saved in the file 64_16_IVN_400_ROAD_upgrade_last2_edge.pkl.  File graph_execute_ROAD_upgrade.py is used to execute the GCL model and generate graph embedding representations saved in folder "upgrade".  File utils0.py, file dataset0.py and file dataset1.py are used to store some of the functions that will be used.
+version https://git-lfs.github.com/spec/v1
+oid sha256:ae742eb816edc3ba1863fc579a38012308616dff047361960f6f5dda28af37b3
+size 437

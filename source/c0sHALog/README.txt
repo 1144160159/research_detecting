@@ -1,7 +1,3 @@
-semantic：Semantic information extraction from the HDFS dataset.
-CNN&GRU：Experimental code and partial results of the HDFS data.
-CNN&GRU_BGL：Experimental code and partial results of the BGL data.
-CNN&GRU_Thunderbird：Experimental code and partial results of the Thunderbird data.
-Bert-base-cased needs to be downloaded manually from the internet.
-The Thunderbird data can be downloaded from Hugging Face using the Tb_data.py file.
-https://doi.org/10.5281/zenodo.18211712
+version https://git-lfs.github.com/spec/v1
+oid sha256:254c2d2dd8745b29b79f0566ab8863a436930c5a5077dd4ab6c2d5093c4d98ba
+size 477

@@ -1,7 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-#
-# This source code is licensed under the Apache License, Version 2.0
-# found in the LICENSE file in the root directory of this source tree.
-
-from .image_net import ImageNet
-from .image_net_22k import ImageNet22k
+version https://git-lfs.github.com/spec/v1
+oid sha256:68fb3fc04fcd86219c1892e02a8df7b0ba65525ce5be8aeb2a0c32d5a98b47e8
+size 274

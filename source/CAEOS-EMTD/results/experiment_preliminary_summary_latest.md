@@ -463,3 +463,229 @@ ExCeL（TMLR 2025）按论文固定的 `a=10`、`b=5`、`alpha=0.8` 实现，未
 ### 6.39 选后污染确认协议
 
 针对冻结胜出算法 `caeos_pairwise` 创建结果为空的选后污染协议，manifest SHA 为 `83415875d1f26c8f1c948dac65f498110a5f3a6080e2aba4fd4407aa05eea4f4`。协议覆盖模态完全缺失、字段缺失、行缺失、特征打乱和高斯漂移五个家族：7 个 coverage-SHA 哨兵对全部 3 模态和完整强度曲线运行 `273` 次，102 场景对每个家族使用 SHA 选模态和固定中等强度运行 `510` 次，总计 `783` 次。算法、模态、强度和退化门均在结果前冻结，相关协议/runner 测试 `7/7 PASS`。执行门要求先完成外部确认与独占效率测量，当前未启动，不得提前声明污染鲁棒优势。
+
+### 6.40 DCC 2025 强基线冻结试点
+
+新增 ICML 2025 Dynamic Covariance Calibration (DCC) 的 strict-v4 适配。实现只用 known-training 的冻结 MLP 64 维嵌入拟合类别均值与协方差，逐测试样本执行动态协方差修正；残差维数预固定为 `min(50,d-1)`，known-validation 只校准阈值，未知类或测试标签不参与拟合、选参和场景选择。协议在结果 0 时冻结，manifest SHA 为 `b05efdba3aef7373e5fd54f2b9e38ac5fbbe8c834c10ddf7a843618f083e2e20`；核心和协议测试 `8/8 PASS`。
+
+冻结试点完成 `14/14`、失败 0，168 项产物 SHA、14 项五方切分指纹和无泄漏检查全部 PASS。DCC 的 Known F1/AUROC/AUPR/FPR95/OSCR 为 `0.762301/0.678972/0.438487/0.619925/0.535440`，四项平均秩 `4.00`；相对 Mahalanobis++ 的四指标有向均值为 `-0.043900`，仅 USTC-TFC2016 套件为正，故总体增益、5/7 套件稳健性和 Top-2 三个扩展门均失败，明确不扩展 full102，不改变 30 方法主表和 OpenDetect 比较器。北京时间 `2026-07-20 11:01`，独立外部确认已完成 `114/306`、失败 0。
+
+### 6.41 最终效率 v2 仪器就绪审计
+
+效率 v2 已补齐可序列化 Pairwise/OpenDetect runtime、训练捕获器、独立 benchmark 和成对运行器。协议现在绑定两侧训练脚本、两侧 runtime/capture/benchmark、成对 runner 与协议创建器共 10 个实现 SHA；推理固定 seed7，训练哨兵固定 seed191。成对 runner 对候选与比较器使用逐元素相同输入，并在奇偶重复中交替先执行方法，分别输出原生设备主结果和同 CPU 设备归一化辅助结果，禁止合并两种口径。
+
+Pairwise 的 `cauchy_modality_support_union` 与 `pseudo_unknown_learned_blend` 两个分支分别在 221 和 1,946 个样本上达到预测数组完全一致、风险最大绝对差 `0`。OpenDetect 的 CPU 重放预测一致、风险最大差 `1.621246337890625e-05`，只标记为跨设备诊断；正式 runner 会拒绝该产物，正式证据仍要求 GPU 同设备影子运行达到 `1e-12` 门。远端效率/runtime/审计测试共 `19/19 PASS`，仪器就绪审计为 `instrumentation_code_ready=true`，轻量证据位于 `results/strict_v4_final_efficiency_v2_instrumentation_audit/`。
+
+北京时间 `2026-07-20 11:56`，独立 OpenDetect 外部确认为 `149/306`，失败文件与错误日志均为 0；正式效率指标和污染指标仍均为 0。当前可以撰写方法、协议、30 方法开发表、机制消融、强基线和负结果，但不得把仪器冒烟计时写入论文，也不得定稿效率优势或“全面 SOTA”。
+
+### 6.42 效率重放缓存就绪边界
+
+新增缓存 readiness 审计并在远端通过 `2/2` 测试。coverage manifest 绑定的 seed7 七套件缓存虽然分布于 strict-v4、strict-v3 和原 CAEOS-EMTD 三个工程目录，但 7 个 CSV 与 7 个 sidecar 均存在且 SHA 完全匹配，故全 102 场景冻结输入可重放。fresh timing seed191 当前为 `0/7` 套件，正式计时门为 `False`；这不是数据集缺失，而是外部确认结束后必须在计时区间外完成的缓存预计算。协议可以先冻结，但训练/校准计时必须等 `7/7` seed191 缓存就绪后才允许启动。轻量证据位于 `results/strict_v4_final_efficiency_cache_readiness/`。
+
+### 6.43 seed191 自动准备链
+
+新增结果无关的 seed191 缓存准备器与等待器，复用 Router 确认链已经验证的 6 个分层缓存生成规则和 CIC-IoT2023 group-supported 规则。脚本在 `confirmation_complete` 不存在时失败关闭，且不调用任何训练器、不生成 `metrics.json`；上游完成后先以正式效率结果数 0 冻结并校验 v2 协议，再要求七套件各恰好一个 CSV/sidecar、记录逐文件 SHA，由缓存 readiness 审计打开正式计时门。核心审计与脚本测试在本地/远端均为 `6/6 PASS`，Bash 静态检查 PASS。GPU watcher PID `104970`、锁有效，当前只等待外部确认，不执行协议冻结或缓存构建。
+
+### 6.44 OpenDetect 同设备严格影子
+
+OpenDetect capture 新增 `same_device_shadow` 模式，使用原始 `OpenDetectClassifier` 在目标 CPU/CUDA 上直接前向作为非插桩参考，再与序列化 runtime 比较；paired runner 强制要求该模式标记、预测一致、风险差与声明容差均不超过 `1e-12`。CIC-ToN-IoT/backdoor 的 1,946 样本真实模型 smoke 在 CPU 上预测完全一致、风险差 `0`；相对旧 GPU score archive 的 `1.621246337890625e-05` 仅保留为跨设备诊断。远端效率/runtime/capture/审计测试 `22/22 PASS`，仪器审计标记同设备严格影子为 True、范围为单场景 smoke，正式效率指标仍为 0。北京时间 `2026-07-20 12:28`，独立外部确认 `161/306`、失败 0。
+
+### 6.45 Pairwise runtime 并列尾秩故障
+
+正式效率训练块已完成 `21/21`，首个 CIC-IoT2023 推理块完整。第二个 BrowserHijacking 场景的候选训练正常生成指标，但捕获器发现同一部署 runtime 连续推理风险最大差 `0.017439245148767935`；预测一致，源组件最大差仅 `2.220446049250313e-16`。执行器按冻结 `1e-12` 门失败关闭，未生成 `execution_complete`，不能汇总或声明效率结果。
+
+该现象定位为经验尾秩在并列值附近的数值稳定性问题。新增 `diagnose_pairwise_runtime_repeatability.py` 和计划重放器，只输出非正式诊断，不改变冻结算法或论文指标。远端隔离诊断 PID `2372450`；诊断完成后如修改 runtime，必须新冻协议/计划并隔离旧部分结果。LCB、Mal_TLS 异构编码器、WDiscOOD、DoH 和 VOS 正式结果均仍为 0，自有算法探索不取消。
+
+随后修正 LCB 对 `final_paper_readiness` 的过度依赖，改为直接等待已完成的综合 SOTA 审计和 seed191 缓存；队列依赖测试 `4/4 PASS`。LCB 已完成 Edge-IIoT Ransomware/Uploading，最后一次成功核验为 `2/14`、失败 0，并进入 NF-CSE 两个场景。为避免 CPU 线程竞争，非正式效率诊断 PID `2372450` 已暂停，优先完成冻结自有候选；效率正式链继续保持失败关闭。
+
+### 6.46 LCB Tail-aware 试点终态
+
+LCB 完成 `14/14`、失败 0。冻结分析器因误将完整 CLI 参数绑定到精简 `metrics.arguments` 而失败关闭；原协议与训练结果未修改。新增只读 schema 校正 manifest，将策略绑定到 metrics 双字段、九个冻结参数绑定到 `provenance.command`，并复用原全部门控；本地/远端测试 `10/10 PASS`，校正 SHA `b79f0643ba5fb32f525bd2a93e89c3d4837ab63eaa02b879308b04290832204f`。
+
+LCB 相对冻结参考的 AUROC/AUPR/FPR95/OSCR 有向均值为 `+0.008084/+0.002029/+0.036745/+0.017994`，候选 endpoint 仅在 `2/14` 场景由 known-only 门选中。唯一失败的扩展检查是套件最差指标门，实际 `-0.033509 < -0.01`；NF-UNSW Reconnaissance 出现 AUROC/AUPR/OSCR 误激活退化，说明 known-only 门不能安全路由该候选。最终决策 `retain_caeos_pairwise_incumbent`；不创建 306 次确认，不放宽激活门。下一项自有算法证据为 Mal_TLS2023 异构编码器试点。
+
+### 6.47 Mal_TLS2023 异构编码器终态
+
+统一 MLP 与 TLS-gated/IP-payload-MLP/packet-TCN 异构编码器完成 6 家族 `12/12` 配对运行、失败 0。异构模型的 AUROC/AUPR/FPR95/OSCR 平均有向增益为 `+0.007308/+0.002404/+0.032313/+0.004916`，Known Macro-F1 平均退化约 `0.002525`；但仅 `3/6` 家族四指标全非回退，Qakbot AUPR 最差 `-0.116946`，Scanners FPR95 `-0.072632`，平均 ECE 约退化 `0.041487`。
+
+三个稳健性门失败，决策 `retain_multi_view_claim_and_revise_encoder_candidate`，不消耗确认种子 `197/199/211`。Pairwise 继续作为最优自有算法。效率 runtime 隔离诊断以 PID `3631578` 恢复，输出使用新路径，后续先修复效率再启动第31基线。
+
+### 6.48 保守异构残差候选冻结
+
+针对全异构候选的 Qakbot AUPR `-0.116946`、Scanners FPR95 `-0.072632` 和平均 ECE 退化，新增 `mal_tls_conservative_residual`。统一 MLP 是主干；TLS-gated 与 packet-TCN 只通过零初始化、`tanh` 有界、固定 `0.25` 系数的残差接入。参考和候选都使用相同的 known-validation 证据温度校准，禁止未知类或测试标签参与拟合和选择。
+
+seed193 的 6 家族、12 配对运行协议在结果数 0 时冻结，SHA 为 `66fa6b6f9d1153873daaa92daf1ecf7a3a7c15d660d02667a28725811cfb7b9a`；开发门继续要求四项未知指标均值为正、最差单项不低于 `-0.03`、至少 4/6 家族全指标非回退、Known F1 与 ECE 非回退。核心和协议远端测试 `6/6 PASS`。确认种子 `197/199/211` 尚未使用，Pairwise incumbent 不变。
+
+### 6.49 Pairwise 经验尾近重复簇修复
+
+三次 BrowserHijacking 诊断把效率失败定位到 `conflict`：组件最大数值差 `3.3306690738754696e-16`，经验尾秩差 `0.00018975332068316142`，最终风险差 `0.007412592539810969`；其他组件均为 0。原有单点吸附不能处理同一 `1e-12` 邻域内的多个不同参考秩。
+
+runtime v2 现在预计算相邻参考近重复簇，并对簇内查询统一使用簇首秩；远端单元测试 `8/8 PASS`。同场景三次非正式重放是恢复正式效率链的硬前置；通过后将只在全新的 protocol/plan/formal/summary v3 根目录执行，旧 v2 目录保留为失败证据。WDiscOOD watcher 已切换为等待 v3 恢复完成标志。
+
+### 6.50 保守异构残差候选终态
+
+seed193 的 12 个配对运行全部完成、失败 0。相对统一 MLP，候选的 AUROC/AUPR/FPR95/OSCR 平均有向增益为 `-0.003976/-0.006646/-0.014708/-0.001474`，全指标非回退家族 `0/6`，最差为 Qakbot FPR95 `-0.100303`。Known Macro-F1 平均改善 `+0.002946`，但 ECE 平均有向增益 `-0.000648`；参考和候选的六场景温度均为 `0.5`。
+
+五个开发门只通过 Known F1 门，决策 `retain_caeos_pairwise_and_reject_residual_candidate`；不运行 `197/199/211`。下一候选不再扫描残差尺度，转向冻结主干的专用适配器或已知类一致性约束。Pairwise incumbent 不变。
+
+### 6.51 效率 v3 作废与 v4 恢复
+
+v3 executor 在 seed193 CUDA 上下文尚未被 `nvidia-smi` 观察到的启动窗口越过瞬时空闲门，造成重叠。发现时正式效率指标为 0、已有 9 个中间文件；executor、孤立 OpenDetect 捕获和 4 个 worker 均已停止，v3 整批标记为无效且不复用。
+
+v4 使用全新四根目录，并要求 executor 启动前连续 5 次、每次间隔 30 秒的 GPU 空闲观测。恢复与队列测试 `5/5 PASS`，WDiscOOD watcher 改为等待 v4 汇总完成标志。
+
+### 6.52 保守残差分量诊断
+
+seed193 的只读分量诊断显示，normal-distance AUROC 平均退化 `-0.047792`，明显大于 raw-conflict `-0.011538`、energy/uncertainty `-0.010686` 和 inverse-belief `-0.008346`；有效 conflict 和 prototype-distance 略增。Qakbot normal-distance AUROC 单场景退化 `-0.125382`。诊断只用于假设生成，不回写 seed193 决策或调参。
+
+### 6.53 几何保持证据适配器协议
+
+下一候选冻结统一 MLP 的所有非适配器张量，TLS/序列专用分支只修改最终融合证据，并用已知类 clean-to-corrupted KL 一致性训练。协议硬要求 checkpoint 主干逐位相等，且 distance、normal-distance、raw/effective conflict 四项 AUROC 差不超过 `1e-12`。
+
+seed195 协议在 `0/12` 时冻结，SHA 为 `2a490c9b0b3dbca0bce8351dbff1c5f937bbbf96eb8773166f0ef58e5b6e77c0`；远端回归 `8/8 PASS`，watcher PID `4097658`，排在 VOS 完成之后。Pairwise incumbent 和确认种子边界均不变。
+
+### 6.54 效率 v4 rep0 等价证据
+
+CIC-IoT2023 Recon-PingSweep rep0 的两侧捕获均完成。Pairwise 6,218 样本预测完全一致、runtime shadow 风险差 `0.0`、组件最大差 `3.33e-16`，OpenDetect CUDA shadow 预测一致且风险差 `0.0`，两侧 `passes=true`。executor 已进入 rep1；正式训练/推理效率聚合仍为未完成状态，不形成效率优势结论。
+
+### 6.55 GROOD 第 33 基线与自有算法优先队列
+
+TMLR 2025 GROOD 被确定为 30 方法主表和第 31/32 候选尚未覆盖的梯度空间强基线。新增 tabular MLP 适配保留合成 OOD 原型、最近类原型损失的 OOD 原型梯度以及梯度空间 1NN，绑定官方代码提交 `8a5ecdfdad178b6793132bec5d23cfad224fba11`；为满足无泄漏约束，禁用官方配置中的 validation OOD，只使用已知训练样本生成合成原型并建立梯度库，known-validation 只校准阈值。
+
+核心和协议测试远端 `5/5 PASS`。14 场景协议与扩展门在正式结果 `0/14` 时冻结，SHA 分别为 `536729683e3088e7071be2a8f3a3032c27cb850b3955d4ffd7a51e32b2255e59`、`77638190563e4642515c7d3fecef3b32c165588fcf0f5d06513038e8bf02d790`。GROOD watcher PID `193140` 依赖 seed195 几何保持适配器分析完成后才运行，因此新增基线不改变“自有算法探索优先”的队列。北京时间 `2026-07-21 03:17`，效率 v4 候选/比较器捕获为 `7/6`，等价文件 `13`，正式效率指标仍为 0。
+
+### 6.56 后效率声明链恢复与自有算法边界
+
+自有算法探索继续作为必要主线：`CAEOS-Pairwise` 是 incumbent，seed195 几何保持证据适配器是当前待执行自有候选；WDiscOOD、VOS、GROOD 只补充外部比较覆盖，不能替代自有创新。自有候选严格执行“新开发种子预冻结 -> 通过稳健门 -> 才使用保留确认种子”，失败候选保留为负结果，不结果后放宽门槛。
+
+审计发现旧效率 v2 等待器退出后，783 次选后污染、1,530 条件的 Pairwise--OpenDetect 比较污染和最终论文就绪审计均无活动接续进程。新增幂等恢复脚本 `scripts/wait_and_run_strict_v4_postefficiency_claim_chain_v2.sh`：等待效率 v4、队列末端 GROOD 和综合准确率审计完成，要求 GPU 与显式实验进程连续 5 次空闲，再按候选污染、比较污染、最终审计顺序执行。候选污染协议固定校验 SHA `83415875d1f26c8f1c948dac65f498110a5f3a6080e2aba4fd4407aa05eea4f4`，不重新创建；比较污染协议只允许在结果 0 时冻结；最终审计明确读取效率 v4 摘要。
+
+服务器端新增/既有回归分别 `5/5`、`6/6`、`2/2 PASS`，Bash 语法通过；修正空目录计数的 `pipefail` 异常路径后，等待器 PID `260108`。北京时间 `2026-07-21 11:40`，效率 v4 的 Pairwise/OpenDetect 捕获为 `8/8`，正式效率指标仍为 0；效率摘要及后续候选、污染和最终就绪标志均未生成，不构成新增论文结论。
+
+### 6.57 自有算法条件确认与 seed201 反事实冲突门
+
+补齐 seed195 阳性后的保留种子确认分支：通过开发门时才在零确认结果下冻结 `197/199/211`、6 家族、`36` 个参考/候选运行；失败则生成 `not_required`，不消耗确认种子。确认门同时要求四项 bootstrap 下界、逐种子稳定性、家族稳健性、Known F1、ECE和几何不变。分支实现/队列测试远端 `4/4 + 2/2 PASS`，watcher PID `393097`。
+
+另在未观察 seed195 结果前预注册 `mal_tls_counterfactual_conflict_gate`。候选冻结统一 MLP 和全部原冲突/距离路径，只训练标量证据衰减门；known-training 通过跨类别替换 TLS/packet-sequence 构造反事实，known-validation 只检查不确定性增益与 margin。开发 seed201、保留 seed203/205/207，正式结果 `0/12` 时协议 SHA 为 `d59cf35d41d34d41f94372d75f56f3bf73288f7c54a72ef148d66343cd82d8c7`。远端核心/协议/队列测试 `4/4 + 3/3 + 2/2 PASS`，独立工程 watcher PID `393098`；GROOD 新 PID `335416` 等其完成。12:14 效率 v4 捕获为 `12/11`，正式效率指标仍为 0，新增候选不形成效果结论。
+
+### 6.58 seed201 确认与最终自有算法选择
+
+seed201 阳性后将自动冻结并执行 `203/205/207`、6 家族、36 个配对确认运行；开发失败则不使用保留种子。确认门新增四指标 bootstrap 下界和逐种子一致性，并重复检查反事实响应与几何不变。确认 watcher PID `447522`。
+
+最终选择协议 v2 在两个确认分析均为 0 时冻结，SHA `16579561e5140a9dc302a652a7bd7eabb1056a863838339272491ad2f5cfcdd7`。只有 pilot 与确认同时通过者有资格；两者均通过时按“最差四指标 bootstrap 下界 -> 四指标平均增益 -> 预冻结优先级”选择。v1 因缺 pilot schema 硬门在结果前作废。选择 watcher PID `525919`，GROOD PID `447536` 等待最终 `audit_complete`。12:39 效率 v4 捕获 `15/15`、正式指标 0，自有算法选择仍无结果。
+
+### 6.59 GPU恶意数据扩展与自有算法外部确认准入
+
+GPU 数据根的采样只读审计确认：LSNM2024 含正常流量、15 个路径级恶意家族和 21 个 CSV，但列数为 59/60/61 混合且部分恶意 CSV 无显式标签；CICDDoS2019 含 16 个路径级 DDoS 家族、18 个 88 列 CSV 和显式 Label。前者优先构建宽域 packet/session 外部开放集，后者只作为窄域 DDoS 家族泛化套件。两者均不得按随机行或单一源文件切分，必须先建立双向五元组/会话或指纹组并证明三组切分重叠为 0。
+
+新增协议在任何完整扫描或训练前冻结：从路径派生 LSNM 缺失标签、标准化混合 schema、排除地址/内容/校验和/采集 ID，固定攻击家族留一与种子 `223/227/229`，并禁止在外部套件上调参。协议 SHA `6c8c76e3e7e5b477b7314c742aeaf7f5ec5c81f147130dc2fdfd4d19a8dafc0e`，本地/远端测试 `3/3 PASS`。自有算法仍是必要主线：Pairwise 为 incumbent，两个新挑战者只有通过 pilot 和保留种子确认才进入新增数据比较。12:56 效率 v4 Pairwise/OpenDetect 捕获 `18/18`，正式效率指标和两个新自有算法结果仍为 0。
+
+### 6.60 全量数据准入执行冻结与首个效率推理块
+
+新增断点式全量扫描器、LSNM2024 四模态数值配置、执行协议创建器、runner 和延后 watcher。扫描器逐成员统计标签、双向五元组/会话组及跨标签冲突，并在最终记录三个 ZIP 的完整 SHA；任何预期家族、benign、每标签最少 3 组、零冲突、零缺组或特征完整性门失败都不生成 `admission_passed`。执行 manifest 在结果为 0 时冻结为 `b41ebb9eee0177376e62a2cc1aede9efebf0e9fca16c379910ce5d5bfcf6f69e`，本地/远端测试 `10/10 PASS`。watcher PID `639026` 等待整个后效率声明链完成，当前未扫描真实数据。
+
+13:49 权威快照显示效率训练捕获 `21/21` 完成，CIC-IoT2023/Backdoor-Malware 首个推理块已生成原生和CPU归一化效率指标，正式推理进度 `1/102`，最终 summary 仍不存在。三项新增基线和两个新自有候选仍为零结果。S&I/GSC 仅完成近期方法学复核，因表格MLP高保真层定义尚未验证，不计入已完成或已冻结基线数。
+
+### 6.61 准入后外部数据标准化准备
+
+新增一次扫描、三种子并行的确定性组抽样准备器。LSNM每标签最多500个会话、每会话8个包；CICDDoS每标签最多4000个流、每流1行；三种子均不使用未知测试指标。LSNM四视图只输出有限数值侧信道和应用字段存在性，原始地址、内容字符串和采集ID不进入模型。每个CSV的sidecar绑定上游审计/协议/配置/源ZIP SHA以及标签、组和行计数。
+
+准备协议在结果0时冻结，manifest SHA `8d8d5a2cf5c5472f24f36dc6c69280a7bb8e94d931d431a59d922bbdc2b2bc43`，本地/远端相关测试 `13/13 PASS`。watcher PID `1174214` 等待全量准入通过；当前准备manifest为0。14:02效率训练 `21/21`、推理 `2/102`，最终summary及新自有算法结果仍不存在。
+
+### 6.62 Pairwise 等价快路径与效率隔离纠偏
+
+102 个 Pairwise 场景的冻结风险分支统计为 cauchy reference `88`、learned blend `14`。原 runtime 对所有分支都计算全局 KNN、类别 KNN、LOF 和全组件归一化，并为分类概率与 tree-disagreement 重复执行 RandomForest/ExtraTrees。新增的独立快路径按风险依赖计算，并仅对服务器 `21/21` 个基础 `ConflictAwareHybridClassifier` 捕获复用全局森林结果；不修改 v4 绑定文件。
+
+服务器 cauchy/learned 两个真实捕获分别以 `6,218/7,847` 个输入通过全量等价门：prediction array equal，risk max abs `0.0/0.0`，probability max abs `1.11e-16/0.0`，阈值 `1e-12`。专项测试本地/远端均 `4/4 PASS`。并发诊断时 cauchy batch `1/64/512` P50 为 `249.722/438.444/606.299 ms`，learned 为 `288.524/424.727/699.666 ms`；因测量与正式链重叠，这些时延只作方向诊断，不是论文效率结果。
+
+重叠发生在效率 v4 第四场景 DDoS-ACK-Fragmentation 捕获期间。已终止该捕获并把 5 个部分文件归档到 `strict_v4_final_efficiency_v4_contaminated_20260721T0624Z`；前三个完整推理场景保留，新恢复任务 PID `1617862` 将从第四场景干净重跑。正式 v4 仍使用原 runtime；优化版需后续新冻 v5 等价效率协议。准确率自有算法队列不变，seed195/201 尚无效果结果，Pairwise 仍为 incumbent。
+
+### 6.63 GSC 第34基线协议与 S&I 暂缓
+
+ICCV 2025 GSC 已完成论文公式级表格适配：冻结 MLP 倒数第二层 embedding，按预测类 logit 对 embedding 的梯度绝对值遮蔽前5%坐标，并用论文 Jacobian 一阶式修正所有 logits。线性头使一阶式与二次前向精确相同，也使掩码在同一预测类内固定；该退化已进入每场景 diagnostics 和扩展硬门。固定比例、向下取整、至少1维和稳定并列策略均不使用未知或测试标签。
+
+核心、协议和汇总测试本地/远端 `6/6 PASS`，Bash语法通过。14场景协议与扩展门在结果 `0/14` 时冻结，SHA 分别为 `55ade315f13d17cdb9d09e8c24d0a48c3ab52fa1260e31453dfff7b3b9162da9`、`8abe15d83a57f3c1005399c1c5857b87edbe7ac9fb04456470a42b2853cbcdaa`。GSC watcher PID `2003725` 等待 GROOD；后效率 watcher PID `2025174` 已增加GSC完成门。
+
+ICML 2025 S&I 官方仓库 HEAD `d8984f0f9325f053e7a7e4b16574842ebab09c34` 依赖专用分层网络和多层梯度 hooks。当前尚未实现 MLP 逐隐藏块的对抗更新与积分路径，故继续标记 `methodology_review_only`，不以最终层梯度简化计作第35基线。GSC当前也只有协议和代码证据，没有效果结果，不能增加已完成基线数或修改SOTA结论。
+
+### 6.64 自有算法优先队列纠偏
+
+用户再次确认自有算法探索不可省略。依赖复核发现 seed195 几何候选原本等待 VOS，因而被 WDiscOOD、DoH、VOS 三条外部基线间接阻塞。现已在候选结果仍为0时重排为：`效率v4恢复 -> seed195及条件确认 -> seed201及条件确认 -> 自有算法v2选择 -> WDiscOOD -> DoH -> VOS -> GROOD -> GSC`。几何、WDiscOOD、GROOD三个等待进程已以新依赖重启，远端队列/协议相关测试 `13/13 PASS`。
+
+纠偏不修改协议、数据、种子、模型和指标。两个挑战者只有在 pilot 与保留种子确认同时通过后才有资格比较，并继续接受 bootstrap 下界、Known F1、ECE、几何/反事实响应、新增恶意数据集和效率资源双门。约15:30，效率恢复已有14个指标文件但未完成；两个挑战者及最终选择仍无结果，故 Pairwise 仍是唯一已确认 incumbent，全面 SOTA 仍未得到证据支持。
+
+### 6.65 Conflict-Topology Copula 第三自有候选
+
+根据三条既有负证据，新增不改编码器、不学习单变量尾权重的 CTC 候选。它从 Pairwise 证据包提取五个视图置换不变量：可靠性加权视图JS、最大视图到共识JS、冲突图Laplacian谱半径、冲突-低可靠性耦合以及全局到视图融合JS。已知验证集按类别以 seed229 做60/40拟合-校准拆分，经经验Gaussian copula和Ledoit-Wolf联合距离得到拓扑上尾风险，再以固定0.25权重与Pairwise风险融合；分类预测保持不变，未知/测试标签仅用于最后计算指标。
+
+核心、评估器、协议、汇总和队列测试本地/远端 `19/19 PASS`，Bash/Python静态检查通过。首次协议缺少执行时输入SHA复核，在结果0时留档作废；补入逐文件失败关闭与篡改测试后，当前14场景协议 canonical SHA 为 `d368e18f8529eeb6ec45ea18b620a852403f8269480a0805df2ffef0597cd5c4`。阳性后保留确认种子为 `233/239/241`，范围为full102。CTC watcher PID `3451408` 等待两条Mal_TLS候选选择完成，WDiscOOD PID `3451409` 再等待CTC完成。08:20 UTC严格效率进度为 `9/102` 场景、18个正式效率文件；CTC和两条前序候选均无效果结果，Pairwise仍是incumbent。
+
+### 6.66 CTC 独立确认链就绪
+
+补齐 CTC 阳性后的保留种子确认链。只有 14 场景 pilot 输出 `freeze_for_reserved_seed_confirmation` 才允许在确认结果为0时冻结协议；否则写 `not_required` 且不使用保留种子。阳性时以 `233/239/241` 在7套件102场景重新生成306个 Pairwise 参考和306个 CTC 报告，逐运行验证 risk policy、known-only 选择、split fingerprint 及必需工件。统计单位固定为场景，先平均场景内三个种子，再进行10,000次bootstrap、四指标Wilcoxon及Holm校正；四项均值、AUROC/AUPR下界、四项校正p值、逐套件非负、306次预测一致和Known F1 `1e-12` 门必须全部通过。
+
+确认生成器、矩阵、汇总器和条件 watcher 已部署；本地相关回归 `21/21 PASS`，远端 CTC 专项 `12/12 PASS`，静态检查通过。WDiscOOD 已改为等待确认分支而非 pilot，新的 CTC 确认/WDiscOOD watcher PID 为 `1587732/1587738`。UTC `2026-07-21 10:40`，效率 v4 正式文件 `34`，对应 `17/102` 场景双口径完成，失败0但 `recovery_complete` 尚未生成；CTC pilot和确认结果仍为0，故不更新算法效果表，Pairwise仍是已确认 incumbent。
+
+### 6.67 自有算法必要性、PRO 第35候选与效率近完成快照
+
+自有算法探索继续作为必要主线。当前 Pairwise 是唯一经独立确认的 incumbent；seed195 几何保持适配器、seed201 反事实冲突门和 CTC 均仍为零效果结果，必须分别通过开发门和预留种子确认后才能进入最终择优。新增外部基线不能替代这一资格链。
+
+ICML 2025 S&I 官方提交 `d8984f0f9325f053e7a7e4b16574842ebab09c34` 的逐层 split、分层对抗更新和非零梯度积分在稠密表格MLP上存在梯度占用退化；当前没有忠实适配，故保持 `methodology_review_only`，不计第35基线。第35个零结果冻结候选改为 CVPR 2025 `PRO-MSP-Fixed`：绑定官方提交 `bb22cc2b1c4c928e4bc38e2d7c7db4f8900df295`，固定温度1.0、一步 sign-gradient、步长0.003、不投影、无OOD超参数扫描，并保持未扰动模型预测。14场景 protocol/gate SHA 为 `1f9d46cc2a1c52d129c924a1660e3a25948caaa427e86147d440eef2f3175206`、`612dfaddfd730c56ec89f34c542017c588cce0cafd932ddcd77ab6236f90cbc2`；本地/远端专项测试均 `8/8 PASS`，协议重生成哈希一致，当前结果 `0/14`。
+
+UTC `2026-07-21 22:54`，效率 v4 训练块 `21/21`、推理块 `95/102`，正式双口径指标 `190/204`；剩余7场景均属USTC-TFC2016，executor仍在运行，summary和完成标志尚未产生。所有新自有挑战者和第31至35候选基线仍没有可判定效果结果，因此实验已接近形成完整效率证据，但当前仍不能声称新自有算法胜出或全面SOTA。
+
+### 6.68 learned-tail 修复与效率 v5 受控恢复
+
+v4 随后在 USTC-TFC2016/Miuref 失败关闭：prediction一致、必需组件最大差仅 `3.33e-16`，但 learned blend 的二级经验尾因离散秩跳变使连续两次风险差达到 `0.000113199 > 1e-12`。v4 最终停在训练 `21/21`、推理 `95/102`、正式指标 `190/204`，没有 summary/recovery marker，不能用于完整效率声明。失败快照已绑定旧协议、计划、runtime、日志和SHA。
+
+基础和优化 runtime 均改为对 learned validation raw score 做 `1e-12` 近重复聚类并固定首秩。服务器专项/队列测试 `26/26 PASS`；Miuref 原参数隔离重捕获的 prediction 完全一致、连续风险差 `0.0`、组件最大差 `4.44e-16`。新 runtime SHA `a0f226d1449b5216783207651661a9f64dd9e5a80c2066c59220e381140dc6ae` 与旧 SHA 显式分离。
+
+v5 protocol/plan/reuse-audit SHA 分别为 `069c61eeba45ded98f4f7d584b29cf66cda1a22bcb507f475b0abe9f6560cbc1`、`dd9d3459b3ec28343547c02af653d1969a26422c61863d1fd09484d3247abb05`、`cf1d64222f82bc1f5312bee17b6588e9fda85543a4204f8af5272bb53681de99`。只复用100个Cauchy候选捕获和211个OpenDetect捕获；16个learned候选捕获、7个未完成场景及全部正式benchmark/paired metrics重新执行。00:30 UTC，v5 已通过5次连续空闲门并开始重跑 learned 训练捕获；下游自有算法和基线等待器均已切换到v5。算法效果结论不变：Pairwise为incumbent，新挑战者仍无结果，全面SOTA未确认。
+
+00:53 UTC，三个新learned训练捕获均通过，risk差 `0.0`、组件差 `3.33e-16`；正式推理进度为 `3/102`、双口径指标 `6/204`。三场景中原Pairwise相对OpenDetect的P50时延比为native `181.2/340.9/656.0`、CPU归一化 `96.3/397.3/410.8`（batch `1/64/512`），吞吐比均低于 `0.012`。该小样本只证明部署成本风险，不能作为总体效率结论。v5继续跑完原实现；严格等价快路径另设v6三方协议，且排在准确率自有候选之后执行。
+
+### 6.69 v6 严格等价三方部署协议
+
+首版 v6 protocol SHA `2b0f0c20629f61ee9b1444990f7859527408e8a34426f881f3ecb6c49acbb379` 在优化结果 `0/204` 时因缺少显式模型体积门而废止并归档，没有形成可用测量。补齐体积门后重新冻结的当前权威 protocol SHA 为 `ae59745a52eeab39af2b93e9f6bd51dcbba631f11d45dd00e0efe6837e9f8487`，再次冻结时优化结果仍为0，且 v5 的52个已观察指标标记为未用于优化参数选择。102场景分别在native/CPU归一化模式交替测量original Pairwise、optimized Pairwise和OpenDetect，三方法按Latin-square轮换顺序；batch `1/64/512`、预热5次、正式30次。优化版每场景先在全输入上通过prediction完全一致、probability/risk差 `<=1e-12`。
+
+部署阳性门要求两种模式和三个batch的中位P99均至少2倍加速、吞吐均至少2倍提升，共6/6检查全通过；优化产物/原产物持久化字节比还必须 `<=1.0`，且全部204块完整报告三方产物字节数；optimized/OpenDetect效率结论还必须有102场景bootstrap区间。协议和队列测试本地/远端均 `9/9 PASS`。当前 v6 watcher PID `2424393` 等待v5和CTC确认，WDiscOOD PID `971653` 再等待v6完成。04:20 UTC，v5为 `82/204`、三方独立 benchmark 为126个，v6仍为0且未运行，两个完成标志均不存在；Pairwise准确率incumbent和seed195/201/CTC顺序不变。
+
+### 6.70 自有算法优先链与基线队列现场审计
+
+依赖脚本逐项复核为：`v5 recovery_complete -> seed195 pilot/条件确认 -> seed201 pilot/条件确认 -> 自有算法选择 audit_complete -> CTC pilot/条件确认 -> v6 branch_complete -> WDiscOOD`。pilot 未通过时，条件确认分支写 `not_required` 后生成完成标志；只有 `freeze_for_reserved_seed_confirmation` 才能使用预留种子。该结构保证负候选失败关闭且不阻塞下一候选，也保证外部基线不能绕过三条自有挑战者和部署门。
+
+04:08 UTC，seed195 pilot/确认 watcher PID `1739794/393097`，seed201 pilot/确认 PID `393098/447522`，自有算法选择 PID `525919`，CTC pilot/确认 PID `3451408/1587732`，v6/WDiscOOD PID `2424393/971653`，均存活；VOS、GROOD、GSC、PRO 等外部候选仍在后续队列。当前没有任何新自有算法效果完成标志，故 Pairwise 仍是唯一已确认 incumbent，下一实质判定点是 v5 完成后 seed195 的12场景开发门。
+
+### 6.71 ActSub 第36候选冻结与队列扩展
+
+S&I 官方实现采用36个逐层切分点、每点两步对抗更新和非零梯度支持聚合。当前两块 `Linear + LayerNorm + GELU` 表格MLP的稠密梯度会使支持占用近似常量，最终线性头简化又不保留逐层路径，因此继续标记 `methodology_review_only`，不计方法数。
+
+新增 `ActSub-SCALE-Fixed` 作为第36个零结果候选。它固定官方代码提交 `5b058e723c814fdfd36ab1b73b18227623faa410`，在冻结MLP embedding与分类头上执行全SVD、known-training自动balance index、percentile 95、lambda 2、top-10 insignificant cosine及Eq.10乘积风险；known-validation只校准阈值，禁止validation OOD、APS和测试标签调参。protocol/gate SHA 为 `8d1414123a6a730592ae6949342f6f0c5e5cd65b17078ce53c1364edb312ad44`、`3f1eb8036e00a787548acbde88d72467befa48d4461c83cc445f979acb478639`；本地/远端专项测试均 `9/9 PASS`，正式指标仍为 `0/14`，故尚无效果结论。
+
+ActSub watcher PID `1551185` 等待 PRO 分析和分支完成；后处理链 PID `1551184` 已增加 ActSub 完成硬门。UTC `2026-07-22 04:54:44`，效率 v5 为 `100/204`，执行日志0字节，执行器、恢复包装器和等待器均存活，未发现非空错误日志。自有算法探索继续优先执行 seed195、seed201、CTC 及其保留种子确认；Pairwise仍是唯一已确认 incumbent，全面SOTA和新自有算法胜出均未确认。
+
+### 6.72 CARef/CADRef 第37-38候选与 full102 闭环
+
+补充 CVPR 2025 `CARef` 和 `CADRef-Energy-Fixed`。二者固定官方提交 `121f74b47ebd71644a1c5a6d856880021268c7fa`，严格使用 known-training 预测类中心；CARef 为 Eq.6 归一化L1相对误差，CADRef 为官方默认 Energy 的 Eq.10，known-validation只定阈值，不使用未知/OOD标签调参。二者共享一次冻结MLP前向，分别作为第37、38个零结果候选。
+
+首版协议 SHA `f31b948cd1d1d6f95ba92747b88c11bd8163edc11e00698fd4502b409bd20a38` 因未绑定 full102 聚合分析，在结果0时留档作废。加入102场景公式审计、四方法表、逐套件增益、非恒定分数与 canonical SHA 后，当前 protocol/gate SHA 为 `5ba6b77c9eaf42e86dedb4fd605df841941a3845bccde8e4a0d2d65e355b6094`、`d04405319976b63913d8a281486eeb53add2499fd89045a5ee32f737ea4c7be2`，绑定7项实现文件。远端专项测试 `10/10 PASS`，Python/Bash静态检查通过，正式结果仍为 `0/14`。
+
+CADRef watcher PID `2395520` 等待 ActSub，后处理链 PID `2395521` 已增加 CADRef analysis/branch 硬门。UTC `2026-07-22 05:42:56`，效率 v5 为 `124/204`、执行日志0字节，主执行器与恢复包装器存活。自有算法 seed195、seed201、CTC 继续优先，Pairwise仍是唯一已确认 incumbent；新增候选目前只补齐全面SOTA的参照覆盖，不构成效果提升。
+
+### 6.73 统一自有算法选择闭环
+
+复核失败集中度后，当前不新增第四候选。seed195、seed201、CTC 已分别检验表示空间尾部几何、反事实冲突响应和证据冲突联合拓扑；再增加一个全局 tail score 会与 LCB/seed195 重合，并增加事后选择自由度。只有三条冻结挑战者均失败且错误归因出现新的非重合机制时，才重新开放第四候选。本决策不削弱自有算法探索，而是要求先完成现有三条可证伪路线。
+
+审计同时发现既有 Mal_TLS 选择器只覆盖 seed195/seed201，CTC 即使通过确认也不能进入全局最终选择。现已新增分层统一选择器：CTC 只有在 pilot 和 reserved confirmation 均通过时才能替换全局 `CAEOS-Pairwise`，否则保留 Pairwise；Mal_TLS 局部组件继承 canonical seed195/seed201 审计。禁止结果依赖集成或临时调权。
+
+统一结果无关协议在 decision 0 时冻结，SHA 为 `a122636de37c8485bd805b5a475635fc4a37c00f7a768d42eb87a8528b202698`。即使 CTC 赢得准确性选择，仍须通过效率、LSNM2024、CICDDoS2019 后才能把 `deployment_selection_complete` 置为 true。本地/远端专项测试均 `6/6 PASS`，Python/Bash静态检查通过。
+
+UTC `2026-07-22 06:17:24`，v5 为 `140/204`，执行器与恢复包装器存活；统一选择、WDiscOOD、后续声明链 watcher PID 为 `3218896/3218897/3218898`，CADRef watcher PID `2395520`。统一 decision 与 seed195、seed201、CTC 正式指标仍均为0，Pairwise仍是唯一已确认 incumbent；当前论文可写的是方法动机、冻结协议和实验设计，不能写挑战者胜出或全面 SOTA 结论。
+
+### 6.74 Fisher-Rao 第39-41候选与外部信息几何边界
+
+新增 ICLR 2026 Fisher-Rao family，补齐现有30个已完成方法及第31-38个排队候选之外的信息几何机制。`FIM-Standard/FIM-Tensor/FIM-Additive` 共享冻结 MLP 前向，分别实现 Eq.7、Eq.9 和 Eq.13；Additive 的系数按 Eq.14-15 只用 known-training 解析方差平衡，LDA/PCA 子空间和系数均不读取未知或测试标签，known-validation 只定阈值。该 family 是外部压力测试，不进入自有算法资格排序。
+
+本地/远端专项测试 `9/9 PASS`，静态检查通过。真实单场景临时冒烟成功，Additive AUROC/FPR95 为 `0.831883/0.373553`，但 `/tmp` 结果只作执行验证，不计正式实验。正式14场景 protocol/gate 在 `0/14` 时冻结，SHA 为 `fd6756f66d519163c11e9609e075b67f4ce704e49618e60e50a88c08e07c235e`、`14fbc86d20035a566c8f374280bb5d98f83e0a7b99bc593b2be1324c9024b38b`。
+
+Fisher-Rao watcher PID `336594` 等待 CADRef；后处理终审 watcher 已重启为 PID `336592`，状态日志明确等待 Fisher-Rao 完成。UTC `2026-07-22 06:49:15`，v5 已到 `157/204`，Fisher-Rao 正式结果、seed195、seed201、CTC 与统一选择结果仍均为0。自有算法探索继续必要且优先，Pairwise保持 incumbent，全面SOTA仍未确认。

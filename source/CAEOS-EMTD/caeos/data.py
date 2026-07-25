@@ -343,6 +343,96 @@ def stratified_column_group_split(
     return splits[0], splits[1], splits[2], metadata
 
 
+def temporal_column_group_split(
+    frame: pd.DataFrame,
+    label_column: str,
+    group_column: str,
+    time_column: str,
+    fractions: Tuple[float, float, float] = (0.70, 0.15, 0.15),
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Dict[str, object]]:
+    """Assign each class's capture groups chronologically to train/validation/test."""
+    if group_column not in frame or time_column not in frame:
+        raise ValueError("temporal split requires group and time columns")
+    if not np.isclose(sum(fractions), 1.0):
+        raise ValueError("split fractions must sum to one")
+    if frame[time_column].isna().any():
+        raise ValueError("temporal split contains missing capture timestamps")
+
+    work = frame.copy()
+    work["__capture_time"] = pd.to_datetime(work[time_column], errors="raise", utc=True)
+    group_labels = work.groupby(group_column, sort=False)[label_column].nunique()
+    if (group_labels > 1).any():
+        raise ValueError("temporal split groups must be label-pure")
+    group_times = work.groupby(group_column, sort=False)["__capture_time"].nunique()
+    if (group_times != 1).any():
+        raise ValueError("each temporal split group must have one capture timestamp")
+
+    split_parts: List[List[pd.DataFrame]] = [[], [], []]
+    per_class_groups: Dict[str, Dict[str, int]] = {}
+    per_class_ranges: Dict[str, Dict[str, Dict[str, str]]] = {}
+    for label, label_frame in work.groupby(label_column, sort=True):
+        groups = [
+            group
+            for _, group in sorted(
+                label_frame.groupby(group_column, sort=False),
+                key=lambda item: (
+                    item[1]["__capture_time"].iloc[0],
+                    str(item[0]),
+                ),
+            )
+        ]
+        if len(groups) < 3:
+            raise ValueError("class %s has fewer than three temporal groups" % label)
+        train_count = max(1, int(np.floor(fractions[0] * len(groups))))
+        validation_count = max(1, int(np.floor(fractions[1] * len(groups))))
+        if train_count + validation_count >= len(groups):
+            train_count = len(groups) - 2
+            validation_count = 1
+        boundaries = (train_count, train_count + validation_count)
+        assigned = (groups[: boundaries[0]], groups[boundaries[0] : boundaries[1]], groups[boundaries[1] :])
+        ranges: Dict[str, Dict[str, str]] = {}
+        counts: Dict[str, int] = {}
+        for split_index, (split_name, split_groups) in enumerate(
+            zip(("train", "validation", "test"), assigned)
+        ):
+            split_parts[split_index].extend(split_groups)
+            counts[split_name] = len(split_groups)
+            timestamps = [group["__capture_time"].iloc[0] for group in split_groups]
+            ranges[split_name] = {
+                "minimum": min(timestamps).isoformat(),
+                "maximum": max(timestamps).isoformat(),
+            }
+        if not (
+            pd.Timestamp(ranges["train"]["maximum"])
+            <= pd.Timestamp(ranges["validation"]["minimum"])
+            <= pd.Timestamp(ranges["test"]["minimum"])
+        ):
+            raise AssertionError("temporal split ordering failed for class %s" % label)
+        per_class_groups[str(label)] = counts
+        per_class_ranges[str(label)] = ranges
+
+    splits = [
+        pd.concat(parts, ignore_index=True).drop(columns="__capture_time")
+        for parts in split_parts
+    ]
+    group_sets = [set(split[group_column].astype(str)) for split in splits]
+    metadata = {
+        "strategy": "temporal_capture_grouped",
+        "group_column": group_column,
+        "time_column": time_column,
+        "fractions": list(fractions),
+        "ordering": "per_class_ascending_capture_time",
+        "per_class_groups": per_class_groups,
+        "per_class_time_ranges": per_class_ranges,
+        "group_overlap": {
+            "train_validation": len(group_sets[0] & group_sets[1]),
+            "train_test": len(group_sets[0] & group_sets[2]),
+            "validation_test": len(group_sets[1] & group_sets[2]),
+        },
+    }
+    return splits[0], splits[1], splits[2], metadata
+
+
 def _split_known_frame(
     frame: pd.DataFrame,
     label_column: str,
@@ -350,6 +440,7 @@ def _split_known_frame(
     seed: int,
     split_strategy: str,
     group_column: str = "",
+    time_column: str = "",
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Dict[str, object]]:
     if split_strategy == "fingerprint_grouped":
         return stratified_fingerprint_group_split(
@@ -360,6 +451,14 @@ def _split_known_frame(
             raise ValueError("capture_grouped requires config group_column")
         return stratified_column_group_split(
             frame, label_column, group_column, seed
+        )
+    if split_strategy == "temporal_capture_grouped":
+        if not group_column or not time_column:
+            raise ValueError(
+                "temporal_capture_grouped requires config group_column and time_column"
+            )
+        return temporal_column_group_split(
+            frame, label_column, group_column, time_column
         )
     if split_strategy != "random":
         raise ValueError("unsupported split strategy: %s" % split_strategy)
@@ -396,6 +495,7 @@ def prepare_tabular_open_set(
     modality_names = list(modalities.keys())
     feature_columns = [column for name in modality_names for column in modalities[name]]
     group_column = str(config.get("group_column", ""))
+    time_column = str(config.get("time_column", ""))
     frame = load_stratified_reservoir(
         csv_path,
         label_column,
@@ -403,7 +503,9 @@ def prepare_tabular_open_set(
         max_per_class,
         chunksize,
         seed,
-        additional_columns=([group_column] if group_column else []),
+        additional_columns=[
+            column for column in (group_column, time_column) if column
+        ],
     )
 
     available_labels = set(frame[label_column].astype(str))
@@ -446,6 +548,7 @@ def prepare_tabular_open_set(
             seed,
             split_strategy,
             group_column,
+            time_column,
         )
     )
     split_metadata["cross_label_fingerprint_filter"] = cross_label_filter
@@ -453,6 +556,7 @@ def prepare_tabular_open_set(
     fingerprint_columns = [
         *feature_columns,
         *([group_column] if group_column else []),
+        *([time_column] if time_column else []),
         label_column,
     ]
     split_metadata["split_fingerprint"] = split_fingerprint_metadata(

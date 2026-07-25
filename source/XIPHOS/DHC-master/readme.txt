@@ -1,3 +1,3 @@
-File "example_clear_CHD_upgrade.py" and "example_clear_ROAD_upgrade.py" are trained with the normally generated graph representations and tested with graph representations of all types of data. In addition, the prediction results which can be dynamically adjusted are given.
-
- File "FeatureExtractor.py", file "Kitsune.py" and folder KitNET are used to store some of the functions that will be used.
+version https://git-lfs.github.com/spec/v1
+oid sha256:e36d1b0b5a299ae2fc70d7020c16a01ff0d85df53db0e6cc4ca265008dd9fc27
+size 400

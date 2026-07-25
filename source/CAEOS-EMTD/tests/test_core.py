@@ -69,6 +69,27 @@ class CoreAlgorithmTest(unittest.TestCase):
         loss.backward()
         self.assertTrue(any(parameter.grad is not None for parameter in model.parameters()))
 
+    def test_heterogeneous_tls_profile_uses_temporal_sequence_encoder(self):
+        model = ConflictAwareEvidentialNet(
+            [9, 39, 39, 30],
+            5,
+            hidden_dim=16,
+            embedding_dim=12,
+            encoder_kinds=["tls_gated", "mlp", "mlp", "sequence_tcn"],
+        )
+        views = [
+            torch.randn(8, 9),
+            torch.randn(8, 39),
+            torch.randn(8, 39),
+            torch.randn(8, 30),
+        ]
+        output = model(views, torch.ones(8, 4))
+        self.assertEqual(model.encoder_kinds[-1], "sequence_tcn")
+        self.assertEqual(tuple(output["embeddings"].shape), (8, 4, 12))
+        self.assertEqual(tuple(output["raw_conflict"].shape), (8, 4, 4))
+        output["fused_evidence"].mean().backward()
+        self.assertTrue(any(parameter.grad is not None for parameter in model.parameters()))
+
     def test_training_loss_uses_reliability_logits(self):
         model = ConflictAwareEvidentialNet([8, 6, 4], 5, hidden_dim=16, embedding_dim=12)
         views = [torch.randn(10, 8), torch.randn(10, 6), torch.randn(10, 4)]

@@ -1,1 +1,3 @@
-The folder data_preprocess provides the code for data preprocessing, the folder ROAD_raw stores the ROAD data set, and the folder ROAD_split contains the processed graph structure data as the input of the graph comparison learning model.
+version https://git-lfs.github.com/spec/v1
+oid sha256:ecfb692f091572db462e9677d7d23f21f61f46edfe9b6601e41d980a5ae2cdcc
+size 237

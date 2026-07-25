@@ -1,1 +1,3 @@
-Run file !graph_train_CHD-upgrade.py and use the training data to complete the training process.  The best weights are saved in the file 32IVN_upgrade_final_16.pkl.  File !graph_execute_CHD-upgrade.py is used to execute the GCL model and generate graph embedding representations saved in folder "upgrade".  File utils0.py, file dataset0.py and file dataset1.py are used to store some of the functions that will be used.
+version https://git-lfs.github.com/spec/v1
+oid sha256:7f476081e4469f12fb23b0758fcc5bfb65aae27325e6dc88957b98193a2dc672
+size 420

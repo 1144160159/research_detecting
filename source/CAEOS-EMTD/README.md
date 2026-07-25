@@ -609,3 +609,21 @@ The initial tabular adapter is intended for algorithm validation. Packet
 sequence, visible protocol fields, and communication-graph encoders can replace
 the three view encoders without changing the evidence, conflict, fusion, or
 open-set calibration interfaces.
+
+## Strict-v4 VOS pilot
+
+The strict-v4 baseline screen includes a VOS adaptation that is intentionally
+separate from NPOS. `caeos/vos.py` implements per-class feature queues, class
+means, tied covariance, low-likelihood Gaussian virtual outliers, and the
+weighted-energy regularizer. `train_vos_open_set.py` uses plain negative
+log-sum-exp energy as the primary OOD score and known-only validation for the
+deployment threshold.
+
+`create_strict_v4_vos_pilot_protocol.py` freezes 14 seed-7 scenarios before any
+VOS result, `run_strict_v4_vos_matrix.py` enforces implementation/source SHA
+bindings, and `summarize_strict_v4_vos_pilot.py` applies the prefrozen expansion
+gate. The remote zero-result protocol SHA is
+`9669965f282d5832b9dcaf460ed85b2882e14dbe4b1060376bd8498174f05903`.
+`scripts/wait_and_run_strict_v4_vos_pilot.sh` waits for the DoH temporal screen
+and an idle GPU; a gate failure retains VOS as negative baseline evidence and
+does not trigger full102 work.
