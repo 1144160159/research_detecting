@@ -27,6 +27,9 @@ strict-v4 的轻量 JSON/Markdown 镜像位于 `F:/泉城实验室/二期/论文
 - `strict_v4_aegis_training_full102_seed7/not_required`：AEGIS 未过冻结扩展门，完整 102 场景扩展按协议免除。
 - `strict_v4_comprehensive_sota_audit/`：综合 SOTA 审计 v9；三组训练强基线、正/负扩展义务和 F2-F9 融合矩阵交叉一致性均为硬门，只有完整 PASS 后才允许升级论文声明。
 - `strict_v4_final_efficiency_readiness_seed7/readiness.json`：冻结效率协议 v1 的可执行性审计；Pairwise 候选可加载模型覆盖为 `0/102`，OpenDetect 为 `102/102`，因此禁止直接效率比较并要求最终选模后冻结 v2。
+- `strict_v4_dcc_pilot_seed7/`：ICML 2025 DCC 的 14 场景冻结发展筛选；`14/14`、零失败、SHA/切分/无泄漏检查通过，但三个性能扩展门失败，故不补跑 full102。
+- `strict_v4_final_efficiency_v2_instrumentation_audit/`：选后效率 v2 runtime、成对 runner 与等价门的机器审计；仪器代码 ready，正式效率指标仍为 0，OpenDetect CPU 重放只作为跨设备诊断。
+- `strict_v4_final_efficiency_cache_readiness/`：效率重放缓存审计；seed7 七套件路径与 SHA `7/7`，seed191 fresh timing 缓存 `0/7`，因此正式计时仍关闭。
 - `strict_v4_{complementary,aegis}_training_full102_seed7/`：仅在对应试点过门时生成，保存零结果冻结协议、102 场景完整汇总和扩展完成证据。
 - `01_基础与闭集验证/mal_tls_xgboost_multiseed/`：XGBoost 2.1.4 五种子闭集基线的冻结协议、完成汇总和完成态完整性审计；逐种子模型与原始运行仍只在 GPU 端。
 - `source/CAEOS-EMTD/results/strict_v4_conflict_metrics_seed7/`：D1-D7 七类冲突度量的 102 场景分析、BH-FDR、多种比较校正和配对稳健性审计。
