@@ -35,6 +35,14 @@ from caeos.pseudo_unknown_risk import (
     quantile_local_rank_blend,
     robust_fold_gate,
 )
+from caeos.continuous_outer_min_p import continuous_outer_min_p
+from caeos.pseudo_unknown_gated_continuous import (
+    PUG_GATE_V1,
+    PUG_RISK_NAME,
+    PUG_SELECTION_NAME,
+    evaluate_pseudo_unknown_gate,
+    select_pug_route,
+)
 from caeos.tail_aware_ranking import (
     apply_tail_aware_head,
     cross_fitted_tail_aware_shrinkage,
@@ -81,6 +89,7 @@ def parse_arguments() -> argparse.Namespace:
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
             "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+            PUG_SELECTION_NAME,
             "nested_conflict_gate",
             "nested_modality_gate",
             "nested_modality_support_gate",
@@ -759,6 +768,7 @@ def select_nested_risk(
         "lof_density",
     )
     calibration_tasks = []
+    pug_fold_comparisons = []
 
     for held_out in range(1, len(bundle.class_names)):
         train_known = train_labels != held_out
@@ -1095,6 +1105,74 @@ def select_nested_risk(
             combined_union_score
         )
         scores_for_class["cauchy_modality_support_union"] = combined_union_score
+        if args.risk_selection == PUG_SELECTION_NAME:
+            known_pug_continuous = continuous_outer_min_p(
+                known_cauchy_evidence, known_modality_support
+            )
+            pseudo_pug_continuous = continuous_outer_min_p(
+                pseudo_cauchy_evidence, pseudo_modality_support
+            )
+            nested_labels = np.concatenate(
+                [
+                    auxiliary_validation_labels,
+                    np.full(validation_pseudo.sum(), -1, dtype=np.int64),
+                ]
+            )
+            nested_unknown = np.concatenate(
+                [
+                    np.zeros(validation_known.sum(), dtype=bool),
+                    np.ones(validation_pseudo.sum(), dtype=bool),
+                ]
+            )
+            nested_prediction = np.concatenate(
+                [
+                    known_probability.argmax(axis=1),
+                    pseudo_probability.argmax(axis=1),
+                ]
+            )
+            candidate_continuous_risk = np.concatenate(
+                [known_pug_continuous, pseudo_pug_continuous]
+            )
+            reference_threshold = float(
+                np.quantile(known_combined_union, args.known_acceptance)
+            )
+            candidate_threshold = float(
+                np.quantile(known_pug_continuous, args.known_acceptance)
+            )
+            reference_report = evaluate_hybrid_open_set(
+                nested_labels,
+                nested_unknown,
+                nested_prediction,
+                combined_union_risk,
+                reference_threshold,
+            )
+            candidate_report = evaluate_hybrid_open_set(
+                nested_labels,
+                nested_unknown,
+                nested_prediction,
+                candidate_continuous_risk,
+                candidate_threshold,
+            )
+            fold_metrics = (
+                "known_macro_f1",
+                "unknown_auroc",
+                "unknown_aupr",
+                "unknown_fpr95",
+                "oscr",
+            )
+            pug_fold_comparisons.append(
+                {
+                    "fold": bundle.class_names[held_out],
+                    "reference": {
+                        name: float(reference_report[name])
+                        for name in fold_metrics
+                    },
+                    "candidate": {
+                        name: float(candidate_report[name])
+                        for name in fold_metrics
+                    },
+                }
+            )
         calibration_tasks.append(
             PseudoUnknownTask(
                 name=bundle.class_names[held_out],
@@ -1187,6 +1265,7 @@ def select_nested_risk(
                     in {
                         "nested_boundary_pseudo_unknown_blend",
                         "nested_boundary_pairwise_pseudo_unknown_blend",
+                        PUG_SELECTION_NAME,
                     }
                 ),
                 boundary_hard_pseudo_fraction=args.boundary_hard_pseudo_fraction,
@@ -1195,7 +1274,10 @@ def select_nested_risk(
                 training_objective=(
                     "pairwise"
                     if args.risk_selection
-                    == "nested_boundary_pairwise_pseudo_unknown_blend"
+                    in {
+                        "nested_boundary_pairwise_pseudo_unknown_blend",
+                        PUG_SELECTION_NAME,
+                    }
                     else args.boundary_training_objective
                 ),
             )
@@ -1262,12 +1344,28 @@ def select_nested_risk(
             "oscr_robust_objective": oscr_robust,
             "joint_robust_objective": 0.5 * auroc_robust + 0.5 * oscr_robust,
         }
+    pug_gate = None
+    if args.risk_selection == PUG_SELECTION_NAME:
+        if len(pug_fold_comparisons) >= int(PUG_GATE_V1["minimum_fold_count"]):
+            pug_gate = evaluate_pseudo_unknown_gate(
+                pug_fold_comparisons, PUG_GATE_V1
+            )
+        else:
+            pug_gate = {
+                "schema_version": "caeos_pug_pseudo_unknown_gate_v1",
+                "fold_count": len(pug_fold_comparisons),
+                "passes": False,
+                "selected_route": "exact_pairwise_passthrough",
+                "reason": "insufficient_pseudo_unknown_folds",
+                "selection_uses_unknown_or_test_labels": False,
+            }
     if not aggregates:
         return "cauchy_evidence", {
             "fallback_reason": "no eligible known attack class",
             "held_out_reports": held_out_reports,
             "candidate_aggregates": aggregates,
             "structural_support_weight_aggregates": structural_support_aggregates,
+            "pug_continuous_outer_gate": pug_gate,
         }
     selected = max(
         aggregates,
@@ -1288,6 +1386,7 @@ def select_nested_risk(
         "held_out_reports": held_out_reports,
         "candidate_aggregates": aggregates,
         "structural_support_weight_aggregates": structural_support_aggregates,
+        "pug_continuous_outer_gate": pug_gate,
     }
 
 
@@ -1679,6 +1778,30 @@ def main() -> None:
         test_cauchy_modality_union,
         thresholds[union_name],
     )
+    pug_continuous_risks = None
+    if args.risk_selection == PUG_SELECTION_NAME:
+        validation_pug_continuous = continuous_outer_min_p(
+            validation_cauchy_evidence_for_union,
+            validation_modality_support,
+        )
+        test_pug_continuous = continuous_outer_min_p(
+            test_cauchy_evidence_for_union,
+            test_modality_support,
+        )
+        pug_continuous_risks = (
+            validation_pug_continuous,
+            test_pug_continuous,
+        )
+        thresholds[PUG_RISK_NAME] = float(
+            np.quantile(validation_pug_continuous, args.known_acceptance)
+        )
+        reports[PUG_RISK_NAME] = evaluate_hybrid_open_set(
+            test_labels,
+            test_unknown,
+            prediction,
+            test_pug_continuous,
+            thresholds[PUG_RISK_NAME],
+        )
     validation_evidence = model.predict_with_evidence(model_validation_views)
     test_evidence = model.predict_with_evidence(model_test_views)
     validation_missing, missing_thresholds = missing_view_mask(
@@ -1956,6 +2079,7 @@ def main() -> None:
         "nested_boundary_pairwise_pseudo_unknown_blend",
         "nested_tail_aware_pairwise_pseudo_unknown_blend",
         "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+        PUG_SELECTION_NAME,
         "nested_conflict_gate",
         "nested_modality_gate",
         "nested_modality_support_gate",
@@ -1976,6 +2100,7 @@ def main() -> None:
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
             "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+            PUG_SELECTION_NAME,
         }:
             learned = risk_selection_details["pseudo_unknown_learned_blend"]
             robust_gate = None
@@ -1987,6 +2112,7 @@ def main() -> None:
                 "nested_boundary_pairwise_pseudo_unknown_blend",
                 "nested_tail_aware_pairwise_pseudo_unknown_blend",
                 "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+                PUG_SELECTION_NAME,
             }:
                 robust_gate = robust_fold_gate(
                     learned,
@@ -2026,6 +2152,7 @@ def main() -> None:
                     "nested_boundary_pairwise_pseudo_unknown_blend",
                     "nested_tail_aware_pairwise_pseudo_unknown_blend",
                     "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+                    PUG_SELECTION_NAME,
                 }:
                     evidence_rule = (
                         "known-only one-sided confidence-bound and AUPR-tail gates"
@@ -2045,6 +2172,7 @@ def main() -> None:
                                 "nested_boundary_pairwise_pseudo_unknown_blend",
                                 "nested_tail_aware_pairwise_pseudo_unknown_blend",
                                 "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+                                PUG_SELECTION_NAME,
                             }
                             else "pointwise",
                             evidence_rule,
@@ -2066,6 +2194,23 @@ def main() -> None:
                         "global_reference_bin_order_preserved": True,
                     }
             risk_selection_details["pseudo_unknown_gate_passes"] = gate_passes
+            if args.risk_selection == PUG_SELECTION_NAME:
+                pug_gate = risk_selection_details["pug_continuous_outer_gate"]
+                pug_route = select_pug_route(selected_risk, pug_gate)
+                selected_risk = pug_route["selected_risk"]
+                risk_selection_details.update(
+                    {
+                        **pug_route,
+                        "selection_rule": (
+                            "first preserve the frozen boundary-pairwise "
+                            "pseudo-unknown route; only when it falls back to "
+                            "cauchy_modality_support_union may the fixed "
+                            "multi-metric leave-one-known-attack PUG gate select "
+                            "continuous outer min-p, otherwise pass Pairwise "
+                            "through exactly"
+                        ),
+                    }
+                )
         elif args.risk_selection == "nested_conflict_gate":
             eligible = ("support_union", "cauchy_evidence")
             aggregates = risk_selection_details["candidate_aggregates"]
@@ -2567,6 +2712,11 @@ def main() -> None:
         score_archive["test_pseudo_unknown_local_rank_blend"] = (
             pseudo_unknown_local_rank_risks[1]
         )
+    if pug_continuous_risks is not None:
+        score_archive[f"validation_{PUG_RISK_NAME}"] = (
+            pug_continuous_risks[0]
+        )
+        score_archive[f"test_{PUG_RISK_NAME}"] = pug_continuous_risks[1]
     for name, (validation_risk, test_risk) in structural_support_pairs.items():
         score_archive[f"validation_{name}"] = validation_risk
         score_archive[f"test_{name}"] = test_risk
@@ -2637,6 +2787,8 @@ def main() -> None:
         stable_risk_pairs["pseudo_unknown_local_rank_blend"] = (
             pseudo_unknown_local_rank_risks
         )
+    if pug_continuous_risks is not None:
+        stable_risk_pairs[PUG_RISK_NAME] = pug_continuous_risks
     for name, components in {
         "cauchy_modality_knn": tuple(view_knn_components),
         "cauchy_modality_support": ("distance", *view_knn_components),
