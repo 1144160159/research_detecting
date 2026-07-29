@@ -91,6 +91,39 @@
 - 实验角色：模型、特征和阈值全部冻结后的外部良性移动应用域偏移测试；只报告良性误报警率、恶意标签分配率、单列拒识率和风险分布漂移
 - 禁止用途：阈值校准、未知恶意正样本、攻击家族覆盖和未知攻击检出率证据
 
+## LSNM2024 与 CICDDoS2019 外部恶意确认准备度
+
+- LSNM2024原始归档：`datasets/LSNM2024/LSNM2024_Dataset.zip`，223,508,263字节。
+- CICDDoS2019原始归档：`datasets/cic/CICDDoS2019/CSVs/CSV-01-12.zip` 与 `CSV-03-11.zip`，分别为2,330,434,641和918,815,761字节。
+- 三个ZIP的大小、成员数和中央目录SHA均与 `results/gpu_malicious_dataset_expansion_protocol_v1/protocol.json` 冻结身份一致。
+- readiness auditor SHA：`80a7bc539af495c33d1a3facc4710e6d3d22f6daee01f66cde4ee1c8b2af794a`。
+- 首快照：`results/strict_v4_krc_downstream_sota_design_v1/data_readiness.json`，canonical/file SHA为 `12a96ae2fed583e17aedff213bf071b9ff52cc185b4eeeeb78351a65dc8795f6` / `9006d0501ee676908bc578512006ab620b6679431550c8725dd2beca68ccb9a7`。
+- 当前 `raw_data_available=true`：两套恶意原始数据与PARROT原始/无解密特征协议均匹配。
+- 当前 `ready_for_downstream_execution=false`：`datasets/caeos_external_open_set_v1` 尚未生成，full admission与seed `223/227/229` prepared manifest均未完成。
+- 全量admission于2026-07-26 05:04 UTC以idle I/O、nice15启动，PID `1902838`；只扫描标签、group、特征与源SHA，不训练模型或读取模型效果。
+- preparation watcher PID `1174214` 等待admission；只有全量准入阳性才生成每数据集三种子CSV、sidecar、manifest与完成标记。
+- LSNM2024在外部确认中覆盖多类攻击；CICDDoS2019只提供DDoS家族窄域证据，不能将其扩写为一般恶意流量覆盖。
+- 首次full admission把SQLite精确group store置于NFS，05:11 UTC在首个PRAGMA处以 `database is locked` 失败；failure log SHA为 `4911398458b54eb7783d8b6cc00974f975ef726512928ba0026e0ee4ba2d5f35`，未生成audit或marker。
+- 零结果恢复amendment：`results/gpu_dataset_full_admission_audit_v1/local_sqlite_amendment_v1.json`，canonical/file SHA为 `e8448f152d8d9d586a65a63404d890fca24593c0a2dd5e1775a8b1a268ad1627` / `72af20a30851db3c9be56cdccea4dee3df94e93931f9b6b5dc7f4c477c26cdaf`。
+- 恢复仅将临时SQLite工作目录改为本地overlay `/tmp/wangwt_gpu_dataset_full_admission_v1_20260726`；原始文件、扫描实现、配置、科学门和权威输出根均未变化。
+- 恢复扫描PID `2152681` 已确认持续计算并写出成员缓存；最终admission状态仍需等待全量audit和passed marker。
+- 恢复扫描最终完成；v1 audit文件SHA为 `840d9a3c3710c8ecefedb1c6ec0e8f9f98a1685fd9135c5cba9b920ae50805a5`。LSNM2024为4,543,916行、16标签并通过；CICDDoS2019为70,427,637行，仅旧词表的unexpected-label门失败，故v1不生成passed marker，原watcher写入blocked。
+- CICDDoS2019全扫描标签证据：`01-12/UDPLag.csv` 含 `UDP-lag` 366,461行和WebDDoS 439行；`03-11/UDPLag.csv` 含UDPLag 1,873行。WebDDoS有439个group，满足保留门。
+- 标签调和protocol canonical/file：`2f4a5ccb3bb8974692a902cdf461809c9a32e5786bf2d382acb9f6cf98a9037d` / `0c835beec752b8ab548e5b0b9131d16d404ea34ca3c65b7204ff0adf22cad3db`。只允许成员绑定的 `UDP-lag -> UDPLag` 并保留WebDDoS为第17个攻击家族。
+- v2准入audit canonical/file：`6ec8c3be0fe2293a21e457cc9f9f70a3eb7a4d94dec9a981014ff98a0afc9436` / `2d9b67b0ef6719b31b6846dc864d2a67549fc3860ec036a9b531a286a029bbc6`。三个源文件完整SHA未变，CICDDoS总行数保持70,427,637，UDPLag调和后368,334行/组、WebDDoS 439行/组，17家族全部通过。
+- v2规范化目录：`datasets/caeos_external_open_set_v2`；准备协议canonical/file为 `0736101ea8bd838bf824f8947f80b7140c79d7f3015dffeb245524502497f6f3` / `a37bee2a1281aaf2f2ac4e2d74ad6e49277d08585b2f5c9a7906cea431ee3d26`。
+- seed `223/227/229` 准备任务PID `4072053` 于06:01 UTC启动，当前从LSNM2024开始；任何CSV、sidecar、manifest和summary均需完整SHA门后才计完成。
+- v2准备中readiness snapshot canonical/file：`9c38ae25e8d5829f280a5106ae785432a60c3c3dfae485ba76dac42892f859f5` / `1e08669ed9a417936ab6614fcbcb851a4a1e2ccf5ce5b633228c3fb20209f9bf`。当前调和准入通过但三种子与summary未完成，`ready_for_downstream_execution=false`。
+- LSNM2024 v2三种子已完成：seed223/227/229分别31,222/31,335/31,204行，均覆盖normal与15攻击家族共16标签；manifest文件SHA为 `54655fd2f45627b762ed7c80f78b8d5829d53d754da0ea03d2b140da711477ee`。
+- LSNM完成快照canonical/file：`ebfa49a72d8d1946571aacaf475834968942f7a78f764f8acfbba27e6aee5a72` / `3aec630cccd2d088a691cbc6442ce97bfb4156cf024b2ebb102e0fe29ef600ac`；三个seed的CSV SHA、sidecar内容、16标签、v2 provenance与完成标记全部通过。
+- 当前runner已进入CICDDoS2019准备；在CIC三种子、总summary与完成标记形成前，整体ready仍为false。
+- CICDDoS2019 v2三种子已完成：seed223/227/229均为68,439行、18标签；manifest文件SHA为 `0cbf2219a719079ec4c525accd203e3776b9ade2af63c5d07f6404e8fb76f591`。
+- 三个CIC正式CSV独立逐行扫描一致：BENIGN、UDPLag及其余15个常规攻击标签各4,000行，WebDDoS各439行；`UDP-lag` 不存在，UDPLag与WebDDoS均存在。
+- v2总summary：`results/gpu_external_dataset_preparation_v2/summary.json`，文件SHA为 `d52899abfd73dcb44a3a2cc7783a09c744df7173272ad103daff5fce2d5b8376`，`status=complete`、`ready_for_frozen_external_experiments=true`，总完成标记存在。
+- 最终readiness：`results/strict_v4_krc_downstream_sota_design_v1/data_readiness_v2_complete.json`，canonical/file SHA为 `ba0240341364f404e1030d3f6c4455c01288bbdb4f8a84b1b98d32a60696e68b` / `506bdef1cdfda9d69d2395f85764b8bd48493d92d0d682c75e3f499e3db9a18e`。
+- 最终五项检查全部通过，`raw_data_available=true`、`ready_for_downstream_execution=true`。这仅表示数据可供冻结外部实验读取，不代表模型效果或KRC选择已经通过。
+- 外部逐攻击家族留一任务宇宙：LSNM 15家族 + CICDDoS 17家族，共32家族；三个种子合计96场景/每算法。
+
 ## 后续处理要求
 
 1. Mal_TLS2023 新建专用加载器，显式指定 `Label`，并在训练/验证/测试切分后拟合预处理器。
