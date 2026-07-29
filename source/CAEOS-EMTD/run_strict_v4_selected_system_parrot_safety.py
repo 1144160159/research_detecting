@@ -644,8 +644,11 @@ def materialize_rrc(
         "strict_v4_rrc_csr_execution_protocol_v1",
         "RRC backend protocol",
     )
+    sources = protocol.get("source_model_pairs", protocol.get("sources"))
+    if not isinstance(sources, list) or not sources:
+        raise ValueError("RRC source matrix is missing")
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for source in protocol["source_model_pairs"]:
+    for source in sources:
         key = (str(source["suite"]), str(source["scenario"]))
         grouped.setdefault(key, []).append(source)
     for (suite, scenario), sources in sorted(grouped.items()):

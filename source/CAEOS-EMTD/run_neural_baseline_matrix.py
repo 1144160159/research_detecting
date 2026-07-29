@@ -89,6 +89,7 @@ def parse_arguments() -> argparse.Namespace:
             "extended",
             "strict_v3",
             "strict_v4",
+            "strict_v4_primary",
             "all",
         ),
         required=True,
@@ -243,6 +244,16 @@ def build_experiments(args: argparse.Namespace) -> list[Experiment]:
         suites = ("nf_unsw", "cicids2017")
     elif args.suite == "strict_v4":
         suites = ("cic_ton_iot", "cic_iot2023")
+    elif args.suite == "strict_v4_primary":
+        suites = (
+            "nf_unsw",
+            "cicids2017",
+            "cic_iot2023",
+            "cic_ton_iot",
+            "edge_iiot",
+            "nf_cse",
+            "ustc_tfc2016",
+        )
     elif args.suite == "all":
         suites = (
             "doh", "mal_tls", "hikari", "nf_unsw", "cicids2017", "edge_iiot", "nf_cse",

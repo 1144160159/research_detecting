@@ -26,6 +26,17 @@ FORMAL_OUTPUTS = (
     "integrated_audit.json",
     "execution_complete.json",
 )
+EXPECTED_PRE_DOWNSTREAM_BLOCKERS = {
+    "external malicious confirmation is incomplete",
+    "PARROT benign safety confirmation is incomplete",
+    "selected-system efficiency comparison is incomplete",
+}
+REQUIRED_PRE_DOWNSTREAM_REQUIREMENTS = (
+    "classic_baselines_few_and_persuasive",
+    "domain_nearest_baseline_confirmed",
+    "best_self_algorithm_finally_selected",
+    "documentation_updated",
+)
 IMPLEMENTATION_FILES = (
     "write_strict_v4_selected_system_activation.py",
     "audit_strict_v4_current_goal_status.py",
@@ -84,6 +95,31 @@ def selection_snapshot(goal: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def pre_downstream_snapshot(goal: dict[str, Any]) -> dict[str, Any]:
+    requirements = goal.get("requirements", {})
+    blockers = set(map(str, goal.get("blockers", [])))
+    requirement_state = {
+        name: requirements.get(name, {}).get("satisfied") is True
+        for name in REQUIRED_PRE_DOWNSTREAM_REQUIREMENTS
+    }
+    comprehensive = requirements.get("comprehensive_sota_verified", {})
+    ready = bool(
+        all(requirement_state.values())
+        and blockers == EXPECTED_PRE_DOWNSTREAM_BLOCKERS
+        and goal.get("goal_achieved") is False
+        and comprehensive.get("satisfied") is False
+    )
+    return {
+        "ready": ready,
+        "requirement_state": requirement_state,
+        "blockers": sorted(blockers),
+        "expected_blockers": sorted(EXPECTED_PRE_DOWNSTREAM_BLOCKERS),
+        "comprehensive_sota_verified_before_downstream": (
+            comprehensive.get("satisfied") is True
+        ),
+    }
+
+
 def build_activation(
     *,
     goal: dict[str, Any],
@@ -121,6 +157,9 @@ def build_activation(
     snapshot = selection_snapshot(goal)
     if not snapshot["final"]:
         return None
+    pre_downstream = pre_downstream_snapshot(goal)
+    if not pre_downstream["ready"]:
+        return None
     if snapshot["selected_algorithm"] not in ALGORITHMS:
         raise ValueError("unsupported final selected algorithm")
     if set(observed_output_counts) != set(FORMAL_OUTPUTS):
@@ -142,6 +181,8 @@ def build_activation(
         "runtime_contract_schema": runtime["schema_version"],
         "selection_snapshot": snapshot,
         "selection_snapshot_sha256": canonical_hash(snapshot),
+        "pre_downstream_snapshot": pre_downstream,
+        "pre_downstream_snapshot_sha256": canonical_hash(pre_downstream),
         "downstream_branches": [
             "external_malicious",
             "parrot_benign_safety",
@@ -164,6 +205,7 @@ def build_activation(
         ),
         "claim_boundary": {
             "activation_is_not_downstream_execution_or_effect": True,
+            "activation_requires_only_three_downstream_blockers": True,
             "all_branches_must_use_the_same_selected_algorithm": True,
             "krc_result_renaming_or_cross_algorithm_splicing_forbidden": True,
             "comprehensive_sota_remains_unauthorized_until_final_audit": True,

@@ -4,14 +4,23 @@ import json
 from pathlib import Path
 
 from audit_strict_v4_current_goal_status import (
+    documentation_snapshot_status,
+    domain_nearest_ronetc_status,
     derive_self_algorithm_status,
     direct_tournament_design_status,
     json_evidence,
+    krc_terminal_clarification_status,
     latest_progress_path,
     pug_cross_suite_design_status,
     pug_cross_suite_implementation_status,
+    rrc_realtime_progress_status,
     selected_system_adapter_design_status,
     selected_system_adapter_implementation_status,
+    selected_system_preconfirmation_status,
+)
+from create_strict_v4_documentation_snapshot import (
+    REQUIRED_DOCUMENTS,
+    create_snapshot,
 )
 from create_strict_v4_external_confirmation_protocol import (
     canonical_hash,
@@ -43,6 +52,337 @@ def test_json_evidence_separates_existence_and_canonical_validity(
     assert evidence["exists"] is True
     assert evidence["canonical_valid"] is True
     assert len(evidence["file_sha256"]) == 64
+
+
+def test_documentation_snapshot_is_portable_and_hash_bound(
+    tmp_path: Path,
+) -> None:
+    documentation = tmp_path / "documentation"
+    for index, relative in enumerate(REQUIRED_DOCUMENTS):
+        path = documentation / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"document-{index}\n", encoding="utf-8")
+    root = tmp_path / "project"
+    create_snapshot(
+        documentation,
+        root / "results/strict_v4_documentation_snapshot_v1",
+    )
+
+    status = documentation_snapshot_status(root)
+
+    assert status["valid"] is True
+    assert status["status"] == "complete"
+    assert status["document_count"] == 4
+
+
+def test_documentation_snapshot_rejects_copied_file_tamper(
+    tmp_path: Path,
+) -> None:
+    documentation = tmp_path / "documentation"
+    for index, relative in enumerate(REQUIRED_DOCUMENTS):
+        path = documentation / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"document-{index}\n", encoding="utf-8")
+    root = tmp_path / "project"
+    output = root / "results/strict_v4_documentation_snapshot_v1"
+    create_snapshot(documentation, output)
+    (output / "files" / REQUIRED_DOCUMENTS[0]).write_text(
+        "tampered\n", encoding="utf-8"
+    )
+
+    status = documentation_snapshot_status(root)
+
+    assert status["valid"] is False
+    assert status["status"] == "snapshot_invalid"
+
+
+def test_selected_system_preconfirmation_design_is_not_terminal_effect(
+    tmp_path: Path,
+) -> None:
+    base = (
+        tmp_path
+        / "results/strict_v4_selected_system_preconfirmation_design_v1"
+    )
+    design_path = base / "design.json"
+    design = {
+        "schema_version": (
+            "strict_v4_selected_system_preconfirmation_design_v1"
+        ),
+        "universe": {
+            "source_task_count": 306,
+            "paired_corruption_record_count": 1530,
+        },
+        "formal_output_counts_at_freeze": {
+            "activation.json": 0,
+            "protocol.json": 0,
+            "summary.json": 0,
+            "audit.json": 0,
+            "execution_complete.json": 0,
+        },
+        "required_future_implementation": [
+            f"future_{index}.py" for index in range(6)
+        ],
+    }
+    write_canonical(design_path, design)
+    design = json.loads(design_path.read_text(encoding="utf-8"))
+    write_canonical(
+        base / "audit.json",
+        {
+            "schema_version": (
+                "strict_v4_selected_system_preconfirmation_design_audit_v1"
+            ),
+            "passed": True,
+            "design_manifest_sha256": design["manifest_sha256"],
+            "design_file_sha256": file_hash(design_path),
+        },
+    )
+
+    status = selected_system_preconfirmation_status(tmp_path)
+
+    assert status["design_frozen_and_audited"] is True
+    assert status["required_implementation_count"] == 6
+    assert status["ready_implementation_count"] == 0
+    assert status["terminal"] is False
+
+
+def test_rrc_realtime_progress_requires_snapshot_state_double_binding(
+    tmp_path: Path,
+) -> None:
+    base = tmp_path / "results/strict_v4_rrc_csr_confirmation_v1"
+    snapshot_path = base / "realtime_progress.json"
+    state_path = base / "realtime_watcher_state.json"
+    inventory = {
+        name: {
+            "present_count": present,
+            "expected_count": expected,
+            "invalid_count": 0,
+            "pending_count": 0,
+        }
+        for name, present, expected in (
+            ("base_csr_captures", 14, 249),
+            ("rrc_runtime_captures", 12, 249),
+            ("scenario_certificates", 4, 83),
+            ("evaluations", 72, 1494),
+        )
+    }
+    write_canonical(
+        snapshot_path,
+        {
+            "schema_version": (
+                "strict_v4_rrc_csr_realtime_progress_snapshot_v1"
+            ),
+            "observed_at_utc": "2026-07-28T03:00:00+00:00",
+            "inventory": inventory,
+            "effect_aggregation_performed": False,
+            "effect_conclusion_available_from_this_snapshot": False,
+        },
+    )
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    write_canonical(
+        state_path,
+        {
+            "schema_version": (
+                "strict_v4_rrc_csr_realtime_progress_watcher_state_v1"
+            ),
+            "state": "rrc_running_valid_partial_progress",
+            "snapshot_manifest_sha256": snapshot["manifest_sha256"],
+            "snapshot_file_sha256": file_hash(snapshot_path),
+            "counts": {
+                name: {
+                    "present": item["present_count"],
+                    "expected": item["expected_count"],
+                    "invalid": 0,
+                    "pending": 0,
+                }
+                for name, item in inventory.items()
+            },
+            "runner_pids": [123],
+            "terminal_evidence": {"complete": False},
+            "partial_effect_aggregation_performed": False,
+            "partial_effect_claim_authorized": False,
+        },
+    )
+
+    status = rrc_realtime_progress_status(tmp_path)
+
+    assert status["valid"] is True
+    assert status["counts"]["evaluations"]["present"] == 72
+    assert status["partial_effect_claim_authorized"] is False
+
+
+def test_krc_negative_terminal_clarification_removes_legacy_ambiguity(
+    tmp_path: Path,
+) -> None:
+    path = (
+        tmp_path
+        / "results/strict_v4_krc_csr_confirmation_v1/"
+        "terminal_decision_clarification.json"
+    )
+    write_canonical(
+        path,
+        {
+            "schema_version": (
+                "strict_v4_krc_terminal_decision_clarification_v1"
+            ),
+            "state": "complete",
+            "all_structural_checks_pass": True,
+            "valid_negative_terminal": True,
+            "no_summary_audit_selection_inconsistency": True,
+            "reported_selection": "caeos_pairwise",
+            "effect_gate_failures": [
+                "enabled_primary_suite_count_minimum"
+            ],
+            "legacy_field_is_not_a_summary_audit_equality_check": True,
+            "claim_boundary": {"rrc_fallback_remains_required": True},
+        },
+    )
+
+    status = krc_terminal_clarification_status(tmp_path)
+
+    assert status["valid"] is True
+    assert status["status"] == "valid_negative_terminal_clarified"
+    assert status[
+        "legacy_field_is_not_a_summary_audit_equality_check"
+    ] is True
+
+
+def test_domain_nearest_protocol_is_frozen_but_not_terminal(
+    tmp_path: Path,
+) -> None:
+    base = tmp_path / "results/strict_v4_ronetc_full102_seed7"
+    protocol_path = base / "protocol.json"
+    tasks = [
+        {
+            "suite": "suite",
+            "scenario": f"scenario_{index}",
+            "model": "ronetc",
+            "seed": 7,
+        }
+        for index in range(102)
+    ]
+    protocol = {
+        "schema_version": "strict_v4_ronetc_full102_protocol_v1",
+        "state": "frozen_zero_result",
+        "universe": {
+            "suite_count": 7,
+            "scenario_count": 102,
+            "task_count": 102,
+        },
+        "tasks": tasks,
+    }
+    write_canonical(protocol_path, protocol)
+    protocol_audit = {
+        "schema_version": "strict_v4_ronetc_full102_protocol_audit_v1",
+        "passed": True,
+        "checks": {"manifest_matches": True, "universe_exact": True},
+    }
+    protocol_audit["audit_manifest_sha256"] = canonical_hash(protocol_audit)
+    (base / "protocol_audit.json").write_text(
+        json.dumps(protocol_audit), encoding="utf-8"
+    )
+
+    status = domain_nearest_ronetc_status(tmp_path)
+
+    assert status["protocol_frozen_and_audited"] is True
+    assert status["execution_terminal"] is False
+    assert status["status"] == "frozen_zero_result_not_executed"
+
+
+def test_domain_nearest_terminal_requires_bound_summary_audit_and_marker(
+    tmp_path: Path,
+) -> None:
+    base = tmp_path / "results/strict_v4_ronetc_full102_seed7"
+    protocol_path = base / "protocol.json"
+    tasks = []
+    for index in range(102):
+        suite = f"suite_{index % 7}"
+        scenario = f"scenario_{index:03d}"
+        tasks.append(
+            {
+                "suite": suite,
+                "scenario": scenario,
+                "model": "ronetc",
+                "seed": 7,
+            }
+        )
+        run = (
+            tmp_path
+            / "runs/strict_v4_ronetc_full102_seed7"
+            / suite
+            / f"{scenario}_seed7_ronetc"
+        )
+        run.mkdir(parents=True)
+        for artifact in ("metrics.json", "scores.npz", "provenance.json"):
+            (run / artifact).write_bytes(artifact.encode("ascii"))
+    protocol = {
+        "schema_version": "strict_v4_ronetc_full102_protocol_v1",
+        "state": "frozen_zero_result",
+        "universe": {
+            "suite_count": 7,
+            "scenario_count": 102,
+            "task_count": 102,
+        },
+        "tasks": tasks,
+    }
+    write_canonical(protocol_path, protocol)
+    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
+    protocol_audit = {
+        "schema_version": "strict_v4_ronetc_full102_protocol_audit_v1",
+        "passed": True,
+        "checks": {"manifest_matches": True, "universe_exact": True},
+    }
+    protocol_audit["audit_manifest_sha256"] = canonical_hash(protocol_audit)
+    (base / "protocol_audit.json").write_text(
+        json.dumps(protocol_audit), encoding="utf-8"
+    )
+    summary_path = base / "summary.json"
+    summary = {
+        "schema_version": "strict_v4_ronetc_full102_summary_v1",
+        "state": "full102_development_summary_complete",
+        "validation": {"passes": True, "scenario_count": 102},
+        "input_evidence": {
+            "protocol_manifest_sha256": protocol["manifest_sha256"],
+            "protocol_file_sha256": file_hash(protocol_path),
+        },
+        "claim_boundary": {"authorizes_comprehensive_sota": False},
+    }
+    write_canonical(summary_path, summary)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    audit_path = base / "audit.json"
+    result_audit = {
+        "schema_version": "strict_v4_ronetc_full102_audit_v1",
+        "state": "independent_integrity_audit_complete",
+        "passes": True,
+        "checks": {"raw_artifacts": True, "aggregate": True},
+        "input_manifest_sha256": {
+            "protocol": protocol["manifest_sha256"],
+            "summary": summary["manifest_sha256"],
+        },
+        "claim_boundary": {"authorizes_comprehensive_sota": False},
+    }
+    write_canonical(audit_path, result_audit)
+    result_audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    write_canonical(
+        base / "execution_complete.json",
+        {
+            "schema_version": "strict_v4_ronetc_full102_completion_v1",
+            "state": "complete",
+            "scenario_count": 102,
+            "integrity_passes": True,
+            "protocol_manifest_sha256": protocol["manifest_sha256"],
+            "protocol_file_sha256": file_hash(protocol_path),
+            "summary_manifest_sha256": summary["manifest_sha256"],
+            "summary_file_sha256": file_hash(summary_path),
+            "audit_manifest_sha256": result_audit["manifest_sha256"],
+            "audit_file_sha256": file_hash(audit_path),
+            "authorizes_comprehensive_sota": False,
+        },
+    )
+
+    status = domain_nearest_ronetc_status(tmp_path)
+
+    assert status["execution_terminal"] is True
+    assert status["status"] == "complete"
 
 
 def test_pug_cross_suite_design_is_frozen_but_not_executed(

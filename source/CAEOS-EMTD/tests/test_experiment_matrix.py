@@ -61,6 +61,38 @@ class NestedGateMatrixTest(unittest.TestCase):
         self.assertEqual(len(experiments), 4)
         self.assertEqual({item.scenario for item in experiments}, {"probing", "xmrigcc"})
 
+    def test_strict_v4_primary_neural_matrix_is_exactly_102_scenarios(self):
+        args = Namespace(
+            suite="strict_v4_primary",
+            scenarios="all",
+            models="ronetc",
+            seeds="7",
+            doh_csv="doh.csv",
+            mal_csv="mal.csv",
+            hikari_csv="hikari.csv",
+            doh_max_per_class=20,
+            mal_max_per_class=20,
+            hikari_max_per_class=20,
+            output_root="runs/strict_v4_ronetc_full102_seed7",
+        )
+        experiments = build_neural_experiments(args)
+
+        self.assertEqual(len(experiments), 102)
+        self.assertEqual(
+            {item.suite for item in experiments},
+            {
+                "nf_unsw",
+                "cicids2017",
+                "cic_iot2023",
+                "cic_ton_iot",
+                "edge_iiot",
+                "nf_cse",
+                "ustc_tfc2016",
+            },
+        )
+        self.assertEqual({item.model for item in experiments}, {"ronetc"})
+        self.assertEqual({item.seed for item in experiments}, {7})
+
     def test_closr_matrix_uses_official_model_hyperparameters(self):
         args = Namespace(
             suite="hikari", scenarios="probing", models="closr",

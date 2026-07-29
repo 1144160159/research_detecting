@@ -38,17 +38,34 @@ def design() -> dict:
 
 
 def goal(selected: str, final: bool = True) -> dict:
+    requirements = {
+        name: {"satisfied": True, "status": "complete"}
+        for name in (
+            "classic_baselines_few_and_persuasive",
+            "domain_nearest_baseline_confirmed",
+            "documentation_updated",
+        )
+    }
+    requirements["best_self_algorithm_finally_selected"] = {
+        "satisfied": final,
+        "status": "complete" if final else "incomplete",
+        "current_incumbent": selected,
+    }
+    requirements["comprehensive_sota_verified"] = {
+        "satisfied": False,
+        "status": "not_established",
+    }
     return canonical(
         {
             "schema_version": "strict_v4_current_goal_status_audit_v1",
             "selected_algorithm": selected,
-            "requirements": {
-                "best_self_algorithm_finally_selected": {
-                    "satisfied": final,
-                    "status": "complete" if final else "incomplete",
-                    "current_incumbent": selected,
-                },
-            },
+            "goal_achieved": False,
+            "blockers": [
+                "external malicious confirmation is incomplete",
+                "PARROT benign safety confirmation is incomplete",
+                "selected-system efficiency comparison is incomplete",
+            ],
+            "requirements": requirements,
             "evidence": {
                 "self_algorithm_selection": {
                     "final": final,
@@ -88,6 +105,30 @@ def test_activation_accepts_each_final_self_algorithm(selected: str) -> None:
 
 def test_activation_remains_pending_before_final_selection() -> None:
     assert build("caeos_pairwise", final=False) is None
+
+
+def test_activation_remains_pending_with_any_upstream_scientific_blocker() -> None:
+    value = goal("caeos_pairwise")
+    value["blockers"].append(
+        "RoNeTC domain-nearest strict-v4 full102 confirmation is incomplete"
+    )
+    value["requirements"]["domain_nearest_baseline_confirmed"][
+        "satisfied"
+    ] = False
+    value["manifest_sha256"] = canonical_hash(value)
+
+    activation = build_activation(
+        goal=value,
+        goal_file_sha256="a" * 64,
+        design=design(),
+        design_file_sha256="b" * 64,
+        observed_output_counts={name: 0 for name in FORMAL_OUTPUTS},
+        implementation_sha256={
+            name: "c" * 64 for name in IMPLEMENTATION_FILES
+        },
+    )
+
+    assert activation is None
 
 
 def test_activation_rejects_selected_algorithm_disagreement() -> None:
