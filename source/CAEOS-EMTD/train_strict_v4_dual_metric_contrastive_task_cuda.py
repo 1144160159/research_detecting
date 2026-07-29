@@ -314,6 +314,59 @@ def evaluation_statistics_for_dropout(
     return statistics
 
 
+def family_heldout_meta_loss(
+    *,
+    torch: Any,
+    model: Any,
+    attack_logits: Any,
+    batch_labels: Any,
+    benign_index: int,
+    heldout_family: int,
+    episode_features: Any,
+    episode_statistics: Any,
+    episode_attack_targets: Any,
+    inner_learning_rate: float,
+) -> tuple[Any, Any]:
+    if inner_learning_rate <= 0.0:
+        raise ValueError("meta inner learning rate must be positive")
+    inner_mask = batch_labels != heldout_family
+    if not bool(inner_mask.any()):
+        raise ValueError("meta inner batch is empty after family holdout")
+    inner_targets = (batch_labels[inner_mask] != benign_index).float()
+    inner_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+        attack_logits[inner_mask],
+        inner_targets,
+    )
+    named_parameters = dict(model.named_parameters())
+    gradients = torch.autograd.grad(
+        inner_loss,
+        tuple(named_parameters.values()),
+        create_graph=True,
+        retain_graph=True,
+        allow_unused=True,
+    )
+    fast_parameters = {
+        name: (
+            parameter - inner_learning_rate * gradient
+            if gradient is not None
+            else parameter
+        )
+        for (name, parameter), gradient in zip(
+            named_parameters.items(), gradients
+        )
+    }
+    episode_outputs = torch.func.functional_call(
+        model,
+        fast_parameters,
+        (episode_features, episode_statistics),
+    )
+    outer_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+        episode_outputs[3],
+        episode_attack_targets.float(),
+    )
+    return inner_loss, outer_loss
+
+
 def train_task(args: argparse.Namespace) -> dict[str, Any]:
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_index)
     import torch
@@ -410,6 +463,35 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
         for index in range(len(known_class_names))
         if index != benign_index
     ]
+    meta_enabled = args.meta_heldout_loss_weight > 0.0
+    architecture_name = (
+        "family_heldout_meta_packet_statistic_v1"
+        if meta_enabled
+        else "dual_metric_contrastive_packet_statistic_v1"
+    )
+    algorithm_name = (
+        "FHMM-CAEOS family-held-out malicious-boundary meta learner"
+        if meta_enabled
+        else "DMC-CAEOS dual-metric contrastive fusion"
+    )
+    training_indices_by_class = {
+        class_index: torch.from_numpy(
+            splits["train"][
+                encoded_labels[splits["train"]] == class_index
+            ]
+        ).to(device)
+        for class_index in range(len(known_class_names))
+    }
+    if meta_enabled:
+        if args.meta_episode_rows_per_class <= 0:
+            raise ValueError("meta episode rows per class must be positive")
+        if args.meta_inner_learning_rate <= 0.0:
+            raise ValueError("meta inner learning rate must be positive")
+        if any(
+            training_indices_by_class[index].numel() == 0
+            for index in [benign_index, *attack_class_indices]
+        ):
+            raise ValueError("meta training requires every known class")
     scaler = torch.cuda.amp.GradScaler()
     initial_gpu = query_gpu()
     sampler = GPUSampler(args.gpu_sample_interval_seconds)
@@ -427,6 +509,7 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                 torch.randperm(train_indices.numel(), device=device)
             ]
             training_losses = []
+            training_meta_outer_losses = []
             for batch_number, start in enumerate(
                 range(0, permutation.numel(), args.batch_size)
             ):
@@ -439,6 +522,9 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 batch_labels = label_tensor[indices]
                 batch_attack = (batch_labels != benign_index).long()
+                pseudo_family = pseudo_family_for_step(
+                    attack_class_indices, epoch, batch_number
+                )
                 optimizer.zero_grad(set_to_none=True)
                 with torch.cuda.amp.autocast():
                     (
@@ -448,10 +534,18 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                         attack_logits,
                         knownness_logits,
                     ) = model(batch_values, batch_statistics)
+                    attack_training_mask = (
+                        batch_labels != pseudo_family
+                        if meta_enabled
+                        else torch.ones_like(batch_labels, dtype=torch.bool)
+                    )
                     total_loss = (
                         family_loss(family_logits, batch_labels)
                         + args.attack_loss_weight
-                        * attack_loss(attack_logits, batch_attack.float())
+                        * attack_loss(
+                            attack_logits[attack_training_mask],
+                            batch_attack[attack_training_mask].float(),
+                        )
                         + args.knownness_loss_weight
                         * knownness_loss(
                             knownness_logits,
@@ -466,12 +560,9 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                     )
                     attack_contrast = supervised_contrastive_loss(
                         torch,
-                        attack_embedding,
-                        batch_attack,
+                        attack_embedding[attack_training_mask],
+                        batch_attack[attack_training_mask],
                         args.contrastive_temperature,
-                    )
-                    pseudo_family = pseudo_family_for_step(
-                        attack_class_indices, epoch, batch_number
                     )
                     margin = leave_one_family_margin_loss(
                         torch,
@@ -513,6 +604,61 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                                 mixed_logits, torch.zeros_like(mixed_logits)
                             )
                         )
+                    if meta_enabled:
+                        heldout_pool = training_indices_by_class[
+                            pseudo_family
+                        ]
+                        benign_pool = training_indices_by_class[benign_index]
+                        heldout_episode = heldout_pool[
+                            torch.randint(
+                                heldout_pool.numel(),
+                                (args.meta_episode_rows_per_class,),
+                                device=device,
+                            )
+                        ]
+                        benign_episode = benign_pool[
+                            torch.randint(
+                                benign_pool.numel(),
+                                (args.meta_episode_rows_per_class,),
+                                device=device,
+                            )
+                        ]
+                        episode_indices = torch.cat(
+                            (heldout_episode, benign_episode)
+                        )
+                        episode_indices = episode_indices[
+                            torch.randperm(
+                                episode_indices.numel(), device=device
+                            )
+                        ]
+                        episode_statistics = (
+                            apply_statistic_modality_dropout(
+                                torch,
+                                statistic_tensor[episode_indices],
+                                args.statistic_modality_dropout_probability,
+                            )
+                        )
+                        _, meta_outer = family_heldout_meta_loss(
+                            torch=torch,
+                            model=model,
+                            attack_logits=attack_logits,
+                            batch_labels=batch_labels,
+                            benign_index=benign_index,
+                            heldout_family=pseudo_family,
+                            episode_features=feature_tensor[episode_indices],
+                            episode_statistics=episode_statistics,
+                            episode_attack_targets=(
+                                label_tensor[episode_indices] != benign_index
+                            ),
+                            inner_learning_rate=args.meta_inner_learning_rate,
+                        )
+                        total_loss = (
+                            total_loss
+                            + args.meta_heldout_loss_weight * meta_outer
+                        )
+                        training_meta_outer_losses.append(
+                            float(meta_outer.detach().cpu())
+                        )
                 scaler.scale(total_loss).backward()
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
@@ -545,6 +691,11 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "epoch": epoch,
                     "training_loss": float(np.mean(training_losses)),
+                    "meta_outer_loss": (
+                        float(np.mean(training_meta_outer_losses))
+                        if training_meta_outer_losses
+                        else None
+                    ),
                     "validation_loss": validation_value,
                     "learning_rate": float(scheduler.get_last_lr()[0]),
                 }
@@ -716,7 +867,7 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
             "sequence_length": packet_lengths.shape[1],
             "flow_statistic_names": statistic_names.tolist(),
             "flow_statistic_scaling": scaling_report,
-            "architecture": "dual_metric_contrastive_packet_statistic_v1",
+            "architecture": architecture_name,
             "statistics_zeroed_during_evaluation": (
                 args.statistic_modality_dropout_probability == 1.0
             ),
@@ -793,7 +944,9 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
     )
     gpu_evidence: dict[str, Any] = {
         "schema_version": (
-            "strict_v4_dual_metric_contrastive_cuda_task_evidence_v1"
+            "strict_v4_family_heldout_meta_cuda_task_evidence_v1"
+            if meta_enabled
+            else "strict_v4_dual_metric_contrastive_cuda_task_evidence_v1"
         ),
         "state": "complete",
         "requested_device": "cuda:0",
@@ -829,7 +982,9 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
     }
     report: dict[str, Any] = {
         "schema_version": (
-            "strict_v4_dual_metric_contrastive_cuda_task_v1"
+            "strict_v4_family_heldout_meta_cuda_task_v1"
+            if meta_enabled
+            else "strict_v4_dual_metric_contrastive_cuda_task_v1"
         ),
         "state": "complete",
         "task": {
@@ -840,8 +995,8 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
         "benign_index": benign_index,
         "split_counts": split_count_report,
         "model": {
-            "name": "DMC-CAEOS dual-metric contrastive fusion",
-            "architecture": "dual_metric_contrastive_packet_statistic_v1",
+            "name": algorithm_name,
+            "architecture": architecture_name,
             "sequence_channels": [
                 "signed_packet_length",
                 "absolute_packet_length",
@@ -893,6 +1048,12 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
             "statistics_zeroed_during_evaluation": (
                 args.statistic_modality_dropout_probability == 1.0
             ),
+            "meta_heldout_loss_weight": args.meta_heldout_loss_weight,
+            "meta_inner_learning_rate": args.meta_inner_learning_rate,
+            "meta_episode_rows_per_class": args.meta_episode_rows_per_class,
+            "meta_attack_families": [
+                known_class_names[index] for index in attack_class_indices
+            ],
             "contrastive_temperature": args.contrastive_temperature,
             "cosine_scale": args.cosine_scale,
             "known_similarity_margin": args.known_similarity_margin,
@@ -932,6 +1093,12 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
             "flow_statistic_scaling_fit_on_training_split_only": True,
             "pseudo_unknowns_derived_from_known_training_families_only": True,
             "episodic_leave_one_family_uses_known_training_labels_only": True,
+            "differentiable_family_heldout_meta_objective_enabled": (
+                meta_enabled
+            ),
+            "meta_outer_episode_uses_heldout_known_family_and_benign_only": (
+                meta_enabled
+            ),
             "nvidia_smi_reports_host_namespace_pids_not_container_pids": True,
         },
     }
@@ -972,6 +1139,9 @@ def parse_arguments() -> argparse.Namespace:
         type=float,
         default=0.5,
     )
+    parser.add_argument("--meta-heldout-loss-weight", type=float, default=0.0)
+    parser.add_argument("--meta-inner-learning-rate", type=float, default=0.05)
+    parser.add_argument("--meta-episode-rows-per-class", type=int, default=64)
     parser.add_argument("--contrastive-temperature", type=float, default=0.12)
     parser.add_argument("--pseudo-mix-lambda", type=float, default=0.5)
     parser.add_argument("--cosine-scale", type=float, default=16.0)

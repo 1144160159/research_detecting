@@ -9,6 +9,7 @@ from train_strict_v4_dual_metric_contrastive_task_cuda import (
     apply_statistic_modality_dropout,
     attack_probability_variants,
     evaluation_statistics_for_dropout,
+    family_heldout_meta_loss,
     leave_one_family_margin_loss,
     pseudo_family_for_step,
     supervised_contrastive_loss,
@@ -116,6 +117,55 @@ class DualMetricContrastiveCudaTests(unittest.TestCase):
             torch.equal(
                 torch.zeros_like(statistics),
                 evaluation_statistics_for_dropout(torch, statistics, 1.0),
+            )
+        )
+
+    @unittest.skipUnless(TORCH_AVAILABLE, "torch is unavailable")
+    def test_family_heldout_meta_loss_is_differentiable(self) -> None:
+        import torch
+
+        class TinyModel(torch.nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.encoder = torch.nn.Linear(3, 4)
+                self.attack = torch.nn.Linear(4, 1)
+
+            def forward(self, values, statistics):
+                embedding = torch.tanh(
+                    self.encoder(values + statistics)
+                )
+                attack = self.attack(embedding).squeeze(1)
+                family = torch.zeros(
+                    values.shape[0], 3, device=values.device
+                )
+                return embedding, embedding, family, attack, attack
+
+        torch.manual_seed(7)
+        model = TinyModel()
+        values = torch.randn(8, 3)
+        statistics = torch.randn(8, 3)
+        labels = torch.tensor([0, 0, 1, 1, 2, 2, 1, 2])
+        attack_logits = model(values, statistics)[3]
+        inner, outer = family_heldout_meta_loss(
+            torch=torch,
+            model=model,
+            attack_logits=attack_logits,
+            batch_labels=labels,
+            benign_index=0,
+            heldout_family=2,
+            episode_features=values[4:],
+            episode_statistics=statistics[4:],
+            episode_attack_targets=torch.ones(4),
+            inner_learning_rate=0.05,
+        )
+        total = inner + outer
+        total.backward()
+        self.assertTrue(torch.isfinite(total))
+        self.assertTrue(
+            all(
+                parameter.grad is not None
+                and torch.isfinite(parameter.grad).all()
+                for parameter in model.parameters()
             )
         )
 
