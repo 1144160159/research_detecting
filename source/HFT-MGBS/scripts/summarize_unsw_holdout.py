@@ -11,6 +11,40 @@ from pathlib import Path
 
 RESULT_NAME = re.compile(r"^(normal|fallback)_repeat(\d+)\.json$")
 
+DEFAULT_HARD_CONSTRAINTS = {
+    "min_macro_f1_min": 0.7,
+    "min_attack_recall_min": 0.72,
+    "min_benign_recall_min": 0.93,
+    "min_auprc_min": 0.45,
+    "min_ground_truth_event_recall_min": 0.7,
+    "min_key_flow_coverage_min": 0.99,
+    "max_ece_max": 0.05,
+    "max_budget_overrun_count_max": 0,
+    "max_budget_us": 5000,
+}
+
+
+def _hard_constraint_violations(metrics, constraints):
+    rules = {
+        "min_macro_f1_min": ("macro_f1_min", "min"),
+        "min_attack_recall_min": ("attack_recall_min", "min"),
+        "min_benign_recall_min": ("benign_recall_min", "min"),
+        "min_auprc_min": ("auprc_min", "min"),
+        "min_ground_truth_event_recall_min": ("ground_truth_event_recall_min", "min"),
+        "min_key_flow_coverage_min": ("key_flow_coverage_min", "min"),
+        "max_ece_max": ("ece_max", "max"),
+        "max_budget_overrun_count_max": ("budget_overrun_count_max", "max"),
+        "max_budget_us": ("budget_us_max", "max"),
+    }
+    if set(constraints) != set(rules):
+        raise ValueError("hard constraint set is not exact")
+    return [
+        name
+        for name, (metric, direction) in rules.items()
+        if (direction == "min" and metrics[metric] < constraints[name])
+        or (direction == "max" and metrics[metric] > constraints[name])
+    ]
+
 
 def _decision_policy(payload):
     protocol = payload.get("protocol") or {}
@@ -48,7 +82,15 @@ def summarize(
     max_budget_overrun_count=0,
     min_key_flow_coverage=0.99,
     min_event_recall=0.0,
+    hard_constraints=None,
 ):
+    if hard_constraints is None:
+        hard_constraints = dict(DEFAULT_HARD_CONSTRAINTS)
+        hard_constraints["max_budget_overrun_count_max"] = max_budget_overrun_count
+        hard_constraints["min_key_flow_coverage_min"] = min_key_flow_coverage
+        hard_constraints["min_ground_truth_event_recall_min"] = min_event_recall
+    else:
+        hard_constraints = dict(hard_constraints)
     grouped = defaultdict(list)
     rejected = []
     for name, payload in named_runs:
@@ -71,12 +113,10 @@ def summarize(
             for payload in payloads
         }
         audits = [
-            audit
+            payload["{}_constraint_audit".format(role)]
             for payload in payloads
-            for audit in (
-                payload["training_constraint_audit"],
-                payload["holdout_constraint_audit"],
-            )
+            for role, count in payload["capture_counts"].items()
+            if count > 0
         ]
         overrun_max = max(
             int(audit["budget_overrun_count"]) for audit in audits
@@ -88,13 +128,19 @@ def summarize(
             float(payload["ground_truth_event_recall_audit"]["event_recall"])
             for payload in payloads
         )
-        violations = []
-        if overrun_max > max_budget_overrun_count:
-            violations.append("budget_overrun")
-        if coverage_min < min_key_flow_coverage:
-            violations.append("key_flow_coverage")
-        if event_recall_min < min_event_recall:
-            violations.append("ground_truth_event_recall")
+        metrics = [payload["quality"]["conservative"] for payload in payloads]
+        gate_metrics = {
+            "macro_f1_min": min(item["macro_f1_min"] for item in metrics),
+            "attack_recall_min": min(item["attack_recall_min"] for item in metrics),
+            "benign_recall_min": min(item["benign_recall_min"] for item in metrics),
+            "auprc_min": min(item["auprc_min"] for item in metrics),
+            "ece_max": max(item["ece_max"] for item in metrics),
+            "ground_truth_event_recall_min": event_recall_min,
+            "key_flow_coverage_min": coverage_min,
+            "budget_overrun_count_max": overrun_max,
+            "budget_us_max": payloads[0]["candidate"]["budget_us"],
+        }
+        violations = _hard_constraint_violations(gate_metrics, hard_constraints)
         hash_ids = {
             payload.get("input_hash_evidence", {}).get("sha256")
             for payload in payloads
@@ -127,7 +173,6 @@ def summarize(
             if len(policies) == len(payloads) and len(policy_ids) == 1
             else None
         )
-        metrics = [payload["quality"]["conservative"] for payload in payloads]
         candidate = {
             "mode": mode,
             "repeat_ids": [item[0] for item in runs],
@@ -204,6 +249,7 @@ def main() -> int:
     parser.add_argument("--max-budget-overrun-count", type=int, default=0)
     parser.add_argument("--min-key-flow-coverage", type=float, default=0.99)
     parser.add_argument("--min-event-recall", type=float, default=0.0)
+    parser.add_argument("--algorithm-search", type=Path, required=True)
     args = parser.parse_args()
     named_runs = []
     for path in sorted(args.result_dir.glob("*.json")):
@@ -217,6 +263,9 @@ def main() -> int:
         max_budget_overrun_count=args.max_budget_overrun_count,
         min_key_flow_coverage=args.min_key_flow_coverage,
         min_event_recall=args.min_event_recall,
+        hard_constraints=json.loads(
+            args.algorithm_search.read_text("utf-8")
+        )["hard_constraints"],
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if summary["candidate_count"] else 2

@@ -473,6 +473,7 @@ def parse_arguments() -> argparse.Namespace:
             "nested_boundary_pairwise_pseudo_unknown_blend",
             "nested_tail_aware_pairwise_pseudo_unknown_blend",
             "nested_lcb_tail_aware_pairwise_pseudo_unknown_blend",
+            "nested_pug_continuous_outer_min_p",
             "nested_conflict_gate",
             "nested_modality_gate",
             "nested_modality_support_gate",

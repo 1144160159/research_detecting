@@ -159,6 +159,14 @@ class NestedGateMatrixTest(unittest.TestCase):
 
         self.assertEqual(command[command.index("--scale-percentile") + 1], "85")
         self.assertEqual(command[command.index("--scale-temperature") + 1], "1")
+        self.assertEqual(command[command.index("--device") + 1], "auto")
+
+        args.device = "cuda"
+        cuda_command = neural_command_for(experiment, args)
+        self.assertEqual(
+            cuda_command[cuda_command.index("--device") + 1],
+            "cuda",
+        )
 
     def test_cade_matrix_uses_official_detection_hyperparameters(self):
         args = Namespace(

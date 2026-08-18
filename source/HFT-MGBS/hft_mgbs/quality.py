@@ -38,6 +38,173 @@ def expected_calibration_error(
     return error
 
 
+def binary_prediction_metrics(labels, probabilities, threshold):
+    """Recompute all binary metrics from addressable label/probability evidence."""
+
+    if len(labels) != len(probabilities) or not labels:
+        raise ValueError("labels/probabilities must align and be non-empty")
+    if any(type(value) is not int or value not in (0, 1) for value in labels):
+        raise ValueError("labels must be binary integers")
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0.0 <= float(value) <= 1.0
+        for value in probabilities
+    ):
+        raise ValueError("probabilities must be in [0, 1]")
+    clean_probabilities = [float(value) for value in probabilities]
+    sentinel = max(clean_probabilities) + 1e-12
+    if (
+        isinstance(threshold, bool)
+        or not isinstance(threshold, (int, float))
+        or float(threshold) < 0.0
+        or (
+            float(threshold) > 1.0
+            and float(threshold) != sentinel
+        )
+    ):
+        raise ValueError("threshold is neither a probability nor the exact all-negative sentinel")
+    predicted = [int(value >= float(threshold)) for value in clean_probabilities]
+    tp = sum(label == 1 and guess == 1 for label, guess in zip(labels, predicted))
+    tn = sum(label == 0 and guess == 0 for label, guess in zip(labels, predicted))
+    fp = sum(label == 0 and guess == 1 for label, guess in zip(labels, predicted))
+    fn = sum(label == 1 and guess == 0 for label, guess in zip(labels, predicted))
+    attack_total = tp + fn
+    benign_total = tn + fp
+    if attack_total == 0 or benign_total == 0:
+        raise ValueError("both classes are required")
+    attack_recall = tp / attack_total
+    benign_recall = tn / benign_total
+    attack_denominator = 2 * tp + fp + fn
+    benign_denominator = 2 * tn + fp + fn
+    attack_f1 = 0.0 if attack_denominator == 0 else 2.0 * tp / attack_denominator
+    benign_f1 = 0.0 if benign_denominator == 0 else 2.0 * tn / benign_denominator
+
+    ranked = sorted(zip(clean_probabilities, labels), key=lambda item: item[0])
+    positive_rank_sum = 0.0
+    index = 0
+    while index < len(ranked):
+        stop = index + 1
+        while stop < len(ranked) and ranked[stop][0] == ranked[index][0]:
+            stop += 1
+        average_rank = ((index + 1) + stop) / 2.0
+        positive_rank_sum += average_rank * sum(item[1] for item in ranked[index:stop])
+        index = stop
+    auroc = (
+        positive_rank_sum - attack_total * (attack_total + 1) / 2.0
+    ) / (attack_total * benign_total)
+
+    descending = sorted(
+        zip(clean_probabilities, labels), key=lambda item: item[0], reverse=True
+    )
+    true_positive = false_positive = previous_true_positive = 0
+    auprc = 0.0
+    index = 0
+    while index < len(descending):
+        stop = index + 1
+        while stop < len(descending) and descending[stop][0] == descending[index][0]:
+            stop += 1
+        positives = sum(item[1] for item in descending[index:stop])
+        true_positive += positives
+        false_positive += stop - index - positives
+        precision = true_positive / (true_positive + false_positive)
+        auprc += ((true_positive - previous_true_positive) / attack_total) * precision
+        previous_true_positive = true_positive
+        index = stop
+    return {
+        "TP": tp,
+        "TN": tn,
+        "FP": fp,
+        "FN": fn,
+        "macro_f1": (attack_f1 + benign_f1) / 2.0,
+        "balanced_accuracy": (attack_recall + benign_recall) / 2.0,
+        "auroc": auroc,
+        "auprc": auprc,
+        "benign_recall": benign_recall,
+        "attack_recall": attack_recall,
+        "ece": expected_calibration_error(labels, clean_probabilities),
+        "predicted_attack_ratio": (tp + fp) / len(labels),
+    }
+
+
+def select_macro_f1_threshold(labels, probabilities, min_attack_recall=0.0):
+    """Select in O(N log N), retaining the exact all-negative sentinel."""
+
+    if not 0.0 <= float(min_attack_recall) <= 1.0:
+        raise ValueError("minimum attack recall must be in [0, 1]")
+    if len(labels) != len(probabilities) or not labels:
+        raise ValueError("labels/probabilities must align and be non-empty")
+    if any(type(value) is not int or value not in (0, 1) for value in labels):
+        raise ValueError("labels must be binary integers")
+    clean_probabilities = [float(value) for value in probabilities]
+    if any(not 0.0 <= value <= 1.0 for value in clean_probabilities):
+        raise ValueError("probabilities must be in [0, 1]")
+    attack_total = sum(labels)
+    benign_total = len(labels) - attack_total
+    if attack_total == 0 or benign_total == 0:
+        raise ValueError("both classes are required")
+    ranked = sorted(
+        zip(clean_probabilities, labels), key=lambda item: item[0], reverse=True
+    )
+    candidates = []
+    tp = fp = 0
+    fn = attack_total
+    tn = benign_total
+
+    def append_candidate(threshold):
+        attack_recall = tp / attack_total
+        benign_recall = tn / benign_total
+        attack_denominator = 2 * tp + fp + fn
+        benign_denominator = 2 * tn + fp + fn
+        attack_f1 = 0.0 if attack_denominator == 0 else 2.0 * tp / attack_denominator
+        benign_f1 = 0.0 if benign_denominator == 0 else 2.0 * tn / benign_denominator
+        if attack_recall >= min_attack_recall:
+            candidates.append(
+                {
+                    "threshold": threshold,
+                    "macro_f1": (attack_f1 + benign_f1) / 2.0,
+                    "balanced_accuracy": (attack_recall + benign_recall) / 2.0,
+                    "attack_recall": attack_recall,
+                    "benign_recall": benign_recall,
+                    "predicted_attack_ratio": (tp + fp) / len(labels),
+                }
+            )
+
+    append_candidate(max(clean_probabilities) + 1e-12)
+    index = 0
+    while index < len(ranked):
+        threshold = ranked[index][0]
+        stop = index + 1
+        while stop < len(ranked) and ranked[stop][0] == threshold:
+            stop += 1
+        positives = sum(item[1] for item in ranked[index:stop])
+        negatives = stop - index - positives
+        tp += positives
+        fn -= positives
+        fp += negatives
+        tn -= negatives
+        append_candidate(threshold)
+        index = stop
+    if not candidates:
+        raise ValueError("no threshold satisfies the minimum attack recall")
+    selected = max(
+        candidates,
+        key=lambda item: (
+            item["macro_f1"],
+            item["balanced_accuracy"],
+            -abs(item["threshold"] - 0.5),
+            -item["threshold"],
+        ),
+    )
+    selected["minimum_attack_recall_constraint"] = min_attack_recall
+    replayed = binary_prediction_metrics(
+        labels, clean_probabilities, selected["threshold"]
+    )
+    replayed["threshold"] = selected["threshold"]
+    replayed["minimum_attack_recall_constraint"] = min_attack_recall
+    return replayed
+
+
 def minimum_metric(records: Iterable[dict], name: str):
     values = [record[name] for record in records if record.get(name) is not None]
     return None if not values else min(values)

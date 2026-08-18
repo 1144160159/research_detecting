@@ -48,6 +48,7 @@ def extract_candidate_flow_records(
     max_actual_optional_cost_us = 0.0
     packet_start_timestamp = None
     packet_last_timestamp = None
+    batch_audits = []
     with PcapFileReader(
         pcap_path, max_payload_bytes=max_payload_bytes
     ) as reader:
@@ -87,6 +88,16 @@ def extract_candidate_flow_records(
             )
             max_actual_optional_cost_us = max(
                 max_actual_optional_cost_us, plan.actual_used_us
+            )
+            batch_audits.append(
+                {
+                    "batch_index": len(batch_audits),
+                    "packet_count": len(packet_batch),
+                    "key_flow_total": plan.key_flow_total,
+                    "key_flow_covered": plan.key_flow_covered,
+                    "budget_overrun_count": plan.budget_overrun_count,
+                    "actual_used_us": plan.actual_used_us,
+                }
             )
             for result in results:
                 tier_counts[result.tier] += 1
@@ -152,6 +163,7 @@ def extract_candidate_flow_records(
         else key_covered / key_total,
         "key_flow_coverage_min": key_coverage_min,
         "max_actual_optional_cost_us": max_actual_optional_cost_us,
+        "batch_audits": batch_audits,
         "tier_counts": {
             tier: tier_counts.get(tier, 0)
             for tier in ("base", "flow", "deep")

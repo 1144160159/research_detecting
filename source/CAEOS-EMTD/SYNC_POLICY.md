@@ -1,26 +1,53 @@
 # Local/GPU synchronization policy
 
-The local directory is the source of truth:
+## Single source of truth
+
+Local code:
 
 `F:\泉城实验室\二期\论文\异常检测\source\CAEOS-EMTD`
 
-The GPU mirror is:
+Validated remote pointer:
 
-`/opt/data/private/wangwt/ParkAttackKE/CAEOS-EMTD`
+`/opt/data/private/wangwt/ParkAttackKE/CAEOS-EMTD/current`
 
-After every local code or configuration edit:
+Immutable remote releases:
 
-1. run local `py_compile` or the affected unit tests;
-2. run `sync_to_gpu.cmd` immediately;
-3. require remote syntax validation and unit tests in Conda environment `py3.9`
-   to pass before launching an experiment;
-4. keep datasets, runs, caches, checkpoints, and generated results on the GPU only;
-5. copy compact metrics and manifests back to the local method folder after each experiment.
+`/opt/data/private/wangwt/ParkAttackKE/CAEOS-EMTD/releases`
 
-The sync command transfers only source code, configurations, tests,
-documentation, and requirements. It excludes `runs`, Python caches, datasets,
-and model artifacts.
+Legacy active workspace:
 
-Experiments must not be launched from an unsynchronized remote edit. If an
-emergency change is made on the server, first copy it back to the local source
-of truth, review it locally, and then run the normal forward synchronization.
+`/opt/data/private/wangwt/ParkAttackKE/CAEOS-EMTD/active/CAEOS-EMTD-strict-v4-20260717`
+
+All inactive historical workspaces are retained without deletion under
+`/opt/data/private/wangwt/ParkAttackKE/CAEOS-EMTD/legacy`.
+
+## Publication procedure
+
+`sync_to_gpu.cmd` performs a release-style publication:
+
+1. upload source, configuration, tests, contracts, scripts, and documentation
+   into a new staging directory;
+2. exclude datasets, results, runs, checkpoints, caches, PDFs, and nested
+   historical source copies;
+3. run remote compile checks and the contract/metric regression tests with the
+   `py3.9` Python environment;
+4. write a SHA-256 file manifest;
+5. move the staging tree into an immutable release directory;
+6. atomically update the `CAEOS-EMTD/current` symlink only after validation.
+
+A failed validation leaves `CAEOS-EMTD/current` unchanged. The script does not
+delete legacy workspaces or generated evidence.
+
+## Operating rules
+
+1. Run affected local tests before synchronization.
+2. Run `sync_to_gpu.cmd` from this directory.
+3. Start new GPU experiments only from the resolved `CAEOS-EMTD/current`
+   release.
+4. Record the resolved release path and `SOURCE_MANIFEST.sha256` digest in each
+   formal result.
+5. Keep raw datasets, checkpoints, sample-level outputs, and large results on
+   the GPU; synchronize compact metrics and manifests back to the document
+   evidence directory.
+6. Emergency remote edits are prohibited. Bring a required fix back to local,
+   review it, and publish a new immutable release.

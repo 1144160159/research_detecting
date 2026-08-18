@@ -98,6 +98,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--models", default="mlp")
     parser.add_argument("--seeds", default="7")
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--device", default="auto")
     parser.add_argument(
         "--epochs",
         type=int,
@@ -416,6 +417,7 @@ def command_for(experiment: Experiment, args: argparse.Namespace) -> list[str]:
         "--epochs", str(epochs), "--patience", str(args.patience),
         "--batch-size", "512", "--num-workers", "4", "--seed", str(experiment.seed),
         "--output-dir", experiment.output_dir,
+        "--device", getattr(args, "device", "auto"),
     ]
     if experiment.model == "mlp":
         command.extend(

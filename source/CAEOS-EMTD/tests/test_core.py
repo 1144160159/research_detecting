@@ -2,13 +2,20 @@ import unittest
 
 import torch
 
-from caeos.losses import compute_training_loss
+from caeos.losses import (
+    compute_training_loss,
+    supervised_contrastive_loss,
+)
 from caeos.model import (
     ConflictAwareEvidentialNet,
     evidence_to_opinion,
     pairwise_conflict,
 )
-from caeos.open_set import DiagnosticConformalCalibrator
+from caeos.open_set import (
+    DiagnosticConformalCalibrator,
+    OpenSetCalibrator,
+    learn_simplex_risk_weights,
+)
 
 
 class CoreAlgorithmTest(unittest.TestCase):
@@ -107,6 +114,37 @@ class CoreAlgorithmTest(unittest.TestCase):
         self.assertTrue(torch.isfinite(losses["total"]))
         losses["total"].backward()
 
+    def test_supervised_contrastive_loss_rewards_fine_class_geometry(self):
+        labels = torch.tensor([0, 0, 1, 1])
+        separated = torch.tensor(
+            [
+                [1.0, 0.0],
+                [1.0, 0.05],
+                [-1.0, 0.0],
+                [-1.0, -0.05],
+            ],
+            requires_grad=True,
+        )
+        mixed = torch.tensor(
+            [
+                [1.0, 0.0],
+                [-1.0, 0.0],
+                [1.0, 0.0],
+                [-1.0, 0.0],
+            ]
+        )
+
+        separated_loss = supervised_contrastive_loss(
+            separated, labels, temperature=0.1
+        )
+        mixed_loss = supervised_contrastive_loss(
+            mixed, labels, temperature=0.1
+        )
+
+        self.assertLess(float(separated_loss), float(mixed_loss))
+        separated_loss.backward()
+        self.assertTrue(torch.isfinite(separated.grad).all())
+
     def test_diagnostic_conformal_detects_multivariate_deviation(self):
         generator = torch.Generator().manual_seed(9)
         train_labels = torch.arange(80) // 40
@@ -153,6 +191,104 @@ class CoreAlgorithmTest(unittest.TestCase):
         unknown_risk, _, _ = calibrator.score(unknown_output)
         self.assertGreater(float(unknown_risk.mean()), float(known_risk.mean()))
         self.assertEqual(calibrator.state_dict()["type"], "diagnostic_conformal")
+
+    def test_hierarchical_fine_prototypes_are_fitted_and_serialized(self):
+        train_embedding = torch.tensor(
+            [
+                [0.0, 0.0],
+                [0.2, 0.0],
+                [2.0, 0.0],
+                [2.2, 0.0],
+            ]
+        )
+        coarse_labels = torch.tensor([0, 0, 1, 1])
+        fine_labels = torch.tensor([0, 1, 2, 3])
+        calibrator = OpenSetCalibrator(
+            2,
+            benign_index=0,
+            weights={
+                "uncertainty": 0.2,
+                "conflict": 0.2,
+                "distance": 0.2,
+                "fine_distance": 0.2,
+                "energy": 0.2,
+            },
+        )
+        calibrator.fit_prototypes(train_embedding, coarse_labels)
+        calibrator.fit_fine_prototypes(train_embedding, fine_labels)
+        validation_output = self._diagnostic_output(
+            train_embedding,
+            coarse_labels,
+            torch.tensor([0.2, 0.3, 0.2, 0.3]),
+            torch.tensor([0.1, 0.2, 0.1, 0.2]),
+        )
+        calibrator.fit_known_validation(validation_output)
+
+        state = calibrator.state_dict()
+        restored = OpenSetCalibrator.from_state_dict(state)
+
+        self.assertEqual(len(state["fine_prototypes"]), 4)
+        self.assertIn("fine_distance", state["quantiles"])
+        self.assertTrue(
+            torch.allclose(
+                calibrator.score(validation_output)[0],
+                restored.score(validation_output)[0],
+            )
+        )
+
+    def test_maximum_risk_aggregation_uses_strongest_component(self):
+        embeddings = torch.tensor(
+            [[0.0, 0.0], [0.2, 0.0], [2.0, 0.0], [2.2, 0.0]]
+        )
+        labels = torch.tensor([0, 0, 1, 1])
+        output = self._diagnostic_output(
+            embeddings,
+            labels,
+            torch.tensor([0.2, 0.3, 0.4, 0.5]),
+            torch.tensor([0.1, 0.2, 0.3, 0.4]),
+        )
+        calibrator = OpenSetCalibrator(
+            2,
+            benign_index=0,
+            aggregation="maximum",
+        )
+        calibrator.fit_prototypes(embeddings, labels)
+        calibrator.fit_known_validation(output)
+
+        risk, _, components = calibrator.score(output)
+        expected = torch.stack(list(components.values())).max(dim=0).values
+        restored = OpenSetCalibrator.from_state_dict(
+            calibrator.state_dict()
+        )
+
+        self.assertTrue(torch.allclose(risk, expected))
+        self.assertEqual(restored.aggregation, "maximum")
+
+    def test_known_only_risk_learning_upweights_separating_component(self):
+        known_components = {
+            "uncertainty": torch.tensor([0.2, 0.3, 0.2, 0.3]),
+            "distance": torch.tensor([0.4, 0.5, 0.4, 0.5]),
+        }
+        pseudo_components = {
+            "uncertainty": torch.tensor([1.5, 1.4, 1.6, 1.5]),
+            "distance": torch.tensor([0.4, 0.5, 0.4, 0.5]),
+        }
+        groups = torch.tensor([0, 0, 1, 1])
+
+        learned, evidence = learn_simplex_risk_weights(
+            known_components,
+            pseudo_components,
+            groups,
+            base_weights={"uncertainty": 0.5, "distance": 0.5},
+            seed=283,
+            steps=100,
+            batch_size=32,
+        )
+
+        self.assertGreater(learned["uncertainty"], learned["distance"])
+        self.assertAlmostEqual(sum(learned.values()), 1.0, places=6)
+        self.assertEqual(evidence["known_samples"], 4)
+        self.assertEqual(evidence["pseudo_unknown_samples"], 4)
 
 
 if __name__ == "__main__":

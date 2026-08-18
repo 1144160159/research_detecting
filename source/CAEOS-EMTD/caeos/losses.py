@@ -44,6 +44,48 @@ def center_loss(embeddings: Tensor, targets: Tensor, centers: Tensor) -> Tensor:
     return (embeddings - centers[targets]).pow(2).sum(dim=-1).mean()
 
 
+def supervised_contrastive_loss(
+    embeddings: Tensor,
+    targets: Tensor,
+    temperature: float = 0.1,
+) -> Tensor:
+    if temperature <= 0.0:
+        raise ValueError("temperature must be positive")
+    if len(embeddings) < 2:
+        return embeddings.sum() * 0.0
+    normalized = F.normalize(embeddings, dim=-1)
+    logits = normalized @ normalized.transpose(0, 1)
+    logits = logits / temperature
+    diagonal = torch.eye(
+        len(embeddings),
+        dtype=torch.bool,
+        device=embeddings.device,
+    )
+    candidate_mask = ~diagonal
+    positive_mask = (
+        targets.view(-1, 1) == targets.view(1, -1)
+    ) & candidate_mask
+    positive_count = positive_mask.sum(dim=1)
+    valid = positive_count > 0
+    if not torch.any(valid):
+        return embeddings.sum() * 0.0
+    row_max = logits.masked_fill(diagonal, -torch.inf).max(
+        dim=1, keepdim=True
+    ).values.detach()
+    shifted = logits - row_max
+    log_denominator = torch.log(
+        (torch.exp(shifted) * candidate_mask).sum(
+            dim=1, keepdim=True
+        ).clamp_min(1e-12)
+    )
+    log_probability = shifted - log_denominator
+    mean_positive_log_probability = (
+        (log_probability * positive_mask).sum(dim=1)
+        / positive_count.clamp_min(1)
+    )
+    return -mean_positive_log_probability[valid].mean()
+
+
 def compute_training_loss(
     output: Dict[str, Tensor],
     targets: Tensor,

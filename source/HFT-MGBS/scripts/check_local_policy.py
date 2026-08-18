@@ -24,7 +24,15 @@ FORBIDDEN_DIRS = {
     "logs",
     "profiles",
 }
-IGNORED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "build", "dist"}
+IGNORED_DIRS = {
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "target",
+}
 FORBIDDEN_SUFFIXES = {
     ".pt", ".pth", ".ckpt", ".onnx", ".safetensors", ".h5",
     ".pkl", ".pickle", ".joblib", ".npy", ".npz", ".parquet",

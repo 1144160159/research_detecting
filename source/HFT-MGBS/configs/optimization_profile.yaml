@@ -1,9 +1,9 @@
 profile_id: hft_optimization_profile_gpu103_v1
-status: offline_adaptation_confirmed_live_and_thresholds_pending
+status: engineering_rearchitecture_10mpps__live_proof_pending
 
 target_environment:
   host: 10.0.5.103
-  ssh_port: 25450
+  ssh_port: 25696
   conda_env: py3.9
   execution_boundary: kubernetes_burstable_pod
   cpu: Intel Xeon Silver 4316
@@ -23,7 +23,9 @@ target_environment:
 
 workload:
   target_load_gbps: null
-  target_load_mpps: null
+  target_load_mpps: 10.0
+  target_scope: single_10gbe_capture_interface_64B_primary
+  target_wire_gbps_at_64B_with_preamble_ifg: 6.72
   peak_headroom_ratio: 1.20
   packet_size_profiles: [64B, IMIX, real]
   flow_profiles: [mice, elephant, high_churn]
@@ -32,25 +34,27 @@ workload:
 
 hard_constraints:
   packet_drop_at_target: 0
-  p99_latency_us: null
-  p999_latency_us: null
-  max_queue_wait_us: null
+  p99_latency_us: 10000
+  p999_latency_us: 50000
+  max_queue_wait_us: 5000
   max_cpu_utilization: 0.85
   max_gpu_utilization: 0.85
   max_memory_utilization: 0.85
   max_gpu_memory_utilization: 0.85
   budget_overrun_count: 0
   min_key_flow_coverage: 0.99
-  fallback_recovery_s: null
+  fallback_recovery_s: 0.30
   local_policy_violations: 0
 
 quality_objectives:
   primary_metric: macro_f1
-  min_primary_metric: null
-  min_independent_primary_metric: null
-  min_independent_attack_recall: null
-  min_independent_benign_recall: null
-  min_ground_truth_event_recall: null
+  min_primary_metric: 0.90
+  min_independent_primary_metric: 0.70
+  min_independent_attack_recall: 0.72
+  min_independent_benign_recall: 0.93
+  min_independent_auprc: 0.45
+  max_independent_ece: 0.05
+  min_ground_truth_event_recall: 0.70
   secondary_metrics: [attack_recall, benign_recall, balanced_accuracy, auroc, auprc, ece]
 
 experiment_policy:
@@ -66,17 +70,12 @@ experiment_policy:
 freeze_gate:
   passed: false
   blocking_fields:
-    - workload.target_load_gbps_or_mpps
-    - hard_constraints.p99_latency_us
-    - hard_constraints.p999_latency_us
-    - hard_constraints.max_queue_wait_us
-    - hard_constraints.fallback_recovery_s
-    - quality_objectives.min_primary_metric
-    - quality_objectives.min_independent_primary_metric
-    - quality_objectives.min_independent_attack_recall
-    - quality_objectives.min_independent_benign_recall
-    - quality_objectives.min_ground_truth_event_recall
-  note: No final Pareto champion may be emitted until these workload and SLA values are fixed.
+    - backend.capture_only_12mpps_headroom
+    - backend.full_base_feature_10mpps
+    - workload.64B_10mpps_generator_proof
+    - hard_constraints.three_repeat_10mpps_live_proof
+    - long_run.24h_and_72h
+  note: The 10 Mpps and latency targets are now frozen. No final Pareto champion may be emitted until the staged Rust fast path and live hardware gates pass.
 
 offline_preselection:
   candidate_batch_size: 512
@@ -99,6 +98,9 @@ offline_preselection:
     entry_count: 27
     sha256: 4b0ac8b9921c21b2bfa87232158813321bcb72b7303fac6e96b898a9cb621665
   evidence:
+    release_candidate: configs/release_candidate_rc1.json
+    algorithm_search: configs/algorithm_search_rc1.json
+    live_threshold_template: configs/live_thresholds_rc1.template.json
     performance: /opt/data/private/wangwt/ParkAttackKE/HFT-MGBS/results/HFT_G3_key_unconditional_safety050_formal_pcap_matrix_20260724T025834Z
     grouped_quality: /opt/data/private/wangwt/ParkAttackKE/HFT-MGBS/results/HFT_G5_key_unconditional_safety050_formal_20260724T025511Z
     independent_unsw_baseline: /opt/data/private/wangwt/ParkAttackKE/HFT-MGBS/results/HFT_G6_unsw_holdout_key_unconditional_safety050_formal_20260724T025042Z

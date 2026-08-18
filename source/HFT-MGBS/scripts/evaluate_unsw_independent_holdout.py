@@ -13,7 +13,12 @@ from hft_mgbs.domain_features import (
     FEATURE_PROFILES,
     transform_feature_rows,
 )
-from hft_mgbs.quality import expected_calibration_error, minimum_metric
+from hft_mgbs.quality import (
+    binary_prediction_metrics,
+    expected_calibration_error,
+    minimum_metric,
+    select_macro_f1_threshold as shared_select_macro_f1_threshold,
+)
 from hft_mgbs.unsw import UnswGroundTruth
 
 
@@ -51,6 +56,10 @@ def _threshold_metrics(labels, probabilities, threshold):
     )
     return {
         "threshold": float(threshold),
+        "TP": true_positive,
+        "TN": true_negative,
+        "FP": false_positive,
+        "FN": false_negative,
         "macro_f1": (attack_f1 + benign_f1) / 2.0,
         "balanced_accuracy": (attack_recall + benign_recall) / 2.0,
         "attack_recall": attack_recall,
@@ -65,36 +74,21 @@ def select_macro_f1_threshold(
     labels, probabilities, min_attack_recall=0.0
 ):
     """Select a threshold only from a labeled calibration partition."""
-
-    if len(labels) != len(probabilities) or not labels:
-        raise ValueError("calibration labels/probabilities must align")
-    if not 0 < sum(labels) < len(labels):
-        raise ValueError("calibration partition must contain both classes")
-    if not 0.0 <= min_attack_recall <= 1.0:
-        raise ValueError("minimum calibration attack recall must be in [0, 1]")
-    thresholds = sorted(set(float(value) for value in probabilities))
-    thresholds.append(max(thresholds) + 1e-12)
-    candidates = [
-        _threshold_metrics(labels, probabilities, threshold)
-        for threshold in thresholds
-    ]
-    feasible = [
-        item
-        for item in candidates
-        if item["attack_recall"] >= min_attack_recall
-    ]
-    selected = max(
-        feasible,
-        key=lambda item: (
-            item["macro_f1"],
-            item["balanced_accuracy"],
-            -abs(item["threshold"] - 0.5),
-        ),
+    selected = shared_select_macro_f1_threshold(
+        labels, probabilities, min_attack_recall
     )
-    selected["minimum_attack_recall_constraint"] = (
-        min_attack_recall
-    )
-    return selected
+    return {
+        name: selected[name]
+        for name in (
+            "threshold",
+            "macro_f1",
+            "balanced_accuracy",
+            "attack_recall",
+            "benign_recall",
+            "predicted_attack_ratio",
+            "minimum_attack_recall_constraint",
+        )
+    }
 
 
 def load_input_hash_evidence(path, required_paths):
@@ -126,13 +120,16 @@ def load_input_hash_evidence(path, required_paths):
 
 def constraint_audit(summaries):
     key_total = sum(item["key_flow_total"] for item in summaries)
+    key_covered = sum(item["key_flow_covered"] for item in summaries)
     return {
         "budget_overrun_count": sum(
             item["budget_overrun_count"] for item in summaries
         ),
+        "key_flow_total": key_total,
+        "key_flow_covered": key_covered,
         "key_flow_coverage": 1.0
         if key_total == 0
-        else sum(item["key_flow_covered"] for item in summaries) / key_total,
+        else key_covered / key_total,
         "key_flow_coverage_min": min(
             item["key_flow_coverage_min"] for item in summaries
         ),
@@ -140,6 +137,28 @@ def constraint_audit(summaries):
             item["max_actual_optional_cost_us"] for item in summaries
         ),
     }
+
+
+def selected_flow_fingerprint(records):
+    identities = [
+        {
+            "forward_key": list(item["forward_key"]),
+            "start_timestamp": float(item["start_timestamp"]),
+            "last_timestamp": float(item["last_timestamp"]),
+        }
+        for item in records
+    ]
+    raw = json.dumps(
+        identities, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical_sha256(value):
+    raw = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def train_and_score(
@@ -330,6 +349,7 @@ def train_and_score(
                 "n_estimators": estimators,
                 "min_samples_leaf": 2,
                 "class_weight": "balanced",
+                "n_jobs": n_jobs,
             }
         elif classifier == "logistic":
             model = LogisticRegression(
@@ -364,9 +384,30 @@ def train_and_score(
         predictions = (
             evaluation_probabilities >= threshold
         ).astype(np.int8)
+        confusion = binary_prediction_metrics(
+            evaluation_labels.tolist(),
+            evaluation_probabilities.tolist(),
+            float(threshold),
+        )
         result = {
                 "seed": seed,
                 "decision_threshold": float(threshold),
+                "TP": confusion["TP"],
+                "TN": confusion["TN"],
+                "FP": confusion["FP"],
+                "FN": confusion["FN"],
+                "evaluation_labels": evaluation_labels.tolist(),
+                "evaluation_probabilities": evaluation_probabilities.tolist(),
+                "calibration_labels": (
+                    y_test[calibration_indices].tolist()
+                    if threshold_policy == "calibration_macro_f1"
+                    else []
+                ),
+                "calibration_probabilities": (
+                    probabilities[calibration_indices].tolist()
+                    if threshold_policy == "calibration_macro_f1"
+                    else []
+                ),
                 "macro_f1": float(
                     f1_score(
                         evaluation_labels, predictions, average="macro"
@@ -435,6 +476,10 @@ def train_and_score(
             - int(y_test[evaluation_indices].sum())
         ),
         "seeds": results,
+        "aggregate_confusion_matrix": {
+            name: sum(int(item[name]) for item in results)
+            for name in ("TP", "TN", "FP", "FN")
+        },
         "conservative": {
             "macro_f1_min": minimum_metric(results, "macro_f1"),
             "balanced_accuracy_min": minimum_metric(
@@ -454,7 +499,7 @@ def main() -> int:
     parser.add_argument("training_manifest", type=Path)
     parser.add_argument("holdout_manifest", type=Path)
     parser.add_argument("--batch-size", type=int, default=512)
-    parser.add_argument("--budget-us", type=float, default=5000.0)
+    parser.add_argument("--budget-us", type=int, default=5000)
     parser.add_argument(
         "--execution-budget-safety-ratio", type=float, default=0.75
     )
@@ -607,6 +652,8 @@ def main() -> int:
         train_rows.extend(item["features"] for item in records)
         train_labels.extend([int(sample["label"])] * len(records))
         train_groups.extend([sample["group"]] * len(records))
+        summary = dict(summary)
+        summary["selected_flow_sha256"] = selected_flow_fingerprint(records)
         train_summaries.append(summary)
 
     test_rows = []
@@ -617,6 +664,7 @@ def main() -> int:
     matched_event_ids = set()
     eligible_event_ids_by_group = defaultdict(set)
     matched_event_ids_by_group = defaultdict(set)
+    matched_event_witnesses = {}
     for sample in holdout_manifest["samples"]:
         def observe_flow(record):
             for interval in truth.matching_intervals(
@@ -630,6 +678,19 @@ def main() -> int:
                     matched_event_ids_by_group[sample["group"]].add(
                         interval.event_id
                     )
+                    witness = {
+                        "event_id": interval.event_id,
+                        "group": sample["group"],
+                        "normalized_forward_key": list(record["forward_key"]),
+                        "start_timestamp_hex": float(record["start_timestamp"]).hex(),
+                        "last_timestamp_hex": float(record["last_timestamp"]).hex(),
+                    }
+                    key = (sample["group"], interval.event_id)
+                    previous = matched_event_witnesses.get(key)
+                    if previous is None or json.dumps(
+                        witness, sort_keys=True, separators=(",", ":")
+                    ) < json.dumps(previous, sort_keys=True, separators=(",", ":")):
+                        matched_event_witnesses[key] = witness
 
         records, summary = extract_candidate_flow_records(
             sample["path"],
@@ -669,6 +730,8 @@ def main() -> int:
         test_labels.extend(labels)
         test_groups.extend([sample["group"]] * len(records))
         summary = dict(summary)
+        summary["selected_flow_sha256"] = selected_flow_fingerprint(records)
+        summary["selected_flow_label_sha256"] = canonical_sha256(labels)
         summary["attack_flows"] = sum(labels)
         summary["benign_flows"] = len(labels) - sum(labels)
         test_summaries.append(summary)
@@ -726,6 +789,17 @@ def main() -> int:
         )
         / len(evaluation_eligible_event_ids)
     )
+    evaluation_eligible_by_group = {
+        group: sorted(eligible_event_ids_by_group[group])
+        for group in sorted(evaluation_group_set)
+    }
+    evaluation_matched_by_group = {
+        group: sorted(
+            matched_event_ids_by_group[group]
+            & eligible_event_ids_by_group[group]
+        )
+        for group in sorted(evaluation_group_set)
+    }
     calibration_eligible_event_ids = set().union(
         *(
             eligible_event_ids_by_group[group]
@@ -779,6 +853,20 @@ def main() -> int:
                 "bidirectional_5tuple_and_flow_attack_time_overlap"
             ),
             "alignment_tolerance_s": args.tolerance_s,
+            "max_train_packets_per_capture": (
+                args.max_train_packets_per_capture
+            ),
+            "max_train_flows_per_capture": (
+                args.max_train_flows_per_capture
+            ),
+            "max_test_packets_per_capture": (
+                args.max_test_packets_per_capture
+            ),
+            "max_test_flows_per_capture": args.max_test_flows_per_capture,
+            "estimators": args.estimators,
+            "n_jobs": args.n_jobs,
+            "key_flow_ratio": args.key_flow_ratio,
+            "max_payload_bytes": args.max_payload_bytes,
             "seeds": args.seeds,
             "threshold_policy": args.threshold_policy,
             "calibration_used_for_threshold": (
@@ -827,6 +915,23 @@ def main() -> int:
             ),
             "event_recall": event_recall,
             "computed_before_flow_sampling": True,
+            "eligible_event_ids_by_group": evaluation_eligible_by_group,
+            "matched_event_ids_by_group": evaluation_matched_by_group,
+            "eligible_event_ids_sha256": canonical_sha256(
+                evaluation_eligible_by_group
+            ),
+            "matched_event_ids_sha256": canonical_sha256(
+                evaluation_matched_by_group
+            ),
+            "matched_event_witnesses": sorted(
+                (
+                    witness
+                    for (group, event_id), witness in matched_event_witnesses.items()
+                    if group in evaluation_group_set
+                    and event_id in evaluation_eligible_by_group[group]
+                ),
+                key=lambda item: (item["group"], item["event_id"]),
+            ),
         },
         "quality": quality,
         "final_quality_eligible": False,
@@ -836,25 +941,6 @@ def main() -> int:
         output["calibration_constraint_audit"] = constraint_audit(
             calibration_test_summaries
         )
-        output["calibration_ground_truth_event_recall_audit"] = {
-            "eligible_event_count": len(
-                calibration_eligible_event_ids
-            ),
-            "matched_event_count": len(
-                calibration_matched_event_ids
-                & calibration_eligible_event_ids
-            ),
-            "event_recall": (
-                1.0
-                if not calibration_eligible_event_ids
-                else len(
-                    calibration_matched_event_ids
-                    & calibration_eligible_event_ids
-                )
-                / len(calibration_eligible_event_ids)
-            ),
-            "used_for_final_evaluation": False,
-        }
     if adaptation_test_summaries:
         output["adaptation_constraint_audit"] = constraint_audit(
             adaptation_test_summaries

@@ -57,6 +57,7 @@ def create_protocol(
     design_file_path: Path,
     design_record_path: Path,
     implementation_sha256: dict[str, str],
+    recovery: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     validate_design(design, design_file_path)
     protocol: dict[str, Any] = {
@@ -117,8 +118,61 @@ def create_protocol(
             "pairwise_remains_incumbent_until_all_gates_pass": True,
         },
     }
+    if recovery is not None:
+        protocol["infrastructure_recovery"] = recovery
     protocol["manifest_sha256"] = canonical_hash(protocol)
     return protocol
+
+
+def create_recovery_record(
+    *,
+    root: Path,
+    protocol_path: Path,
+    failed_log_path: Path,
+) -> dict[str, Any]:
+    original = load(protocol_path)
+    failure_text = failed_log_path.read_text(encoding="utf-8", errors="replace")
+    failure_marker = (
+        "invalid choice: 'nested_pug_continuous_outer_min_p'"
+    )
+    if (
+        original.get("schema_version") != "strict_v4_pug_execution_protocol_v1"
+        or original.get("manifest_sha256") != canonical_hash(original)
+        or original.get("state") != "frozen_before_fresh_seed_execution"
+        or original.get("execution", {}).get("candidate_risk_selection")
+        != "nested_pug_continuous_outer_min_p"
+        or len(original.get("tasks", [])) != 18
+        or failure_marker not in failure_text
+    ):
+        raise ValueError("canonical failed PUG execution evidence required")
+    return {
+        "kind": "entrypoint_choice_integration_recovery",
+        "original_protocol": {
+            "path": protocol_path.relative_to(root).as_posix(),
+            "canonical_sha256": original["manifest_sha256"],
+            "file_sha256": file_hash(protocol_path),
+        },
+        "failed_candidate_log": {
+            "path": failed_log_path.relative_to(root).as_posix(),
+            "file_sha256": file_hash(failed_log_path),
+            "failure_marker": failure_marker,
+        },
+        "allowed_change": {
+            "path": "run_nested_gate_matrix.py",
+            "description": (
+                "Expose the already implemented frozen PUG risk-selection name "
+                "through the matrix entrypoint."
+            ),
+        },
+        "unchanged_effect_design": (
+            "Seeds, scenarios, data caches, model settings, candidate rule, "
+            "references, and admission gates remain identical."
+        ),
+        "claim_boundary": (
+            "This record repairs infrastructure only and does not use candidate "
+            "effects for method selection."
+        ),
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -141,6 +195,8 @@ def parse_args() -> argparse.Namespace:
             "results/strict_v4_pug_confirmation_v1/execution_protocol.json"
         ),
     )
+    parser.add_argument("--recovery-of-protocol", type=Path)
+    parser.add_argument("--failed-log", type=Path)
     return parser.parse_args()
 
 
@@ -180,11 +236,23 @@ def main() -> None:
         path.relative_to(root).as_posix(): file_hash(path)
         for path in implementation_paths
     }
+    if bool(args.recovery_of_protocol) != bool(args.failed_log):
+        raise ValueError(
+            "--recovery-of-protocol and --failed-log must be provided together"
+        )
+    recovery = None
+    if args.recovery_of_protocol is not None:
+        recovery = create_recovery_record(
+            root=root,
+            protocol_path=resolve(args.recovery_of_protocol),
+            failed_log_path=resolve(args.failed_log),
+        )
     protocol = create_protocol(
         load(design_path),
         design_path,
         design_path.relative_to(root),
         implementation_sha256,
+        recovery,
     )
     output = resolve(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

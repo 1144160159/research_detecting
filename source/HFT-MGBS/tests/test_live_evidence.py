@@ -38,6 +38,10 @@ def valid_run(repeat=1):
             "min_key_flow_coverage": 0.99,
             "max_fallback_recovery_s": 1.0,
             "min_independent_macro_f1": 0.30,
+            "min_independent_attack_recall": 0.60,
+            "min_independent_benign_recall": 0.80,
+            "min_independent_auprc": 0.10,
+            "max_independent_ece": 0.20,
             "min_ground_truth_event_recall": 0.60,
             "min_run_duration_s": 60.0,
             "resource_max": {
@@ -64,10 +68,13 @@ def valid_run(repeat=1):
         "load": {
             "packet_profile": "IMIX",
             "observed_mpps_min": 1.05,
+            "rate_window_s": 1.0,
+            "rate_sample_count": 60,
         },
         "end_to_end_latency": {
             "start_point": "nic_hardware_timestamp",
             "end_point": "feature_event_enqueued",
+            "timestamp_provenance_verified": True,
             "sample_count": 1000,
             "p99_us": 800.0,
             "p999_us": 1200.0,
@@ -92,6 +99,10 @@ def valid_run(repeat=1):
         },
         "independent_quality": {
             "macro_f1_min": 0.42,
+            "attack_recall_min": 0.70,
+            "benign_recall_min": 0.90,
+            "auprc_min": 0.20,
+            "ece_max": 0.10,
             "ground_truth_event_recall_min": 0.67,
         },
         "duration_s": 3600.0,
@@ -140,6 +151,64 @@ class LiveEvidenceTest(unittest.TestCase):
         audit = audit_live_run(run)
 
         self.assertIn("hard_constraint.target_load_mpps", audit.errors)
+
+    def test_average_load_or_unverified_timestamp_cannot_substitute(self):
+        run = valid_run()
+        run["load"]["rate_sample_count"] = 0
+        run["end_to_end_latency"]["timestamp_provenance_verified"] = False
+
+        audit = audit_live_run(run)
+
+        self.assertIn("load.rate_sample_count.zero", audit.errors)
+        self.assertIn(
+            "end_to_end_latency.timestamp_provenance_verified",
+            audit.errors,
+        )
+
+    def test_all_independent_quality_gates_are_enforced(self):
+        run = valid_run()
+        run["independent_quality"]["attack_recall_min"] = 0.59
+        run["independent_quality"]["benign_recall_min"] = 0.79
+        run["independent_quality"]["auprc_min"] = 0.09
+        run["independent_quality"]["ece_max"] = 0.21
+
+        audit = audit_live_run(run)
+
+        self.assertIn(
+            "hard_constraint.independent_attack_recall", audit.errors
+        )
+        self.assertIn(
+            "hard_constraint.independent_benign_recall", audit.errors
+        )
+        self.assertIn("hard_constraint.independent_auprc", audit.errors)
+        self.assertIn("hard_constraint.independent_ece", audit.errors)
+
+    def test_external_threshold_content_and_hash_must_match(self):
+        runs = [valid_run(1), valid_run(2), valid_run(3)]
+        expected = copy.deepcopy(runs[0]["frozen_thresholds"])
+
+        accepted = audit_live_repeats(
+            runs,
+            expected_thresholds=expected,
+            expected_thresholds_sha256="c" * 64,
+        )
+        self.assertTrue(accepted.accepted)
+
+        expected["max_pipeline_drop_rate"] = 0.0
+        rejected = audit_live_repeats(
+            runs,
+            expected_thresholds=expected,
+            expected_thresholds_sha256="d" * 64,
+        )
+        self.assertFalse(rejected.accepted)
+        self.assertIn(
+            "repeat1.external_thresholds_content_mismatch",
+            rejected.errors,
+        )
+        self.assertIn(
+            "repeat1.external_thresholds_sha256_mismatch",
+            rejected.errors,
+        )
 
 
 if __name__ == "__main__":

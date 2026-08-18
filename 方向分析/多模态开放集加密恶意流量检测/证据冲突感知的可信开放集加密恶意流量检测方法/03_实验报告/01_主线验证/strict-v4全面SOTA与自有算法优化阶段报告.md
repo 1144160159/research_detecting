@@ -2872,3 +2872,63 @@ DMC-CAEOS使用包序列与80维流统计双编码、家族/恶意双度量头�
 DMC不扩展到7场景、不进入fresh确认，也不替代当前PSF候选。下一分支从损失构造上模拟未知攻击：每个episode从攻击头内循环排除一个已知恶意家族，外循环仍要求该家族被检测为恶意；同时保留模态平衡以避免统计捷径。该分支仍先过同一Botnet资格门，未过即停止，不再增加静态对比项或后融合候选。
 
 新增证据包位于`results/06_自有算法95_5目标证据_20260728/gpu_cuda_development_snapshot_20260729/dmc_botnet_development_20260729`，远端/本地归档SHA-256均为`3a9bc5dc38d11251e53d060a01b9d5402ce4299b848cc45276a4062f755cba31`。
+
+### 102.185 FHMM-CAEOS Botnet两种子资格试验
+
+FHMM-CAEOS按已知恶意家族轮换episode：内循环排除一个已知恶意家族，外循环要求该家族仍跨过恶意边界；真实Botnet未知标签不参与训练、早停、配置选择或阈值。固定配置在seed29/31并行运行，GPU资源审计均通过，整卡均值`76.60%/65.20%`、中位数`75%/69%`、`>=50%`采样占比`98.8%/78.9%`。两种子均值Alert Accuracy `0.940930`、Benign FPR `0.046544`、Known type Accuracy `0.946501`、Unknown alert Recall `0.757724`、Unknown label Recall `0.261382`，未通过两种子均须达标的扩展门。
+
+seed31达到Alert Accuracy `0.980934`和Unknown alert Recall `0.946341`，但Benign FPR `0.057828`、Known type Accuracy `0.949632`仍未达标；seed29为`0.900927/0.035261/0.943371/0.569106`。同一1230条Botnet测试流的两种子攻击概率Pearson相关仅`0.07777`，告警决策一致率`0.57398`，seed31单独告警比例`0.40163`。结论是跨种子概率尺度和边界稳定性是首要瓶颈，不能用均值掩盖seed29回退，也不能以seed31单次近门结果启动七场景正式确认。
+
+### 102.186 已知识别与未知拒识指标纠偏
+
+采纳“已知识别与未知拒识是不同任务但须联合报告”的主体意见，并冻结双主表。表A继续承担95%/5%操作验收，包含Alert Accuracy/Precision/Recall、Benign FPR、Known type Accuracy和两种Unknown Recall；表B作为开放集研究主表，包含Known Macro-F1、Balanced Accuracy、Unknown AUROC-Out、AUPR-Out、`FPR_known@95TPR_unknown`和OSCR。建议中的六项不能替代95%/5%门，FPR95也不等于Benign FPR。
+
+阈值、risk formula和路由继续严格限制为known-only validation或已知家族内伪未知；测试曲线上的AUROC/AUPR/FPR95/OSCR只在揭盲后评价，不能反向选阈值。正式统计以场景为独立块，先在场景内聚合至少5个种子，再做paired Wilcoxon/精确置换、场景块或层级bootstrap与Holm；不把场景×种子直接当独立样本。capture/session分组为首选，fingerprint只负责重复泄漏控制。当前FHMM按flow_id哈希拆分，因此仍是开发证据。
+
+实现新增`strict_v4_open_set_metric_contract_v2.py`、`evaluate_strict_v4_family_heldout_meta_pilot_v2.py`与定向测试，v1训练/评估器及冻结SHA保持不变。当前缓存无K类概率矩阵，校准字段如实为unavailable；下一版训练协议需在零结果时重冻后才能增加概率缓存。校准只报告known-only ECE/Brier/NLL，任意risk不包装为未知概率。历史OSCR为300分位点近似，新字段使用`oscr_exact_v2`并保持历史冻结值不变；正式比较必须让候选与基线按同版本重算。完整决策见`02_实验设计/01_核心协议/已知识别与未知拒识联合评价协议_2026-07-29.md`。
+
+GPU只读复算已完成且未启动训练。seed29/31的Known Macro-F1为`0.882837/0.943113`，Balanced Accuracy为`0.950146/0.957424`，AUROC-Out为`0.928259/0.890607`，AUPR-Out为`0.675661/0.667603`，`FPR_known@95TPR_unknown`为`0.122090/0.388407`，exact OSCR v2为`0.920959/0.884136`。两种子均值分别为`0.912975/0.953785/0.909433/0.671632/0.255249/0.902548`。seed31虽然Alert Accuracy更高，但未知排序和拒识指标更差，构成“闭集/告警提升不能推出未知检测提升”的项目内直接证据。两份结果远端/本地SHA为`485d121f...f28eb/5abc99a2...3c22`。
+
+### 102.187 同拆分三初始化集成的实证裁决
+
+为检验FHMM的跨初始化不稳定性，结果前冻结双拆分三成员协议：split37使用model101/103/107，split41使用model109/113/127；每个拆分内部共享完全相同的数据划分，攻击概率与open score取算术均值，类型取硬多数票。协议manifest为`be5572532f69fe7ffc1c151e70dc2631854e55d311271ac2be9f37941c3024df`，真实未知标签不参与训练、配置、权重或阈值选择。
+
+双拆分操作指标分别为：
+
+| split | Alert Accuracy | Benign FPR | Known type Accuracy | Unknown alert Recall | Unknown rejection Recall |
+|---|---:|---:|---:|---:|---:|
+| 37 | 0.866180 | 0.047955 | 0.943098 | 0.417073 | 0.019512 |
+| 41 | 0.898967 | 0.060649 | 0.954805 | 0.575610 | 0.052033 |
+| mean | 0.882573 | 0.054302 | 0.948952 | 0.496341 | 0.035772 |
+
+开放集研究指标均值为Known Macro-F1 `0.939672`、Balanced Accuracy `0.954879`、Unknown AUROC `0.786685`、AUPR-Out `0.399046`、`FPR_known@95TPR_unknown=0.456641`、OSCR `0.785504`。该对照再次证明：已知类Balanced Accuracy超过95%不能推出未知拒识合格。两个拆分均未通过预注册效果门，故不扩展七家族，不采纳简单三初始化均值作为自有算法。
+
+六个成员的CUDA与资源门全部通过，成员平均GPU利用率均值`81.76%`，单成员范围`68.91%–86.72%`，峰值均为`100%`。但`split37_model103`在第76–78轮出现training/validation/meta outer loss同时NaN，导致完整性门失败；旧checkpoint虽可评估，但不能作为干净确认结果。成员test attack probability相关性为`0.9988–0.9999`、类型一致率为`0.9858–0.9991`，open score相关性仅`0.0152–0.4931`，说明算术均值稀释了未知风险排序而非形成稳定互补。
+
+建议的采纳裁决不变但边界进一步收紧：任务分层、双表、known-only threshold、每场景重拟合与至少5种子原则主体采纳；六指标研究表不能替代95%/5%操作表；capture/session分组只条件采纳并列为正式结果前硬门；统计推断先在场景内聚合种子，再以场景为块，禁止把场景×种子当独立样本。下一轮只处理FP32二阶meta、非有限损失fail-fast和known-only validation预注册的稳健open聚合，禁止根据本轮Botnet test挑成员或权重。
+
+本地完整证据位于`results/06_自有算法95_5目标证据_20260728/gpu_cuda_development_snapshot_20260729/fhmm_same_split_ensemble_botnet_pilot_v1_20260729`，`completion.json` manifest为`055822d2b3e8c2c61706f10906d64b146aa3e207a85d8421552b475ebf5d556e`，本地只读汇总manifest为`f3f8db881ebcb2a464c0a0a1adbf48efcda24ef2d32308a511f6f8b0e084fbbb`。
+
+### 102.188 FHMM-SR-CAEOS 稳定训练与双新拆分裁决
+
+在旧同拆分集成失败后，训练核心改为FP32一阶family-held-out meta update，加入内外梯度裁剪、非有限损失fail-fast、AMP scale reduction记录，并把split seed与model seed彻底分离。三成员并行smoke的GPU均值为`80.95%–82.67%`且无NaN，随后在训练前冻结split43/47双新拆分协议。固定候选使用family attack score maximum、open score maximum、known-only validation最优类型成员，两个预算均为`0.04`；确认期未搜索候选、权重或阈值。
+
+| split | Alert Accuracy | Benign FPR | Known type Accuracy | Unknown alert Recall | Unknown rejection Recall |
+|---|---:|---:|---:|---:|---:|
+| 43 | 0.990378 | 0.032440 | 0.954261 | 0.974797 | 0.491057 |
+| 47 | 0.901818 | 0.038082 | 0.950449 | 0.573984 | 0.382114 |
+| mean | 0.946098 | 0.035261 | 0.952355 | 0.774390 | 0.436585 |
+
+split43通过用户95%/5%、主确认及机器字段`full_typed_known_unknown_95_5`三门；split47因Alert Accuracy和Unknown alert Recall失败而三门全失。该机器字段不含Unknown rejection 95%条件，split43的Unknown rejection Recall实际为`0.491057`，不得表述为完整未知拒识达标。六个训练完整性门和资源门全部通过，成员平均GPU利用率为`69.28%–85.91%`，六成员均值`79.86%`，峰值均为`99%`或`100%`。因此`expand_to_seven_unknown_families=false`，不得以均值FPR、Known type、AUROC或OSCR达标替代逐拆分操作门。
+
+开放集研究指标在split43/47分别为：Known Macro-F1 `0.957952/0.965516`、Balanced Accuracy `0.966933/0.968207`、Unknown AUROC `0.952772/0.886194`、AUPR-Out `0.777189/0.660436`、`FPR_known@95TPR_unknown=0.080100/0.377910`、OSCR `0.950354/0.883679`。split47的闭集与排序指标达门而操作告警失败，再次证明三个评价层不能合成一个accuracy。
+
+该固定配置在开发拆分37/41上曾用真实Botnet标签排序。fresh确认消除了split43/47上的后选择，但不能把开发过程改写为目标未知家族完全未见。下一版attack routing必须改由嵌套leave-one-known-family validation的最坏家族召回选择，显式解耦binary maliciousness与known-family type，并改用全新拆分确认；本轮结果不扩展、不宣称95%/5%达成。协议文件SHA为`fdd6a4cd...d086`，completion manifest为`c7b5fe13...7649`，本地证据位于`results/06_自有算法95_5目标证据_20260728/gpu_cuda_development_snapshot_20260729/fhmm_stable_confirmation_v1_20260729/`。
+
+### 102.189 FHMM确认后的三条局部优化路线裁决
+
+稳定确认失败后，先在冻结的split43/47分数上审计两个低成本假设。攻击路由v3搜索4种攻击分数源、3种聚合和3个告警预算，共36组；联合告警v4搜索attack-only/maximum/noisy-or、3种开放分数聚合和3个告警预算，共27组。两次搜索的双拆分用户预警门通过数和双拆分已知/未知告警门通过数均为`0`。路由v3最佳开发配置的均值Alert Accuracy/FPR/Known type/Unknown alert/Unknown rejection为`0.954651/0.037377/0.952355/0.814634/0.426423`，但最坏拆分Alert Accuracy和Unknown alert Recall只有`0.922844/0.668293`；简单maximum/noisy-or联合告警进一步恶化split47，最终退回attack-only。由此关闭“仅靠分数路由或阈值融合修复稳定性”的路线。
+
+随后在训练前冻结70/10/20已知类拆分，保持20%已知测试和全部未知测试不变，并在split43/47各训练3个初始化。六个成员的完整性与资源门全部通过，成员平均GPU利用率为`66.53%–85.47%`，峰值均为`100%`。但双拆分均值Alert Accuracy/FPR/Known type/Unknown alert/Unknown rejection降为`0.925989/0.040141/0.954682/0.685366/0.330894`；AUROC-Out、AUPR-Out、FPR95-Out和OSCR为`0.848037/0.610522/0.344434/0.843393`。最坏拆分Alert Accuracy、Known type和Unknown alert Recall只有`0.901496/0.945291/0.573171`。因此增加已知训练量未改善未见家族表征，70/10/20替换被拒绝。
+
+三组结果均为阴性开发证据，不启动六个未见攻击家族扩展。Botnet已参与开发配置选择，后续只能作为开发未知类；若新架构通过开发门，fresh确认必须改用与Botnet不相交的BruteForce、DDoS、DoS、Exploit、Reconnaissance、WebAttack，并在结果产生前冻结协议。轻量证据位于`results/06_自有算法95_5目标证据_20260728/gpu_cuda_development_snapshot_20260729/fhmm_post_confirmation_development_20260729/`，三份development物理SHA分别为`e5899865...3e95c`、`ec7b3d3b...bf22`和`70e716b0...b69`。

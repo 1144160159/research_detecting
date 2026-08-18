@@ -8,13 +8,15 @@ SEEDS_COMMA="283,293,307"
 SEEDS_SPACE="283 293 307"
 SCENARIOS="ddos_syn_flood,mirai_greeth_flood,dos_udp_flood,backdoor_malware,dns_spoofing,ddos_icmp_fragmentation"
 MAX_PER_CLASS=1000
-RUN_ROOT="$PROJECT_ROOT/runs/strict_v4_pug_confirmation_v1"
-RESULT_ROOT="$PROJECT_ROOT/results/strict_v4_pug_confirmation_v1"
+RUN_ID="${RUN_ID:-strict_v4_pug_confirmation_v1}"
+RUN_ROOT="${RUN_ROOT:-$PROJECT_ROOT/runs/$RUN_ID}"
+RESULT_ROOT="${RESULT_ROOT:-$PROJECT_ROOT/results/$RUN_ID}"
 CANDIDATE_ROOT="$RUN_ROOT/candidate"
 OPENDETECT_ROOT="$RUN_ROOT/opendetect"
-RAW_ROOT="$PROJECT_ROOT/caches/strict_v4_pug_confirmation_v1/cic_iot2023/raw"
-CACHE_ROOT="$PROJECT_ROOT/caches/strict_v4_pug_confirmation_v1/cic_iot2023/group_supported"
-PROTOCOL="$RESULT_ROOT/execution_protocol.json"
+RAW_ROOT="${RAW_ROOT:-$PROJECT_ROOT/caches/$RUN_ID/cic_iot2023/raw}"
+CACHE_ROOT="${CACHE_ROOT:-$PROJECT_ROOT/caches/$RUN_ID/cic_iot2023/group_supported}"
+PROTOCOL="${PROTOCOL:-$RESULT_ROOT/execution_protocol.json}"
+RISK_POLICY_NAME="${RISK_POLICY_NAME:-$RUN_ID}"
 
 cd "$PROJECT_ROOT"
 mkdir -p "$RESULT_ROOT" "$RAW_ROOT" "$CACHE_ROOT"
@@ -51,7 +53,7 @@ sha256sum "$RAW_ROOT"/*.csv "$CACHE_ROOT"/*.csv > "$RESULT_ROOT/cache_sha256.txt
   --boundary-interpolation 0.5 \
   --boundary-max-per-task 512 \
   --boundary-training-objective pairwise \
-  --risk-policy-name strict_v4_pug_confirmation_v1 \
+  --risk-policy-name "$RISK_POLICY_NAME" \
   --output-root "$CANDIDATE_ROOT" \
   --cic-iot2023-max-per-class "$MAX_PER_CLASS" \
   --cic-iot2023-cache-dir "$CACHE_ROOT" \

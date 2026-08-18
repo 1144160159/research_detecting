@@ -16,6 +16,134 @@ DEFAULT_WEIGHTS = {
 }
 
 
+def learn_simplex_risk_weights(
+    known_components: Mapping[str, Tensor],
+    pseudo_unknown_components: Mapping[str, Tensor],
+    pseudo_unknown_groups: Tensor,
+    base_weights: Mapping[str, float],
+    seed: int,
+    steps: int = 400,
+    batch_size: int = 512,
+    margin: float = 0.10,
+    regularization: float = 0.05,
+) -> Tuple[Dict[str, float], Dict[str, object]]:
+    component_names = tuple(base_weights)
+    if not component_names:
+        raise ValueError("base risk weights are empty")
+    if set(known_components) != set(component_names):
+        raise ValueError("known risk components do not match base weights")
+    if set(pseudo_unknown_components) != set(component_names):
+        raise ValueError(
+            "pseudo-unknown risk components do not match base weights"
+        )
+    if steps <= 0 or batch_size <= 0:
+        raise ValueError("risk learning steps and batch size must be positive")
+    known = torch.stack(
+        [
+            known_components[name].detach().cpu().to(torch.float32)
+            for name in component_names
+        ],
+        dim=1,
+    )
+    pseudo = torch.stack(
+        [
+            pseudo_unknown_components[name]
+            .detach()
+            .cpu()
+            .to(torch.float32)
+            for name in component_names
+        ],
+        dim=1,
+    )
+    groups = pseudo_unknown_groups.detach().cpu().to(torch.long)
+    if len(known) == 0 or len(pseudo) == 0:
+        raise ValueError("known and pseudo-unknown components are required")
+    if len(groups) != len(pseudo):
+        raise ValueError("pseudo-unknown group count does not match samples")
+    unique_groups = torch.unique(groups, sorted=True)
+    if len(unique_groups) < 2:
+        raise ValueError(
+            "at least two pseudo-unknown groups are required"
+        )
+    base = torch.tensor(
+        [float(base_weights[name]) for name in component_names],
+        dtype=torch.float32,
+    )
+    base = base / base.sum().clamp_min(1e-8)
+    logits = torch.log(base.clamp_min(1e-4)).requires_grad_(True)
+    optimizer = torch.optim.Adam([logits], lr=0.05)
+    generator = torch.Generator().manual_seed(seed)
+    final_ranking_loss = 0.0
+    final_regularization_loss = 0.0
+    for _ in range(steps):
+        optimizer.zero_grad(set_to_none=True)
+        weights = torch.softmax(logits, dim=0)
+        known_indices = torch.randint(
+            len(known),
+            (batch_size,),
+            generator=generator,
+        )
+        known_score = known[known_indices] @ weights
+        group_losses = []
+        for group in unique_groups.tolist():
+            pool = torch.where(groups == group)[0]
+            sampled = pool[
+                torch.randint(
+                    len(pool),
+                    (batch_size,),
+                    generator=generator,
+                )
+            ]
+            pseudo_score = pseudo[sampled] @ weights
+            group_losses.append(
+                torch.nn.functional.softplus(
+                    margin - (pseudo_score - known_score)
+                ).mean()
+            )
+        ranking_loss = torch.logsumexp(
+            torch.stack(group_losses) * 10.0,
+            dim=0,
+        ) / 10.0
+        regularization_loss = regularization * (
+            (weights - base).pow(2).sum()
+        )
+        loss = ranking_loss + regularization_loss
+        loss.backward()
+        optimizer.step()
+        final_ranking_loss = float(ranking_loss.detach())
+        final_regularization_loss = float(
+            regularization_loss.detach()
+        )
+    learned = torch.softmax(logits.detach(), dim=0)
+    weights = {
+        name: float(learned[index])
+        for index, name in enumerate(component_names)
+    }
+    evidence: Dict[str, object] = {
+        "method": "known_only_group_robust_pairwise_simplex",
+        "component_names": list(component_names),
+        "base_weights": {
+            name: float(base[index])
+            for index, name in enumerate(component_names)
+        },
+        "learned_weights": weights,
+        "known_samples": int(len(known)),
+        "pseudo_unknown_samples": int(len(pseudo)),
+        "pseudo_unknown_group_counts": {
+            str(int(group)): int((groups == group).sum())
+            for group in unique_groups.tolist()
+        },
+        "seed": int(seed),
+        "steps": int(steps),
+        "batch_size": int(batch_size),
+        "margin": float(margin),
+        "regularization": float(regularization),
+        "final_ranking_loss": final_ranking_loss,
+        "final_regularization_loss": final_regularization_loss,
+    }
+    return weights, evidence
+
+
 class OpenSetCalibrator:
     """Known-only calibration for prototype and compound unknown-risk scoring."""
 
@@ -26,6 +154,7 @@ class OpenSetCalibrator:
         weights: Optional[Mapping[str, float]] = None,
         known_acceptance: float = 0.95,
         malicious_threshold: float = 0.5,
+        aggregation: str = "weighted_mean",
     ):
         self.num_classes = num_classes
         self.benign_index = benign_index
@@ -34,9 +163,14 @@ class OpenSetCalibrator:
         if total_weight <= 0:
             raise ValueError("risk weights must sum to a positive value")
         self.weights = {name: value / total_weight for name, value in self.weights.items()}
+        if aggregation not in {"weighted_mean", "maximum"}:
+            raise ValueError("unknown risk aggregation: %s" % aggregation)
+        self.aggregation = aggregation
         self.known_acceptance = known_acceptance
         self.malicious_threshold = malicious_threshold
         self.prototypes: Optional[Tensor] = None
+        self.fine_prototypes: Optional[Tensor] = None
+        self.fine_prototype_labels: Optional[Tensor] = None
         self.quantiles: Dict[str, Tuple[float, float]] = {}
         self.risk_threshold: Optional[float] = None
 
@@ -56,6 +190,12 @@ class OpenSetCalibrator:
             raise RuntimeError("calibrator has not been fitted")
         prototype = self.prototypes[self.benign_index].to(embeddings.device)
         return torch.linalg.vector_norm(embeddings - prototype, dim=-1)
+
+    def _fine_prototype_distance(self, embeddings: Tensor) -> Tensor:
+        if self.fine_prototypes is None:
+            raise RuntimeError("fine-grained prototypes have not been fitted")
+        prototypes = self.fine_prototypes.to(embeddings.device)
+        return torch.cdist(embeddings, prototypes).min(dim=1).values
 
     @staticmethod
     def _fit_quantile(values: np.ndarray) -> Tuple[float, float]:
@@ -77,8 +217,32 @@ class OpenSetCalibrator:
             prototypes.append(selected.mean(dim=0))
         self.prototypes = torch.stack(prototypes).detach().cpu()
 
+    def fit_fine_prototypes(
+        self,
+        embeddings: Tensor,
+        fine_labels: Tensor,
+    ) -> None:
+        labels = fine_labels.detach().cpu().to(torch.long)
+        embeddings = embeddings.detach().cpu()
+        unique_labels = torch.unique(labels, sorted=True)
+        if len(unique_labels) < self.num_classes:
+            raise ValueError(
+                "fine-grained prototype labels must cover at least "
+                "the coarse class count"
+            )
+        prototypes = []
+        for fine_label in unique_labels.tolist():
+            selected = embeddings[labels == fine_label]
+            if selected.numel() == 0:
+                raise ValueError(
+                    "fine label %d has no prototype samples" % fine_label
+                )
+            prototypes.append(selected.mean(dim=0))
+        self.fine_prototypes = torch.stack(prototypes)
+        self.fine_prototype_labels = unique_labels
+
     def raw_components(self, output: Dict[str, Tensor]) -> Dict[str, Tensor]:
-        return {
+        components = {
             "uncertainty": output["fused_uncertainty"],
             "conflict": output["global_conflict"],
             "distance": self._prototype_distance(output["fused_embedding"]),
@@ -86,10 +250,20 @@ class OpenSetCalibrator:
             "inverse_belief": 1.0 - output["fused_belief"].max(dim=-1).values,
             "normal_distance": self._normal_distance(output["fused_embedding"]),
         }
+        if self.fine_prototypes is not None:
+            components["fine_distance"] = self._fine_prototype_distance(
+                output["fused_embedding"]
+            )
+        return components
 
     def fit_known_validation(self, validation_output: Dict[str, Tensor]) -> None:
         components = self.raw_components(validation_output)
-        for name in ("uncertainty", "conflict", "distance", "energy", "normal_distance"):
+        component_names = tuple(self.weights) + ("normal_distance",)
+        for name in component_names:
+            if name not in components:
+                raise ValueError(
+                    "risk component %s has not been fitted" % name
+                )
             values = components[name].detach().cpu().numpy()
             self.quantiles[name] = self._fit_quantile(values)
         risk, _, _ = self.score(validation_output)
@@ -105,9 +279,18 @@ class OpenSetCalibrator:
         raw = self.raw_components(output)
         normalized = {
             name: self._normalize(name, raw[name])
-            for name in ("uncertainty", "conflict", "distance", "energy")
+            for name in self.weights
         }
-        risk = sum(self.weights[name] * normalized[name] for name in self.weights)
+        if self.aggregation == "maximum":
+            risk = torch.stack(
+                [normalized[name] for name in self.weights],
+                dim=0,
+            ).max(dim=0).values
+        else:
+            risk = sum(
+                self.weights[name] * normalized[name]
+                for name in self.weights
+            )
         normal_distance = self._normalize("normal_distance", raw["normal_distance"])
         malicious_probability = torch.sigmoid(output["malicious_logit"])
         maliciousness = 0.5 * malicious_probability + 0.5 * normal_distance.clamp(0.0, 1.0)
@@ -134,16 +317,25 @@ class OpenSetCalibrator:
     def state_dict(self) -> Dict[str, object]:
         if self.prototypes is None or self.risk_threshold is None:
             raise RuntimeError("cannot serialize an unfitted calibrator")
-        return {
+        state = {
             "num_classes": self.num_classes,
             "benign_index": self.benign_index,
             "weights": self.weights,
+            "aggregation": self.aggregation,
             "known_acceptance": self.known_acceptance,
             "malicious_threshold": self.malicious_threshold,
             "prototypes": self.prototypes.tolist(),
             "quantiles": {key: list(value) for key, value in self.quantiles.items()},
             "risk_threshold": self.risk_threshold,
         }
+        if self.fine_prototypes is not None:
+            state["fine_prototypes"] = self.fine_prototypes.tolist()
+            state["fine_prototype_labels"] = (
+                self.fine_prototype_labels.tolist()
+                if self.fine_prototype_labels is not None
+                else []
+            )
+        return state
 
     @classmethod
     def from_state_dict(cls, state: Mapping[str, object]) -> "OpenSetCalibrator":
@@ -153,8 +345,17 @@ class OpenSetCalibrator:
             state["weights"],
             float(state["known_acceptance"]),
             float(state["malicious_threshold"]),
+            str(state.get("aggregation", "weighted_mean")),
         )
         calibrator.prototypes = torch.tensor(state["prototypes"], dtype=torch.float32)
+        if state.get("fine_prototypes") is not None:
+            calibrator.fine_prototypes = torch.tensor(
+                state["fine_prototypes"], dtype=torch.float32
+            )
+            calibrator.fine_prototype_labels = torch.tensor(
+                state.get("fine_prototype_labels", []),
+                dtype=torch.long,
+            )
         calibrator.quantiles = {
             key: (float(value[0]), float(value[1]))
             for key, value in state["quantiles"].items()

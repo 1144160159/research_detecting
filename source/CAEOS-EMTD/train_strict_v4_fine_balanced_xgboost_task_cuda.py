@@ -14,10 +14,13 @@ import numpy as np
 
 from caeos.data import prepare_tabular_open_set
 from strict_v4_cicids2017_attack_family import (
-    FINE_TO_FAMILY,
+    FINE_TO_FAMILY as CICIDS2017_FINE_TO_FAMILY,
     atomic_json,
     canonical_hash,
     file_hash,
+)
+from strict_v4_cic_iot2023_attack_family import (
+    FINE_TO_FAMILY as CIC_IOT2023_FINE_TO_FAMILY,
 )
 from train_strict_v4_flow_statistic_xgboost_task_cuda import booster_uses_cuda
 from train_strict_v4_packet_sequence_fusion_task_cuda import (
@@ -31,16 +34,26 @@ from train_strict_v4_packet_sequence_fusion_task_cuda import (
 
 
 BENIGN_CLASS = "Benign"
+TAXONOMIES = {
+    "cicids2017": CICIDS2017_FINE_TO_FAMILY,
+    "cic_iot2023": CIC_IOT2023_FINE_TO_FAMILY,
+}
 
 
-def fine_classes_for_family(family: str) -> list[str]:
+def fine_classes_for_family(
+    family: str,
+    taxonomy: str = "cicids2017",
+) -> list[str]:
+    if taxonomy not in TAXONOMIES:
+        raise ValueError(f"unsupported attack taxonomy: {taxonomy}")
+    mapping = TAXONOMIES[taxonomy]
     values = sorted(
         fine_class
-        for fine_class, mapped_family in FINE_TO_FAMILY.items()
+        for fine_class, mapped_family in mapping.items()
         if mapped_family == family and fine_class != BENIGN_CLASS
     )
     if not values:
-        raise ValueError(f"unknown CICIDS2017 attack family: {family}")
+        raise ValueError(f"unknown {taxonomy} attack family: {family}")
     return values
 
 
@@ -54,6 +67,32 @@ def labels(dataset: Any) -> np.ndarray:
 
 def unknown_flags(dataset: Any) -> np.ndarray:
     return np.asarray(dataset.is_unknown.numpy(), dtype=bool)
+
+
+def family_labels(
+    labels_value: np.ndarray,
+    fine_class_names: list[str],
+    mapping: dict[str, str],
+) -> tuple[np.ndarray, list[str], int]:
+    missing = sorted(set(fine_class_names) - set(mapping))
+    if missing:
+        raise ValueError(f"fine classes are missing taxonomy entries: {missing}")
+    family_class_names = sorted(
+        {mapping[name] for name in fine_class_names},
+        key=lambda name: (name != BENIGN_CLASS, name),
+    )
+    family_index = {
+        name: index for index, name in enumerate(family_class_names)
+    }
+    lookup = np.asarray(
+        [family_index[mapping[name]] for name in fine_class_names],
+        dtype=np.int64,
+    )
+    source = np.asarray(labels_value, dtype=np.int64)
+    remapped = source.copy()
+    known = source >= 0
+    remapped[known] = lookup[source[known]]
+    return remapped, family_class_names, family_index[BENIGN_CLASS]
 
 
 def attack_probability_variants(
@@ -98,7 +137,11 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
     cache_csv = args.cache_csv.resolve()
     config_path = args.config.resolve()
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    unknown_fine_classes = fine_classes_for_family(args.unknown_family)
+    taxonomy_mapping = TAXONOMIES[args.taxonomy]
+    unknown_fine_classes = fine_classes_for_family(
+        args.unknown_family,
+        args.taxonomy,
+    )
     bundle = prepare_tabular_open_set(
         csv_path=str(cache_csv),
         config=config,
@@ -109,14 +152,41 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
         seed=args.seed,
         split_strategy="capture_grouped",
     )
-    known_class_names = [str(value) for value in bundle.class_names]
-    benign_index = int(bundle.benign_index)
+    fine_class_names = [str(value) for value in bundle.class_names]
     x_train = features(bundle.train)
     x_validation = features(bundle.validation)
     x_test = features(bundle.test)
     y_train = labels(bundle.train)
     y_validation = labels(bundle.validation)
     test_labels = labels(bundle.test)
+    if args.classification_level == "family":
+        y_train, known_class_names, benign_index = family_labels(
+            y_train,
+            fine_class_names,
+            taxonomy_mapping,
+        )
+        y_validation, validation_class_names, validation_benign_index = (
+            family_labels(
+                y_validation,
+                fine_class_names,
+                taxonomy_mapping,
+            )
+        )
+        test_labels, test_class_names, test_benign_index = family_labels(
+            test_labels,
+            fine_class_names,
+            taxonomy_mapping,
+        )
+        if (
+            validation_class_names != known_class_names
+            or test_class_names != known_class_names
+            or validation_benign_index != benign_index
+            or test_benign_index != benign_index
+        ):
+            raise ValueError("family label remapping drifted across splits")
+    else:
+        known_class_names = fine_class_names
+        benign_index = int(bundle.benign_index)
     validation_unknown = unknown_flags(bundle.validation)
     test_unknown = unknown_flags(bundle.test)
     if validation_unknown.any() or (test_labels[test_unknown] != -1).any():
@@ -345,11 +415,14 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
         "schema_version": "strict_v4_fine_balanced_xgboost_cuda_task_v1",
         "state": "complete",
         "task": {
+            "taxonomy": args.taxonomy,
+            "classification_level": args.classification_level,
             "unknown_family": args.unknown_family,
             "unknown_fine_classes": unknown_fine_classes,
             "seed": args.seed,
         },
         "known_class_names": known_class_names,
+        "fine_class_names": fine_class_names,
         "benign_index": benign_index,
         "split_counts": {
             "train": split_counts(
@@ -394,7 +467,9 @@ def train_task(args: argparse.Namespace) -> dict[str, Any]:
         "data_partition": {
             "sample_counts": bundle.sample_counts,
             "split_metadata": bundle.split_metadata,
-            "fine_to_family_mapping": FINE_TO_FAMILY,
+            "taxonomy": args.taxonomy,
+            "classification_level": args.classification_level,
+            "fine_to_family_mapping": taxonomy_mapping,
         },
         "training": {
             "elapsed_seconds": elapsed_seconds,
@@ -455,6 +530,16 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache-csv", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument(
+        "--taxonomy",
+        choices=tuple(TAXONOMIES),
+        default="cicids2017",
+    )
+    parser.add_argument(
+        "--classification-level",
+        choices=("fine", "family"),
+        default="fine",
+    )
     parser.add_argument("--unknown-family", required=True)
     parser.add_argument("--seed", type=int, default=29)
     parser.add_argument("--output-dir", type=Path, required=True)

@@ -119,6 +119,110 @@ class PacketSequenceTCNEncoder(nn.Module):
         return self.projection(pooled)
 
 
+class BytePayloadCNNEncoder(nn.Module):
+    """Embed transport-payload bytes and encode local byte motifs."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        embedding_dim: int,
+        dropout: float,
+    ):
+        super().__init__()
+        if input_dim < 32:
+            raise ValueError("byte payload encoder requires at least 32 tokens")
+        channels = max(32, min(int(hidden_dim), 128))
+        byte_dim = max(16, min(channels // 2, 64))
+        self.embedding = nn.Embedding(257, byte_dim, padding_idx=256)
+        self.network = nn.Sequential(
+            nn.Conv1d(byte_dim, channels, kernel_size=7, padding=3),
+            nn.BatchNorm1d(channels),
+            nn.GELU(),
+            nn.Conv1d(channels, channels, kernel_size=5, padding=2),
+            nn.BatchNorm1d(channels),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+        self.projection = nn.Sequential(
+            nn.Linear(2 * channels, embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.GELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        tokens = x.long().clamp(0, 256)
+        valid = tokens.ne(256).unsqueeze(1)
+        encoded = self.network(self.embedding(tokens).transpose(1, 2))
+        denominator = valid.sum(dim=-1).clamp_min(1)
+        mean = (encoded * valid).sum(dim=-1) / denominator
+        maximum = encoded.masked_fill(~valid, float("-inf")).amax(dim=-1)
+        maximum = torch.where(
+            torch.isfinite(maximum), maximum, torch.zeros_like(maximum)
+        )
+        return self.projection(torch.cat([mean, maximum], dim=-1))
+
+
+class PacketInteractionGraphEncoder(nn.Module):
+    """Two-layer message passing over a fixed packet interaction graph."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        embedding_dim: int,
+        dropout: float,
+        node_count: int = 16,
+    ):
+        super().__init__()
+        adjacency_dim = node_count * node_count
+        remaining = input_dim - adjacency_dim
+        if remaining <= 0 or remaining % node_count:
+            raise ValueError(
+                "packet graph input must contain node features and adjacency"
+            )
+        self.node_count = int(node_count)
+        self.node_features = remaining // node_count
+        channels = max(32, min(int(hidden_dim), 128))
+        self.input_projection = nn.Linear(self.node_features, channels)
+        self.message_one = nn.Linear(channels, channels)
+        self.message_two = nn.Linear(channels, channels)
+        self.dropout = nn.Dropout(dropout)
+        self.projection = nn.Sequential(
+            nn.Linear(2 * channels, embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.GELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        split = self.node_count * self.node_features
+        nodes = x[:, :split].reshape(
+            -1, self.node_count, self.node_features
+        )
+        adjacency = x[:, split:].reshape(
+            -1, self.node_count, self.node_count
+        ).clamp_min(0.0)
+        degree = adjacency.sum(dim=-1).clamp_min(1e-6)
+        inverse_sqrt = degree.rsqrt()
+        normalized = (
+            inverse_sqrt.unsqueeze(-1)
+            * adjacency
+            * inverse_sqrt.unsqueeze(-2)
+        )
+        valid = nodes[..., -1:].gt(0.0)
+        hidden = F.gelu(self.input_projection(nodes))
+        hidden = F.gelu(self.message_one(torch.bmm(normalized, hidden)))
+        hidden = self.dropout(hidden)
+        hidden = F.gelu(self.message_two(torch.bmm(normalized, hidden)))
+        denominator = valid.sum(dim=1).clamp_min(1)
+        mean = (hidden * valid).sum(dim=1) / denominator
+        maximum = hidden.masked_fill(~valid, float("-inf")).amax(dim=1)
+        maximum = torch.where(
+            torch.isfinite(maximum), maximum, torch.zeros_like(maximum)
+        )
+        return self.projection(torch.cat([mean, maximum], dim=-1))
+
+
 class ConservativeResidualEncoder(nn.Module):
     """Add a bounded specialist correction to a full-capacity MLP backbone."""
 
@@ -209,6 +313,14 @@ def build_view_encoder(
         return TlsHandshakeEncoder(input_dim, hidden_dim, embedding_dim, dropout)
     if kind == "sequence_tcn":
         return PacketSequenceTCNEncoder(input_dim, hidden_dim, embedding_dim, dropout)
+    if kind == "byte_cnn":
+        return BytePayloadCNNEncoder(
+            input_dim, hidden_dim, embedding_dim, dropout
+        )
+    if kind == "packet_graph":
+        return PacketInteractionGraphEncoder(
+            input_dim, hidden_dim, embedding_dim, dropout
+        )
     if kind == "tls_residual_025":
         return ConservativeResidualEncoder(
             ViewEncoder(input_dim, hidden_dim, embedding_dim, dropout),

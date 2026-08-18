@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict, Iterable, Mapping, Tuple
+from typing import Dict, Iterable, Mapping, Optional, Tuple
 
 
 COUNTER_FIELDS = (
@@ -80,11 +80,29 @@ def _require_equal(errors, name, left, right):
         errors.append("counter_reconciliation.{}".format(name))
 
 
-def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
+def audit_live_run(
+    values: Mapping[str, object],
+    *,
+    allow_virtual_diagnostic: bool = False,
+    allow_physical_diagnostic: bool = False,
+) -> LiveEvidenceAudit:
     errors = []
     if values.get("schema_version") != 1:
         errors.append("schema_version")
-    if values.get("scope") != "physical_nic_live_replay":
+    scope = values.get("scope")
+    virtual_diagnostic = (
+        scope == "virtual_link_live_diagnostic"
+        and allow_virtual_diagnostic
+    )
+    physical_diagnostic = (
+        scope == "physical_link_live_diagnostic"
+        and allow_physical_diagnostic
+    )
+    if (
+        scope != "physical_nic_live_replay"
+        and not virtual_diagnostic
+        and not physical_diagnostic
+    ):
         errors.append("scope")
     if values.get("run_status") != "complete":
         errors.append("run_status")
@@ -98,7 +116,12 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
             errors.append("identity.{}".format(field))
 
     capture = _mapping(values, "capture", errors)
-    if capture.get("physical_nic_visible") is not True:
+    if virtual_diagnostic:
+        if capture.get("physical_nic_visible") is not False:
+            errors.append("capture.virtual_physical_marker")
+        if capture.get("virtual_interface_visible") is not True:
+            errors.append("capture.virtual_interface_visible")
+    elif capture.get("physical_nic_visible") is not True:
         errors.append("capture.physical_nic_visible")
     if capture.get("driver") not in ("xdp", "af_packet"):
         errors.append("capture.driver")
@@ -153,6 +176,34 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
     )
     min_quality = _number(
         thresholds, "min_independent_macro_f1", errors, minimum=0.0, maximum=1.0
+    )
+    min_attack_recall = _number(
+        thresholds,
+        "min_independent_attack_recall",
+        errors,
+        minimum=0.0,
+        maximum=1.0,
+    )
+    min_benign_recall = _number(
+        thresholds,
+        "min_independent_benign_recall",
+        errors,
+        minimum=0.0,
+        maximum=1.0,
+    )
+    min_auprc = _number(
+        thresholds,
+        "min_independent_auprc",
+        errors,
+        minimum=0.0,
+        maximum=1.0,
+    )
+    max_ece = _number(
+        thresholds,
+        "max_independent_ece",
+        errors,
+        minimum=0.0,
+        maximum=1.0,
     )
     min_event_recall = _number(
         thresholds,
@@ -255,6 +306,14 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
     load = _mapping(values, "load", errors)
     if load.get("packet_profile") not in ("64B", "IMIX", "real"):
         errors.append("load.packet_profile")
+    rate_window_s = _number(
+        load, "rate_window_s", errors, minimum=0.0, maximum=1.0
+    )
+    if rate_window_s == 0:
+        errors.append("load.rate_window_s.zero")
+    rate_sample_count = _integer(load, "rate_sample_count", errors)
+    if rate_sample_count == 0:
+        errors.append("load.rate_sample_count.zero")
     if target_mpps is not None:
         observed_mpps = _number(
             load, "observed_mpps_min", errors, minimum=0.0
@@ -275,9 +334,13 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
             errors.append("hard_constraint.target_load_gbps")
 
     latency = _mapping(values, "end_to_end_latency", errors)
+    if latency.get("timestamp_provenance_verified") is not True:
+        errors.append("end_to_end_latency.timestamp_provenance_verified")
     if latency.get("start_point") not in (
         "nic_hardware_timestamp",
         "kernel_receive_monotonic",
+        "kernel_receive_realtime",
+        "kernel_xdp_entry_realtime",
     ):
         errors.append("end_to_end_latency.start_point")
     if latency.get("end_point") != "feature_event_enqueued":
@@ -349,6 +412,18 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
     macro_f1 = _number(
         quality, "macro_f1_min", errors, minimum=0.0, maximum=1.0
     )
+    attack_recall = _number(
+        quality, "attack_recall_min", errors, minimum=0.0, maximum=1.0
+    )
+    benign_recall = _number(
+        quality, "benign_recall_min", errors, minimum=0.0, maximum=1.0
+    )
+    auprc = _number(
+        quality, "auprc_min", errors, minimum=0.0, maximum=1.0
+    )
+    ece = _number(
+        quality, "ece_max", errors, minimum=0.0, maximum=1.0
+    )
     event_recall = _number(
         quality,
         "ground_truth_event_recall_min",
@@ -362,6 +437,30 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
         and macro_f1 < min_quality
     ):
         errors.append("hard_constraint.independent_macro_f1")
+    if (
+        attack_recall is not None
+        and min_attack_recall is not None
+        and attack_recall < min_attack_recall
+    ):
+        errors.append("hard_constraint.independent_attack_recall")
+    if (
+        benign_recall is not None
+        and min_benign_recall is not None
+        and benign_recall < min_benign_recall
+    ):
+        errors.append("hard_constraint.independent_benign_recall")
+    if (
+        auprc is not None
+        and min_auprc is not None
+        and auprc < min_auprc
+    ):
+        errors.append("hard_constraint.independent_auprc")
+    if (
+        ece is not None
+        and max_ece is not None
+        and ece > max_ece
+    ):
+        errors.append("hard_constraint.independent_ece")
     if (
         event_recall is not None
         and min_event_recall is not None
@@ -380,7 +479,10 @@ def audit_live_run(values: Mapping[str, object]) -> LiveEvidenceAudit:
 
 
 def audit_live_repeats(
-    runs: Iterable[Mapping[str, object]], minimum_repeats: int = 3
+    runs: Iterable[Mapping[str, object]],
+    minimum_repeats: int = 3,
+    expected_thresholds: Optional[Mapping[str, object]] = None,
+    expected_thresholds_sha256: Optional[str] = None,
 ) -> LiveEvidenceAudit:
     runs = list(runs)
     errors = []
@@ -397,6 +499,24 @@ def audit_live_repeats(
         if len({identity.get(field) for identity in identities}) > 1:
             errors.append("repeat_identity_inconsistent.{}".format(field))
     for index, run in enumerate(runs, 1):
+        if expected_thresholds is not None:
+            if run.get("frozen_thresholds") != expected_thresholds:
+                errors.append(
+                    "repeat{}.external_thresholds_content_mismatch".format(
+                        index
+                    )
+                )
+        if expected_thresholds_sha256 is not None:
+            identity = run.get("identity") or {}
+            if (
+                identity.get("thresholds_sha256")
+                != expected_thresholds_sha256
+            ):
+                errors.append(
+                    "repeat{}.external_thresholds_sha256_mismatch".format(
+                        index
+                    )
+                )
         audit = audit_live_run(run)
         errors.extend(
             "repeat{}.{}".format(index, error) for error in audit.errors

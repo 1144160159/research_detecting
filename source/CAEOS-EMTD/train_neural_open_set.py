@@ -496,6 +496,21 @@ def main() -> None:
         bundle = prepare_tabular_open_set(args.csv, config, unknown_classes, args.benign_class, args.max_per_class, args.chunksize, args.seed, args.split_strategy)
 
     device = choose_device(args.device)
+    runtime_execution = {
+        "requested_device": args.device,
+        "resolved_device": str(device),
+        "cuda_available": bool(torch.cuda.is_available()),
+        "cuda_device_name": (
+            torch.cuda.get_device_name(device) if device.type == "cuda" else None
+        ),
+        "cuda_device_index": (
+            int(device.index) if device.type == "cuda" and device.index is not None else 0
+        )
+        if device.type == "cuda"
+        else None,
+        "torch_version": torch.__version__,
+        "torch_cuda_version": torch.version.cuda,
+    }
     loader_options = {"batch_size": args.batch_size, "num_workers": args.num_workers, "pin_memory": device.type == "cuda"}
     sampler = weighted_sampler(bundle.train.labels) if args.sampling == "weighted" else None
     train_loader = DataLoader(bundle.train, sampler=sampler, shuffle=sampler is None, **loader_options)
@@ -923,6 +938,7 @@ def main() -> None:
         "training_history": history,
         "training_seconds": training_seconds,
         "trainable_parameters": count_trainable_parameters(model),
+        "runtime_execution": runtime_execution,
         "implementation": {
             "closr": "official CLOSR method adapted to the shared CAEOS split and feature protocol",
             "cade": "official CADE method adapted to PyTorch and the shared CAEOS split and feature protocol",
